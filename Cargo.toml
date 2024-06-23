@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+num-traits = { version = "0.2" }
 derive_builder = { version = "0.20" }
 libc = { version = "0.2" }
 blas-sys = { version = "0.7" }

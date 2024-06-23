@@ -4,8 +4,6 @@ use ndarray::prelude::*;
 use blas_sys;
 use crate::util::*;
 
-/* #region FFI binding */
-
 pub trait ASUMFunc<F>
 where
     F: FloatType
@@ -33,12 +31,8 @@ impl_subroutine!(f64, dasum_);
 impl_subroutine!(c32, scasum_);
 impl_subroutine!(c64, dzasum_);
 
-/* #endregion */
-
-/* #region Struct */
-
 #[derive(Builder)]
-pub struct ASUM<'a, F> {
+pub struct ASUM_<'a, F> {
 
     pub x: ArrayView1<'a, F>,
 
@@ -52,26 +46,27 @@ pub struct ASUM<'a, F> {
     flag_runnable: bool,
 }
 
-impl<'a, F> StructBLAS for ASUM<'a, F> {
+impl<'a, F> StructBLAS for ASUM_<'a, F> {
 
-    fn init_hidden(&mut self) {
-        self.n = self.x.len() as c_int;
-        self.incx = self.x.stride_of(Axis(0)) as c_int;
+    fn init_hidden(&mut self) -> Result<(), AnyError> {
+        self.n = self.x.len().try_into()?;
+        self.incx = self.x.stride_of(Axis(0)).try_into()?;
+        Ok(())
     }
 
-    fn init_optional(&mut self) {}
+    fn init_optional(&mut self) -> Result<(), AnyError> { Ok(()) }
 
-    fn check(&self) -> Result<(), String> { Ok(()) }
+    fn check(&self) -> Result<(), AnyError> { Ok(()) }
 
     fn runnable(&self) -> bool { self.flag_runnable }
 }
 
-impl<'a, F> ASUM<'a, F>
+impl<'a, F> ASUM_<'a, F>
 where
     F: FloatType
 {
 
-    pub fn run(&mut self) -> Result<<F as FloatType>::RealFloat, String>
+    pub fn run(&mut self) -> Result<<F as FloatType>::RealFloat, AnyError>
     where
         BLASFunc<F>: ASUMFunc<F>
     {
@@ -85,9 +80,9 @@ where
     }
 }
 
-pub type SASUM<'a> = ASUM<'a, f32>;
-pub type DASUM<'a> = ASUM<'a, f64>;
-pub type SCASUM<'a> = ASUM<'a, c32>;
-pub type DZASUM<'a> = ASUM<'a, c64>;
+pub type ASUM<'a, F> = ASUM_Builder<'a, F>;
 
-/* #endregion */
+pub type SASUM<'a> = ASUM_<'a, f32>;
+pub type DASUM<'a> = ASUM_<'a, f64>;
+pub type SCASUM<'a> = ASUM_<'a, c32>;
+pub type DZASUM<'a> = ASUM_<'a, c64>;
