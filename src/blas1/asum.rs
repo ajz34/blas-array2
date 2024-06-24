@@ -6,7 +6,7 @@ use crate::util::*;
 
 pub trait ASUMFunc<F>
 where
-    F: FloatType
+    F: BLASFloat
 {
     fn asum(n: *const c_int, x: *const F, incx: *const c_int) -> F::RealFloat;
 }
@@ -16,10 +16,10 @@ macro_rules! impl_subroutine {
 
 impl ASUMFunc<$type> for BLASFunc<$type>
 where
-    $type: FloatType
+    $type: BLASFloat
 {
-    fn asum(n: *const c_int, x: *const $type, incx: *const c_int) -> <$type as FloatType>::RealFloat {
-        unsafe { blas_sys::$func(n, x as *const <$type as FloatType>::FFIFloat, incx) }
+    fn asum(n: *const c_int, x: *const $type, incx: *const c_int) -> <$type as BLASFloat>::RealFloat {
+        unsafe { blas_sys::$func(n, x as *const <$type as BLASFloat>::FFIFloat, incx) }
     }
 }
 
@@ -63,10 +63,10 @@ impl<'a, F> StructBLAS for ASUM_<'a, F> {
 
 impl<'a, F> ASUM_<'a, F>
 where
-    F: FloatType
+    F: BLASFloat
 {
 
-    pub fn run(&mut self) -> Result<<F as FloatType>::RealFloat, AnyError>
+    pub fn run(&mut self) -> Result<<F as BLASFloat>::RealFloat, AnyError>
     where
         BLASFunc<F>: ASUMFunc<F>
     {
