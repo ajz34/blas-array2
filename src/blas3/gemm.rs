@@ -24,7 +24,7 @@ where
         ldc: *const c_int);
 }
 
-macro_rules! impl_subroutine {
+macro_rules! impl_func {
     ($type:ty, $func:ident) => {
 
 impl GEMMFunc<$type> for BLASFunc<$type>
@@ -67,22 +67,22 @@ where
     };
 }
 
-impl_subroutine!(f32, sgemm_);
-impl_subroutine!(f64, dgemm_);
-impl_subroutine!(c32, cgemm_);
-impl_subroutine!(c64, zgemm_);
+impl_func!(f32, sgemm_);
+impl_func!(f64, dgemm_);
+impl_func!(c32, cgemm_);
+impl_func!(c64, zgemm_);
 
-pub struct GEMM_Driver<'a, F>
+pub struct GEMM_Driver<'a, 'b, 'c, F>
 where
     F: BLASFloat
 {
-    pub a: ArrayView2<'a, F>,
-    pub b: ArrayView2<'a, F>,
-    pub c: ArrayOut2<'a, F>,
-    pub alpha: F,
-    pub beta: F,
-    pub transa: c_char,
-    pub transb: c_char,
+    a: ArrayView2<'a, F>,
+    b: ArrayView2<'b, F>,
+    c: ArrayOut2<'c, F>,
+    alpha: F,
+    beta: F,
+    transa: c_char,
+    transb: c_char,
     n: c_int,
     m: c_int,
     k: c_int,
@@ -91,11 +91,11 @@ where
     ldc: c_int,
 }
 
-impl <'a, F> GEMM_Driver<'a, F>
+impl<'a, 'b, 'c, F> GEMM_Driver<'a, 'b, 'c, F>
 where
     F: BLASFloat
 {
-    pub fn run(self) -> Result<ArrayOut2<'a, F>, AnyError>
+    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
     where
         BLASFunc<F>: GEMMFunc<F>
     {
@@ -114,6 +114,7 @@ where
         let c_ptr = match &mut c {
             ArrayOut::ViewMut(c) => c.as_mut_ptr(),
             ArrayOut::Owned(c) => c.as_mut_ptr(),
+            ArrayOut::ToBeCloned(_, c) => c.as_mut_ptr(),
         };
         let ldc = self.ldc;
 
@@ -124,91 +125,93 @@ where
             b_ptr, &ldb,
             &beta, c_ptr, &ldc
         );
-        Ok(c)
+        Ok(c.clone_to_view_mut())
     }
 }
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-pub struct GEMM_<'a, F>
+pub struct GEMM_<'a, 'b, 'c, F>
 where
     F: BLASFloat
 {
     pub a: ArrayView2<'a, F>,
-    pub b: ArrayView2<'a, F>,
+    pub b: ArrayView2<'b, F>,
 
-    #[builder(default = "None")]
-    pub c: Option<ArrayViewMut2<'a, F>>,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub c: Option<ArrayViewMut2<'c, F>>,
     #[builder(default = "F::one()")]
     pub alpha: F,
     #[builder(default = "F::zero()")]
     pub beta: F,
-    #[builder(default = "BLASTrans::NoTrans")]
+    #[builder(try_setter, default = "BLASTrans::NoTrans")]
     pub transa: BLASTrans,
-    #[builder(default = "BLASTrans::NoTrans")]
+    #[builder(try_setter, default = "BLASTrans::NoTrans")]
     pub transb: BLASTrans,
 }
 
-pub type GEMM<'a, F> = GEMM_Builder<'a, F>;
+pub type GEMM<'a, 'b, 'c, F> = GEMM_Builder<'a, 'b, 'c, F>;
 
-impl<'a, F> GEMM<'a, F>
-where
+impl<'a, 'b, 'c, F> GEMM_<'a, 'b, 'c, F>
+where 
     F: BLASFloat
 {
-    pub fn driver(self) -> Result<GEMM_Driver<'a, F>, AnyError>
+    pub fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError>
     {
-        // initialize
-        let obj = self.build()?;
-
-        let a = obj.a;
-        let b = obj.b;
-        let c = obj.c;
-        let transa = obj.transa;
-        let transb = obj.transb;
-        let alpha = obj.alpha;
-        let beta = obj.beta;
+        let a = self.a;
+        let b = self.b;
+        let c = self.c;
+        let transa = self.transa;
+        let transb = self.transb;
+        let alpha = self.alpha;
+        let beta = self.beta;
         
         // currently only fortran-preferred (col-major) is accepted
-        let layout_a = get_layout_array2(&obj.a);
-        let layout_b = get_layout_array2(&obj.b);
-        if !layout_a.is_fpref() && !layout_b.is_fpref() {
-            todo!("Only column major implemented.")
+        let layout_a = get_layout_array2(&a);
+        let layout_b = get_layout_array2(&b);
+        if !(layout_a.is_fpref() && layout_b.is_fpref()) {
+            BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string());
         }
 
         // initialize intent(hide)
-        let (lda, ka) = a.dim();
-        let (ldb, kb) = b.dim();
-        let m = if transa != BLASTrans::NoTrans { ka } else { lda };
-        let k = if transa != BLASTrans::NoTrans { lda } else { ka };
-        let n = if transb != BLASTrans::NoTrans { ldb } else { kb };
+        let m = if transa != BLASTrans::NoTrans { a.dim().1 } else { a.dim().0 };
+        let k = if transa != BLASTrans::NoTrans { a.dim().0 } else { a.dim().1 };
+        let n = if transb != BLASTrans::NoTrans { b.dim().0 } else { b.dim().1 };
+        let lda = a.stride_of(Axis(1));
+        let ldb = b.stride_of(Axis(1));
         
         // perform check
         if transb != BLASTrans::NoTrans {
             BLASError::assert(
-                k == kb,
-                format!("Incompatible dimensions for matrix multiplication, k={k}, kb={kb}."))?;
+                k == b.dim().1,
+                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[1]={:}.", k, b.dim().1))?;
         } else {
             BLASError::assert(
-                k == ldb,
-                format!("Incompatible dimensions for matrix multiplication, k={k}, ldb={ldb}."))?;
+                k == b.dim().0,
+                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[0]={:}.", k, b.dim().0))?;
         }
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                let (ldc, kc) = c.dim();
                 BLASError::assert(
-                    m == ldc,
-                    format!("Incompatible dimensions for matrix multiplication, m={m}, ldc={ldc}."))?;
+                    m == c.dim().0,
+                    format!("Incompatible dimensions for matrix multiplication, m={:}, c.dim[0]={:}.", m, c.dim().0))?;
                 BLASError::assert(
-                    n == kc,
-                    format!("Incompatible dimensions for matrix multiplication, n={n}, kc={kc}."))?;
-                ArrayOut2::ViewMut(c)
+                    n == c.dim().1,
+                    format!("Incompatible dimensions for matrix multiplication, n={:}, c.dim[1]={:}.", n, c.dim().1))?;
+                if get_layout_array2(&c.view()).is_fpref() {
+                    ArrayOut2::ViewMut(c)
+                } else {
+                    ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
+                }
             },
             None => {
                 ArrayOut2::Owned(Array2::zeros((m, n).f()))
             }
         };
+
+        let ldc = c.view().stride_of(Axis(1));
         
         let driver = GEMM_Driver {
             a,
@@ -223,38 +226,69 @@ where
             k: k.try_into()?,
             lda: lda.try_into()?,
             ldb: ldb.try_into()?,
-            ldc: m.try_into()?,
+            ldc: ldc.try_into()?,
         };
 
         return Ok(driver);
     }
-
-    pub fn run(self) -> Result<ArrayOut2<'a, F>, AnyError>
-    where
-        BLASFunc<F>: GEMMFunc<F>
-    {
-        self.driver()?.run()
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_gemm()
+impl<'a, 'b, 'c, F> GEMM<'a, 'b, 'c, F>
+where
+    F: BLASFloat,
+    BLASFunc<F>: GEMMFunc<F>,
+{
+    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
     {
-        println!("test_gemm");
-        let arr = Array1::<f64>::linspace(1.0, 35.0, 35);
-        let a = Array2::from_shape_vec((5, 7).f(), arr.to_vec()).unwrap();
-        let a = a.slice(s![1..4, 2..6]);
-        let b = Array2::from_shape_vec((7, 5).f(), arr.to_vec()).unwrap();
-        let b = b.slice(s![2..6, 1..4]);
-        println!("a={:?}, b={:?}", a, b);
-        let c = GEMM::default()
-            .a(a.view())
-            .b(b.view())
-            .run().unwrap();
-        println!("{:?}", c);
+        // initialize
+        let obj = self.build()?;
+        
+        // currently only fortran-preferred (col-major) is accepted
+        let layout_a = get_layout_array2(&obj.a);
+        let layout_b = get_layout_array2(&obj.b);
+
+        if layout_a.is_fpref() && layout_b.is_fpref() {
+            return obj.driver()?.run()
+        } else if layout_a.is_cpref() && layout_b.is_cpref() {
+            let obj = GEMM_ {
+                a: obj.b.reversed_axes(),
+                b: obj.a.reversed_axes(),
+                c: match obj.c {
+                    Some(c) => Some(c.reversed_axes()),
+                    None => None,
+                },
+                alpha: obj.alpha,
+                beta: obj.beta,
+                transa: obj.transb,
+                transb: obj.transa,
+            };
+            let c = obj.driver()?.run()?.reversed_axes();
+            return Ok(c);
+        } else {
+            let a_owned = match obj.a.is_standard_layout() {
+                true => None,
+                false => Some(obj.a.as_standard_layout().into_owned()),
+            };
+            let b_owned = match obj.b.is_standard_layout() {
+                true => None,
+                false => Some(obj.b.as_standard_layout().into_owned()),
+            };
+            let a_ref = a_owned.as_ref().map_or(obj.a.t(), |a| a.t());
+            let b_ref = b_owned.as_ref().map_or(obj.a.t(), |a| a.t());
+            let obj = GEMM_ {
+                a: b_ref,
+                b: a_ref,
+                c: match obj.c {
+                    Some(c) => Some(c.reversed_axes()),
+                    None => None,
+                },
+                alpha: obj.alpha,
+                beta: obj.beta,
+                transa: obj.transb,
+                transb: obj.transa,
+            };
+            let c = obj.driver()?.run()?.reversed_axes();
+            return Ok(c);
+        }
     }
 }
