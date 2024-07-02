@@ -1,5 +1,5 @@
-use ndarray::prelude::*;
 use crate::util::*;
+use ndarray::prelude::*;
 
 #[derive(Debug)]
 pub enum ArrayOut<'a, F, D>
@@ -39,7 +39,7 @@ where
             Self::ToBeCloned(mut arr_view, arr_owned) => {
                 arr_view.assign(&arr_owned);
                 arr_owned
-            }
+            },
         }
     }
 
@@ -64,7 +64,7 @@ where
             ArrayOut::ToBeCloned(mut arr_view, arr_owned) => {
                 arr_view.assign(&arr_owned);
                 ArrayOut::ViewMut(arr_view)
-            }
+            },
             _ => self,
         }
     }
@@ -89,8 +89,7 @@ pub type ArrayOut3<'a, F> = ArrayOut<'a, F, Ix3>;
 
 /* #region Strides */
 
-pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout
-{
+pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
     // Note that this only shows order of matrix (dimension information)
     // not c/f-contiguous (memory layout)
     // So some sequential (both c/f-contiguous) cases may be considered as only row or col major
@@ -106,8 +105,7 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout
     if d0 == 0 || d1 == 0 {
         // empty array
         return BLASLayout::Sequential;
-    }
-    else if d0 == 1 && d1 == 1 {
+    } else if d0 == 1 && d1 == 1 {
         // one element
         return BLASLayout::Sequential;
     } else if s1 == 1 {
@@ -122,17 +120,17 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout
     }
 }
 
-pub fn ndarray_to_colmajor<A, D> (arr: Array<A, D>) -> Array<A, D>
+pub fn ndarray_to_colmajor<A, D>(arr: Array<A, D>) -> Array<A, D>
 where
     A: Clone,
     D: Dimension,
 {
-    let arr = arr.reversed_axes();  // data not copied
+    let arr = arr.reversed_axes(); // data not copied
     if arr.is_standard_layout() {
         // arr is f-contiguous = reversed arr is c-contiguous
         // CowArray `into_owned` will not copy if own data, but will copy if it represents view
         // So, though `arr.as_standard_layout().reversed_axes().into_owned()` works, it clones data instead of move it
-        return arr.reversed_axes();  // data not copied
+        return arr.reversed_axes(); // data not copied
     } else {
         // arr is not f-contiguous
         // make reversed arr c-contiguous, then reverse arr again
@@ -140,7 +138,7 @@ where
     }
 }
 
-pub fn ndarray_to_rowmajor<A, D> (arr: Array<A, D>) -> Array<A, D>
+pub fn ndarray_to_rowmajor<A, D>(arr: Array<A, D>) -> Array<A, D>
 where
     A: Clone,
     D: Dimension,
@@ -151,4 +149,3 @@ where
         return arr.as_standard_layout().into_owned();
     }
 }
-

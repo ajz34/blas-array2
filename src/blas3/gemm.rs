@@ -10,7 +10,7 @@ pub trait GEMMFunc<F>
 where
     F: BLASFloat,
 {
-    fn gemm(
+    unsafe fn gemm(
         transa: *const c_char,
         transb: *const c_char,
         m: *const c_int,
@@ -33,7 +33,7 @@ macro_rules! impl_func {
         where
             $type: BLASFloat,
         {
-            fn gemm(
+            unsafe fn gemm(
                 transa: *const c_char,
                 transb: *const c_char,
                 m: *const c_int,
@@ -48,23 +48,21 @@ macro_rules! impl_func {
                 c: *mut $type,
                 ldc: *const c_int,
             ) {
-                unsafe {
-                    blas_sys::$func(
-                        transa,
-                        transb,
-                        m,
-                        n,
-                        k,
-                        alpha as *const <$type as BLASFloat>::FFIFloat,
-                        a as *const <$type as BLASFloat>::FFIFloat,
-                        lda,
-                        b as *const <$type as BLASFloat>::FFIFloat,
-                        ldb,
-                        beta as *const <$type as BLASFloat>::FFIFloat,
-                        c as *mut <$type as BLASFloat>::FFIFloat,
-                        ldc,
-                    )
-                }
+                blas_sys::$func(
+                    transa,
+                    transb,
+                    m,
+                    n,
+                    k,
+                    alpha as *const <$type as BLASFloat>::FFIFloat,
+                    a as *const <$type as BLASFloat>::FFIFloat,
+                    lda,
+                    b as *const <$type as BLASFloat>::FFIFloat,
+                    ldb,
+                    beta as *const <$type as BLASFloat>::FFIFloat,
+                    c as *mut <$type as BLASFloat>::FFIFloat,
+                    ldc,
+                );
             }
         }
     };
@@ -125,7 +123,9 @@ where
         };
         let ldc = self.ldc;
 
-        BLASFunc::<F>::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
+        unsafe {
+            BLASFunc::<F>::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
+        }
         Ok(c.clone_to_view_mut())
     }
 }
@@ -149,9 +149,9 @@ where
     pub alpha: F,
     #[builder(default = "F::zero()")]
     pub beta: F,
-    #[builder(try_setter, default = "BLASTrans::NoTrans")]
+    #[builder(setter(into), default = "BLASTrans::NoTrans")]
     pub transa: BLASTrans,
-    #[builder(try_setter, default = "BLASTrans::NoTrans")]
+    #[builder(setter(into), default = "BLASTrans::NoTrans")]
     pub transb: BLASTrans,
 }
 
@@ -184,15 +184,9 @@ where
 
         // perform check
         if transb != BLASTrans::NoTrans {
-            BLASError::assert(
-                k == b.dim().1,
-                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[1]={:}.", k, b.dim().1),
-            )?;
+            BLASError::assert(k == b.dim().1, format!("Incompatible dimensions, k={:}, b.dim[1]={:}.", k, b.dim().1))?;
         } else {
-            BLASError::assert(
-                k == b.dim().0,
-                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[0]={:}.", k, b.dim().0),
-            )?;
+            BLASError::assert(k == b.dim().0, format!("Incompatible dimensions, k={:}, b.dim[0]={:}.", k, b.dim().0))?;
         }
 
         // optional intent(out)
@@ -200,18 +194,18 @@ where
             Some(c) => {
                 BLASError::assert(
                     m == c.dim().0,
-                    format!("Incompatible dimensions for matrix multiplication, m={:}, c.dim[0]={:}.", m, c.dim().0),
+                    format!("Incompatible dimensions, m={:}, c.dim[0]={:}.", m, c.dim().0),
                 )?;
                 BLASError::assert(
                     n == c.dim().1,
-                    format!("Incompatible dimensions for matrix multiplication, n={:}, c.dim[1]={:}.", n, c.dim().1),
+                    format!("Incompatible dimensions, n={:}, c.dim[1]={:}.", n, c.dim().1),
                 )?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
                     ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
                 }
-            }
+            },
             None => ArrayOut2::Owned(Array2::zeros((m, n).f())),
         };
 
@@ -223,8 +217,8 @@ where
             c,
             alpha,
             beta,
-            transa: transa.try_into()?,
-            transb: transb.try_into()?,
+            transa: transa.into(),
+            transb: transb.into(),
             n: n.try_into()?,
             m: m.try_into()?,
             k: k.try_into()?,

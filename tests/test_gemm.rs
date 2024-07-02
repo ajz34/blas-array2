@@ -90,35 +90,28 @@ mod test_gemm {
         let arr = Array1::<f64>::zeros(120);
 
         // output not defined
-        let c = GEMM::default()
-            .a(a.view())
-            .b(b.view())
-            .try_transb('T')
-            .unwrap()
-            .run()
-            .unwrap()
-            .into_owned();
+        let c = GEMM::default().a(a.view()).b(b.view()).transb('T').run().unwrap().into_owned();
         let c_naive = naive_gemm(&a.view(), &b.view().t());
         assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
 
         // output defined, f-contiguous
         let mut c = Array2::from_shape_vec((6, 20).f(), arr.to_vec()).unwrap();
         let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).try_transb('T').unwrap().run().unwrap();
+        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
         let c_view = c.slice(s![2..5, 12..16]);
         assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
 
         // output defined, c-contiguous
         let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
         let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).try_transb('T').unwrap().run().unwrap();
+        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
         let c_view = c.slice(s![2..5, 12..16]);
         assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
 
         // output defined, arbitary slice
         let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
         let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).try_transb('T').unwrap().run().unwrap();
+        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
         let c_view = c.slice(s![0..6;2, 4..16;3]);
         assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
     }
@@ -134,30 +127,15 @@ mod test_gemm {
         let arr = Array1::<f64>::zeros(120);
 
         // output not defined
-        let c = GEMM::default()
-            .a(a.view())
-            .b(b.view())
-            .transa(BLASTrans::Trans)
-            .try_transb('T')
-            .unwrap()
-            .run()
-            .unwrap()
-            .into_owned();
+        let c =
+            GEMM::default().a(a.view()).b(b.view()).transa(BLASTrans::Trans).transb('T').run().unwrap().into_owned();
         let c_naive = naive_gemm(&a.view().t(), &b.view().t());
         assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
 
         // output defined, arbitary slice
         let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
         let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default()
-            .a(a.view())
-            .b(b.view())
-            .c(c_view)
-            .transa(BLASTrans::Trans)
-            .try_transb('T')
-            .unwrap()
-            .run()
-            .unwrap();
+        GEMM::default().a(a.view()).b(b.view()).c(c_view).transa(BLASTrans::Trans).transb('T').run().unwrap();
         let c_view = c.slice(s![0..6;2, 4..16;3]);
         assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
     }

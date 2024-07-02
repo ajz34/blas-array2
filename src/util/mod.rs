@@ -1,5 +1,5 @@
-pub mod blas_flags;
 pub mod blas_error;
+pub mod blas_flags;
 pub mod blas_traits;
 pub mod util_ndarray;
 

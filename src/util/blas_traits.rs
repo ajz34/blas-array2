@@ -1,7 +1,7 @@
-use crate::util::{BLASError, AnyError};
+use crate::util::{AnyError, BLASError};
 
 /// BLAS functions for a given floating point type `F`.
-/// 
+///
 /// This struct will be implemented in modules of each function.
 pub struct BLASFunc<F> {
     _marker: std::marker::PhantomData<F>,
@@ -20,8 +20,10 @@ pub trait StructBLAS {
         println!("runnable: {:?}", self.runnable());
         if !self.runnable() {
             return Err(BLASError(
-                "Current BLAS is not runnable. This struct may have execuated once and shouldn't be execuated anymore.".to_string()
-            ).into());
+                "Current BLAS is not runnable. This struct may have execuated once and shouldn't be execuated anymore."
+                    .to_string(),
+            )
+            .into());
         }
         self.init_optional()?;
         self.init_hidden()?;
@@ -30,8 +32,8 @@ pub trait StructBLAS {
     }
 }
 
-use blas_sys::{c_float_complex, c_double_complex};
-use libc::{c_float, c_double};
+use blas_sys::{c_double_complex, c_float_complex};
+use libc::{c_double, c_float};
 use num_complex::Complex;
 use num_traits::{Num, NumAssignOps};
 
@@ -42,9 +44,7 @@ pub type c64 = Complex<f64>;
 
 /// Trait for defining real part float types
 pub trait BLASFloat:
-Num + NumAssignOps
-+ Send + Sync + Copy + Clone + Default
-+ std::fmt::Debug + std::fmt::Display + 'static
+    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display + 'static
 {
     type RealFloat: Num;
     type FFIFloat;

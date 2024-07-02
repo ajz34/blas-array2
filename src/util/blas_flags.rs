@@ -1,5 +1,4 @@
 use libc::c_char;
-use crate::util::BLASError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BLASLayout {
@@ -48,170 +47,155 @@ pub enum BLASSide {
     Right = 142,
 }
 
-impl TryFrom<char> for BLASLayout {
-    type Error = BLASError;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'R' => Ok(BLASLayout::RowMajor),
-            'C' => Ok(BLASLayout::ColMajor),
-            _ => Err(BLASError(format!("Invalid character for BLASOrder: {}", c))),
+impl From<char> for BLASLayout {
+    fn from(c: char) -> Self {
+        match c.to_ascii_uppercase() {
+            'R' => BLASLayout::RowMajor,
+            'C' => BLASLayout::ColMajor,
+            _ => panic!("Invalid character for BLASOrder: {}", c),
         }
     }
 }
 
-impl TryFrom<BLASLayout> for char {
-    type Error = BLASError;
-    fn try_from(o: BLASLayout) -> Result<Self, Self::Error> {
-        match o {
-            BLASLayout::RowMajor => Ok('R'),
-            BLASLayout::ColMajor => Ok('C'),
-            _ => Err(BLASError(format!("Invalid BLASOrder: {:?}", o))),
+impl From<BLASLayout> for char {
+    fn from(layout: BLASLayout) -> Self {
+        match layout {
+            BLASLayout::RowMajor => 'R',
+            BLASLayout::ColMajor => 'C',
+            _ => panic!("Invalid BLASOrder: {:?}", layout),
         }
     }
 }
 
-impl TryFrom<BLASLayout> for c_char {
-    type Error = BLASError;
-    fn try_from(o: BLASLayout) -> Result<Self, Self::Error> {
-        match o {
-            BLASLayout::RowMajor => Ok('R' as c_char),
-            BLASLayout::ColMajor => Ok('C' as c_char),
-            _ => Err(BLASError(format!("Invalid BLASOrder: {:?}", o))),
+impl From<BLASLayout> for c_char {
+    fn from(layout: BLASLayout) -> Self {
+        match layout {
+            BLASLayout::RowMajor => 'R' as c_char,
+            BLASLayout::ColMajor => 'C' as c_char,
+            _ => panic!("Invalid BLASOrder: {:?}", layout),
         }
     }
 }
 
-impl TryFrom<char> for BLASTrans {
-    type Error = BLASError;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'N' => Ok(BLASTrans::NoTrans),
-            'T' => Ok(BLASTrans::Trans),
-            'C' => Ok(BLASTrans::ConjTrans),
-            _ => Err(BLASError(format!("Invalid character for BLASTrans: {}", c))),
+impl From<char> for BLASTrans {
+    fn from(c: char) -> Self {
+        match c.to_ascii_uppercase() {
+            'N' => BLASTrans::NoTrans,
+            'T' => BLASTrans::Trans,
+            'C' => BLASTrans::ConjTrans,
+            _ => panic!("Invalid character for BLASTrans: {}", c),
         }
     }
 }
 
-impl TryFrom<BLASTrans> for char {
-    type Error = BLASError;
-    fn try_from(t: BLASTrans) -> Result<Self, Self::Error> {
-        match t {
-            BLASTrans::NoTrans => Ok('N'),
-            BLASTrans::Trans => Ok('T'),
-            BLASTrans::ConjTrans => Ok('C'),
-            _ => Err(BLASError(format!("Invalid BLASTrans: {:?}", t))),
+impl From<BLASTrans> for char {
+    fn from(trans: BLASTrans) -> Self {
+        match trans {
+            BLASTrans::NoTrans => 'N',
+            BLASTrans::Trans => 'T',
+            BLASTrans::ConjTrans => 'C',
+            _ => panic!("Invalid BLASTrans: {:?}", trans),
         }
     }
 }
 
-impl TryFrom<BLASTrans> for c_char {
-    type Error = BLASError;
-    fn try_from(t: BLASTrans) -> Result<Self, Self::Error> {
-        match t {
-            BLASTrans::NoTrans => Ok('N' as c_char),
-            BLASTrans::Trans => Ok('T' as c_char),
-            BLASTrans::ConjTrans => Ok('C' as c_char),
-            _ => Err(BLASError(format!("Invalid BLASTrans: {:?}", t))),
+impl From<BLASTrans> for c_char {
+    fn from(trans: BLASTrans) -> Self {
+        match trans {
+            BLASTrans::NoTrans => 'N' as c_char,
+            BLASTrans::Trans => 'T' as c_char,
+            BLASTrans::ConjTrans => 'C' as c_char,
+            _ => panic!("Invalid BLASTrans: {:?}", trans),
         }
     }
 }
 
-impl TryFrom<char> for BLASUpLo {
-    type Error = BLASError;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'U' => Ok(BLASUpLo::Upper),
-            'L' => Ok(BLASUpLo::Lower),
-            _ => Err(BLASError(format!("Invalid character for BLASUpLo: {}", c))),
+impl From<char> for BLASUpLo {
+    fn from(c: char) -> Self {
+        match c.to_ascii_uppercase() {
+            'U' => BLASUpLo::Upper,
+            'L' => BLASUpLo::Lower,
+            _ => panic!("Invalid character for BLASUpLo: {}", c),
         }
     }
 }
 
-impl TryFrom<BLASUpLo> for char {
-    type Error = BLASError;
-    fn try_from(u: BLASUpLo) -> Result<Self, Self::Error> {
-        match u {
-            BLASUpLo::Upper => Ok('U'),
-            BLASUpLo::Lower => Ok('L'),
-            _ => Err(BLASError(format!("Invalid BLASUpLo: {:?}", u))),
+impl From<BLASUpLo> for char {
+    fn from(uplo: BLASUpLo) -> Self {
+        match uplo {
+            BLASUpLo::Upper => 'U',
+            BLASUpLo::Lower => 'L',
+            _ => panic!("Invalid BLASUpLo: {:?}", uplo),
         }
     }
 }
 
-impl TryFrom<BLASUpLo> for c_char {
-    type Error = BLASError;
-    fn try_from(u: BLASUpLo) -> Result<Self, Self::Error> {
-        match u {
-            BLASUpLo::Upper => Ok('U' as c_char),
-            BLASUpLo::Lower => Ok('L' as c_char),
-            _ => Err(BLASError(format!("Invalid BLASUpLo: {:?}", u))),
+impl From<BLASUpLo> for c_char {
+    fn from(uplo: BLASUpLo) -> Self {
+        match uplo {
+            BLASUpLo::Upper => 'U' as c_char,
+            BLASUpLo::Lower => 'L' as c_char,
+            _ => panic!("Invalid BLASUpLo: {:?}", uplo),
         }
     }
 }
 
-impl TryFrom<char> for BLASDiag {
-    type Error = BLASError;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'N' => Ok(BLASDiag::NonUnit),
-            'U' => Ok(BLASDiag::Unit),
-            _ => Err(BLASError(format!("Invalid character for BLASDiag: {}", c))),
+impl From<char> for BLASDiag {
+    fn from(c: char) -> Self {
+        match c.to_ascii_uppercase() {
+            'N' => BLASDiag::NonUnit,
+            'U' => BLASDiag::Unit,
+            _ => panic!("Invalid character for BLASDiag: {}", c),
         }
     }
 }
 
-impl TryFrom<BLASDiag> for char {
-    type Error = BLASError;
-    fn try_from(d: BLASDiag) -> Result<Self, Self::Error> {
-        match d {
-            BLASDiag::NonUnit => Ok('N'),
-            BLASDiag::Unit => Ok('U'),
-            _ => Err(BLASError(format!("Invalid BLASDiag: {:?}", d))),
+impl From<BLASDiag> for char {
+    fn from(diag: BLASDiag) -> Self {
+        match diag {
+            BLASDiag::NonUnit => 'N',
+            BLASDiag::Unit => 'U',
+            _ => panic!("Invalid BLASDiag: {:?}", diag),
         }
     }
 }
 
-impl TryFrom<BLASDiag> for c_char {
-    type Error = BLASError;
-    fn try_from(d: BLASDiag) -> Result<Self, Self::Error> {
-        match d {
-            BLASDiag::NonUnit => Ok('N' as c_char),
-            BLASDiag::Unit => Ok('U' as c_char),
-            _ => Err(BLASError(format!("Invalid BLASDiag: {:?}", d))),
+impl From<BLASDiag> for c_char {
+    fn from(diag: BLASDiag) -> Self {
+        match diag {
+            BLASDiag::NonUnit => 'N' as c_char,
+            BLASDiag::Unit => 'U' as c_char,
+            _ => panic!("Invalid BLASDiag: {:?}", diag),
         }
     }
 }
 
-impl TryFrom<char> for BLASSide {
-    type Error = BLASError;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'L' => Ok(BLASSide::Left),
-            'R' => Ok(BLASSide::Right),
-            _ => Err(BLASError(format!("Invalid character for BLASSide: {}", c))),
+impl From<char> for BLASSide {
+    fn from(c: char) -> Self {
+        match c.to_ascii_uppercase() {
+            'L' => BLASSide::Left,
+            'R' => BLASSide::Right,
+            _ => panic!("Invalid character for BLASSide: {}", c),
         }
     }
 }
 
-impl TryFrom<BLASSide> for char {
-    type Error = BLASError;
-    fn try_from(s: BLASSide) -> Result<Self, Self::Error> {
-        match s {
-            BLASSide::Left => Ok('L'),
-            BLASSide::Right => Ok('R'),
-            _ => Err(BLASError(format!("Invalid BLASSide: {:?}", s))),
+impl From<BLASSide> for char {
+    fn from(side: BLASSide) -> Self {
+        match side {
+            BLASSide::Left => 'L',
+            BLASSide::Right => 'R',
+            _ => panic!("Invalid BLASSide: {:?}", side),
         }
     }
 }
 
-impl TryFrom<BLASSide> for c_char {
-    type Error = BLASError;
-    fn try_from(s: BLASSide) -> Result<Self, Self::Error> {
-        match s {
-            BLASSide::Left => Ok('L' as c_char),
-            BLASSide::Right => Ok('R' as c_char),
-            _ => Err(BLASError(format!("Invalid BLASSide: {:?}", s))),
+impl From<BLASSide> for c_char {
+    fn from(side: BLASSide) -> Self {
+        match side {
+            BLASSide::Left => 'L' as c_char,
+            BLASSide::Right => 'R' as c_char,
+            _ => panic!("Invalid BLASSide: {:?}", side),
         }
     }
 }
