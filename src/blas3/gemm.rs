@@ -273,11 +273,11 @@ where
                 true => None,
                 false => Some(obj.b.as_standard_layout().into_owned()),
             };
-            let a_ref = a_owned.as_ref().map_or(obj.a.t(), |a| a.t());
-            let b_ref = b_owned.as_ref().map_or(obj.a.t(), |a| a.t());
+            let a_view = a_owned.as_ref().map_or(obj.a.view(), |a| a.view());
+            let b_view = b_owned.as_ref().map_or(obj.b.view(), |b| b.view());
             let obj = GEMM_ {
-                a: b_ref,
-                b: a_ref,
+                a: b_view.t(),
+                b: a_view.t(),
                 c: match obj.c {
                     Some(c) => Some(c.reversed_axes()),
                     None => None,

@@ -9,9 +9,11 @@ mod test_gemm {
     {
         let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
         let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
+        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
         let b = Array2::from_shape_vec((12, 10).f(), arr.to_vec()).unwrap();
         let a = a.slice(s![1..4, 5..10]);
         let b = b.slice(s![3..8, 4..8]);
+        let arr = Array1::<f64>::zeros(120);
 
         // output not defined
         let c = GEMM::default().a(a.view()).b(b.view())
@@ -49,9 +51,11 @@ mod test_gemm {
     {
         let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
         let a = Array2::from_shape_vec((10, 12), arr.to_vec()).unwrap();
+        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
         let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
         let a = a.slice(s![1..4, 5..10]);
         let b = b.slice(s![3..8, 4..8]);
+        let arr = Array1::<f64>::zeros(120);
         
         // output not defined
         let c = GEMM::default().a(a.view()).b(b.view())
@@ -89,9 +93,11 @@ mod test_gemm {
     {
         let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
         let a = Array2::from_shape_vec((10, 12), arr.to_vec()).unwrap();
+        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
         let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
         let a = a.slice(s![1..4, 5..10]);
         let b = b.slice(s![4..8, 3..8]);
+        let arr = Array1::<f64>::zeros(120);
         
         // output not defined
         let c = GEMM::default().a(a.view()).b(b.view())
@@ -133,9 +139,11 @@ mod test_gemm {
     {
         let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
         let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
+        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
         let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
         let a = a.slice(s![5..10, 1..4]);
         let b = b.slice(s![4..8, 3..8]);
+        let arr = Array1::<f64>::zeros(120);
         
         // output not defined
         let c = GEMM::default().a(a.view()).b(b.view())
