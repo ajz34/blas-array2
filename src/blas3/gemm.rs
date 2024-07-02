@@ -4,6 +4,8 @@ use ndarray::prelude::*;
 use blas_sys;
 use crate::util::*;
 
+/* #region BLAS func */
+
 pub trait GEMMFunc<F>
 where
     F: BLASFloat
@@ -72,6 +74,10 @@ impl_func!(f64, dgemm_);
 impl_func!(c32, cgemm_);
 impl_func!(c64, zgemm_);
 
+/* #endregion */
+
+/* #region BLAS driver */
+
 pub struct GEMM_Driver<'a, 'b, 'c, F>
 where
     F: BLASFloat
@@ -129,6 +135,10 @@ where
     }
 }
 
+/* #endregion */
+
+/* #region BLAS builder */
+
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 pub struct GEMM_<'a, 'b, 'c, F>
@@ -149,8 +159,6 @@ where
     #[builder(try_setter, default = "BLASTrans::NoTrans")]
     pub transb: BLASTrans,
 }
-
-pub type GEMM<'a, 'b, 'c, F> = GEMM_Builder<'a, 'b, 'c, F>;
 
 impl<'a, 'b, 'c, F> GEMM_<'a, 'b, 'c, F>
 where 
@@ -233,6 +241,16 @@ where
     }
 }
 
+/* #endregion */
+
+/* #region BLAS wrapper */
+
+pub type GEMM<'a, 'b, 'c, F> = GEMM_Builder<'a, 'b, 'c, F>;
+pub type SGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, f32>;
+pub type DGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, f64>;
+pub type CGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, c32>;
+pub type ZGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, c64>;
+
 impl<'a, 'b, 'c, F> GEMM<'a, 'b, 'c, F>
 where
     F: BLASFloat,
@@ -292,3 +310,5 @@ where
         }
     }
 }
+
+/* #endregion */

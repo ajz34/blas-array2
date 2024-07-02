@@ -3,6 +3,7 @@ mod test_gemm {
     use ndarray::prelude::*;
     use blas_array2::util::*;
     use blas_array2::blas3::gemm::GEMM;
+    use num_complex::*;
 
     #[test]
     fn nn_f_contiguous()
@@ -162,6 +163,46 @@ mod test_gemm {
             .run().unwrap();
         let c_view = c.slice(s![0..6;2, 4..16;3]);
         assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
+    }
+
+    #[test]
+    fn various_float_types() {
+        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
+        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
+        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
+        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
+        let a = a.slice(s![0..6, 0..8]);
+        let b = b.slice(s![0..8, 0..9]);
+        let c = GEMM::default().a(a.view()).b(b.view())
+            .run().unwrap().into_owned();
+        let c_naive = naive_gemm(&a.view(), &b.view());
+        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
+
+        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
+        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
+        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
+        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
+        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
+        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
+        let a = a.slice(s![0..6, 0..8]);
+        let b = b.slice(s![0..8, 0..9]);
+        let c = GEMM::default().a(a.view()).b(b.view())
+            .run().unwrap().into_owned();
+        let c_naive = naive_gemm(&a.view(), &b.view());
+        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
+
+        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
+        let arr = arr.mapv(|x| x + 2.0 * c64::i() * x);
+        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
+        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
+        let arr = arr.mapv(|x| x + 2.0 * c64::i() * x);
+        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
+        let a = a.slice(s![0..6, 0..8]);
+        let b = b.slice(s![0..8, 0..9]);
+        let c = GEMM::default().a(a.view()).b(b.view())
+            .run().unwrap().into_owned();
+        let c_naive = naive_gemm(&a.view(), &b.view());
+        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
     }
 
     fn naive_gemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>) -> Array2<F>
