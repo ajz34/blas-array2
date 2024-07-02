@@ -1,14 +1,14 @@
-use derive_builder::Builder;
-use libc::{c_int, c_char};
-use ndarray::prelude::*;
-use blas_sys;
 use crate::util::*;
+use blas_sys;
+use derive_builder::Builder;
+use libc::{c_char, c_int};
+use ndarray::prelude::*;
 
 /* #region BLAS func */
 
 pub trait GEMMFunc<F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
     fn gemm(
         transa: *const c_char,
@@ -23,49 +23,50 @@ where
         ldb: *const c_int,
         beta: *const F,
         c: *mut F,
-        ldc: *const c_int);
+        ldc: *const c_int,
+    );
 }
 
 macro_rules! impl_func {
     ($type:ty, $func:ident) => {
-
-impl GEMMFunc<$type> for BLASFunc<$type>
-where
-    $type: BLASFloat
-{
-    fn gemm(
-        transa: *const c_char,
-        transb: *const c_char,
-        m: *const c_int,
-        n: *const c_int,
-        k: *const c_int,
-        alpha: *const $type,
-        a: *const $type,
-        lda: *const c_int,
-        b: *const $type,
-        ldb: *const c_int,
-        beta: *const $type,
-        c: *mut $type,
-        ldc: *const c_int
-    ){
-        unsafe { blas_sys::$func(
-            transa,
-            transb,
-            m,
-            n,
-            k,
-            alpha as *const <$type as BLASFloat>::FFIFloat,
-            a as *const <$type as BLASFloat>::FFIFloat,
-            lda,
-            b as *const <$type as BLASFloat>::FFIFloat,
-            ldb,
-            beta as *const <$type as BLASFloat>::FFIFloat,
-            c as *mut <$type as BLASFloat>::FFIFloat,
-            ldc)
+        impl GEMMFunc<$type> for BLASFunc<$type>
+        where
+            $type: BLASFloat,
+        {
+            fn gemm(
+                transa: *const c_char,
+                transb: *const c_char,
+                m: *const c_int,
+                n: *const c_int,
+                k: *const c_int,
+                alpha: *const $type,
+                a: *const $type,
+                lda: *const c_int,
+                b: *const $type,
+                ldb: *const c_int,
+                beta: *const $type,
+                c: *mut $type,
+                ldc: *const c_int,
+            ) {
+                unsafe {
+                    blas_sys::$func(
+                        transa,
+                        transb,
+                        m,
+                        n,
+                        k,
+                        alpha as *const <$type as BLASFloat>::FFIFloat,
+                        a as *const <$type as BLASFloat>::FFIFloat,
+                        lda,
+                        b as *const <$type as BLASFloat>::FFIFloat,
+                        ldb,
+                        beta as *const <$type as BLASFloat>::FFIFloat,
+                        c as *mut <$type as BLASFloat>::FFIFloat,
+                        ldc,
+                    )
+                }
+            }
         }
-    }
-}
-
     };
 }
 
@@ -80,7 +81,7 @@ impl_func!(c64, zgemm_);
 
 pub struct GEMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
     a: ArrayView2<'a, F>,
     b: ArrayView2<'b, F>,
@@ -99,11 +100,11 @@ where
 
 impl<'a, 'b, 'c, F> GEMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
     pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
     where
-        BLASFunc<F>: GEMMFunc<F>
+        BLASFunc<F>: GEMMFunc<F>,
     {
         let transa = self.transa as c_char;
         let transb = self.transb as c_char;
@@ -124,13 +125,7 @@ where
         };
         let ldc = self.ldc;
 
-        BLASFunc::<F>::gemm(
-            &transa, &transb,
-            &m, &n, &k,
-            &alpha, a_ptr, &lda,
-            b_ptr, &ldb,
-            &beta, c_ptr, &ldc
-        );
+        BLASFunc::<F>::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         Ok(c.clone_to_view_mut())
     }
 }
@@ -143,7 +138,7 @@ where
 #[builder(pattern = "owned")]
 pub struct GEMM_<'a, 'b, 'c, F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayView2<'b, F>,
@@ -161,11 +156,10 @@ where
 }
 
 impl<'a, 'b, 'c, F> GEMM_<'a, 'b, 'c, F>
-where 
-    F: BLASFloat
+where
+    F: BLASFloat,
 {
-    pub fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError>
-    {
+    pub fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError> {
         let a = self.a;
         let b = self.b;
         let c = self.c;
@@ -173,7 +167,7 @@ where
         let transb = self.transb;
         let alpha = self.alpha;
         let beta = self.beta;
-        
+
         // currently only fortran-preferred (col-major) is accepted
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
@@ -187,16 +181,18 @@ where
         let n = if transb != BLASTrans::NoTrans { b.dim().0 } else { b.dim().1 };
         let lda = a.stride_of(Axis(1));
         let ldb = b.stride_of(Axis(1));
-        
+
         // perform check
         if transb != BLASTrans::NoTrans {
             BLASError::assert(
                 k == b.dim().1,
-                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[1]={:}.", k, b.dim().1))?;
+                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[1]={:}.", k, b.dim().1),
+            )?;
         } else {
             BLASError::assert(
                 k == b.dim().0,
-                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[0]={:}.", k, b.dim().0))?;
+                format!("Incompatible dimensions for matrix multiplication, k={:}, b.dim[0]={:}.", k, b.dim().0),
+            )?;
         }
 
         // optional intent(out)
@@ -204,23 +200,23 @@ where
             Some(c) => {
                 BLASError::assert(
                     m == c.dim().0,
-                    format!("Incompatible dimensions for matrix multiplication, m={:}, c.dim[0]={:}.", m, c.dim().0))?;
+                    format!("Incompatible dimensions for matrix multiplication, m={:}, c.dim[0]={:}.", m, c.dim().0),
+                )?;
                 BLASError::assert(
                     n == c.dim().1,
-                    format!("Incompatible dimensions for matrix multiplication, n={:}, c.dim[1]={:}.", n, c.dim().1))?;
+                    format!("Incompatible dimensions for matrix multiplication, n={:}, c.dim[1]={:}.", n, c.dim().1),
+                )?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
                     ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
                 }
-            },
-            None => {
-                ArrayOut2::Owned(Array2::zeros((m, n).f()))
             }
+            None => ArrayOut2::Owned(Array2::zeros((m, n).f())),
         };
 
         let ldc = c.view().stride_of(Axis(1));
-        
+
         let driver = GEMM_Driver {
             a,
             b,
@@ -256,18 +252,19 @@ where
     F: BLASFloat,
     BLASFunc<F>: GEMMFunc<F>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    {
+    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
         let obj = self.build()?;
-        
+
         // currently only fortran-preferred (col-major) is accepted
         let layout_a = get_layout_array2(&obj.a);
         let layout_b = get_layout_array2(&obj.b);
 
         if layout_a.is_fpref() && layout_b.is_fpref() {
-            return obj.driver()?.run()
+            // F-contiguous: C = A B
+            return obj.driver()?.run();
         } else if layout_a.is_cpref() && layout_b.is_cpref() {
+            // C-contiguous: C' = B' A'
             let obj = GEMM_ {
                 a: obj.b.reversed_axes(),
                 b: obj.a.reversed_axes(),
@@ -283,16 +280,12 @@ where
             let c = obj.driver()?.run()?.reversed_axes();
             return Ok(c);
         } else {
-            let a_owned = match obj.a.is_standard_layout() {
-                true => None,
-                false => Some(obj.a.as_standard_layout().into_owned()),
-            };
-            let b_owned = match obj.b.is_standard_layout() {
-                true => None,
-                false => Some(obj.b.as_standard_layout().into_owned()),
-            };
-            let a_view = a_owned.as_ref().map_or(obj.a.view(), |a| a.view());
-            let b_view = b_owned.as_ref().map_or(obj.b.view(), |b| b.view());
+            // neither F-contiguous nor C-contiguous
+            // copy to C contiguous if necessary, then C' = B' A'
+            let a_cow = obj.a.as_standard_layout();
+            let b_cow = obj.b.as_standard_layout();
+            let a_view = a_cow.view();
+            let b_view = b_cow.view();
             let obj = GEMM_ {
                 a: b_view.t(),
                 b: a_view.t(),
