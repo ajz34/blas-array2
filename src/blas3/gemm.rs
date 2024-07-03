@@ -48,19 +48,20 @@ macro_rules! impl_func {
                 c: *mut $type,
                 ldc: *const c_int,
             ) {
+                type FFIFloat = <$type as BLASFloat>::FFIFloat;
                 blas_sys::$func(
                     transa,
                     transb,
                     m,
                     n,
                     k,
-                    alpha as *const <$type as BLASFloat>::FFIFloat,
-                    a as *const <$type as BLASFloat>::FFIFloat,
+                    alpha as *const FFIFloat,
+                    a as *const FFIFloat,
                     lda,
-                    b as *const <$type as BLASFloat>::FFIFloat,
+                    b as *const FFIFloat,
                     ldb,
-                    beta as *const <$type as BLASFloat>::FFIFloat,
-                    c as *mut <$type as BLASFloat>::FFIFloat,
+                    beta as *const FFIFloat,
+                    c as *mut FFIFloat,
                     ldc,
                 );
             }
@@ -172,7 +173,7 @@ where
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
         if !(layout_a.is_fpref() && layout_b.is_fpref()) {
-            BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string());
+            Err(BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string()))?;
         }
 
         // initialize intent(hide)
@@ -260,27 +261,10 @@ where
         let layout_b = get_layout_array2(&obj.b);
 
         if layout_a.is_fpref() && layout_b.is_fpref() {
-            // F-contiguous: C = A B
+            // F-contiguous: C = op(A) op(B)
             return obj.driver()?.run();
-        } else if layout_a.is_cpref() && layout_b.is_cpref() {
-            // C-contiguous: C' = B' A'
-            let obj = GEMM_ {
-                a: obj.b.reversed_axes(),
-                b: obj.a.reversed_axes(),
-                c: match obj.c {
-                    Some(c) => Some(c.reversed_axes()),
-                    None => None,
-                },
-                alpha: obj.alpha,
-                beta: obj.beta,
-                transa: obj.transb,
-                transb: obj.transa,
-            };
-            let c = obj.driver()?.run()?.reversed_axes();
-            return Ok(c);
         } else {
-            // neither F-contiguous nor C-contiguous
-            // copy to C contiguous if necessary, then C' = B' A'
+            // C-contiguous: C' = op(B') op(A')
             let a_cow = obj.a.as_standard_layout();
             let b_cow = obj.b.as_standard_layout();
             let a_view = a_cow.view();
@@ -288,10 +272,7 @@ where
             let obj = GEMM_ {
                 a: b_view.t(),
                 b: a_view.t(),
-                c: match obj.c {
-                    Some(c) => Some(c.reversed_axes()),
-                    None => None,
-                },
+                c: obj.c.map(|c| c.reversed_axes()),
                 alpha: obj.alpha,
                 beta: obj.beta,
                 transa: obj.transb,

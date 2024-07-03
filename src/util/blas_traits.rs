@@ -44,37 +44,85 @@ pub type c64 = Complex<f64>;
 pub trait BLASFloat:
     Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display + 'static
 {
-    type RealFloat: Num;
+    type RealFloat: BLASFloat;
     type FFIFloat;
+    fn is_complex() -> bool;
 }
 
 impl BLASFloat for f32 {
     type RealFloat = f32;
     type FFIFloat = c_float;
+    fn is_complex() -> bool {
+        false
+    }
 }
 
 impl BLASFloat for f64 {
     type RealFloat = f64;
     type FFIFloat = c_double;
+    fn is_complex() -> bool {
+        false
+    }
 }
 
 impl BLASFloat for c32 {
     type RealFloat = f32;
     type FFIFloat = c_float_complex;
+    fn is_complex() -> bool {
+        true
+    }
 }
 
 impl BLASFloat for c64 {
     type RealFloat = f64;
     type FFIFloat = c_double_complex;
+    fn is_complex() -> bool {
+        true
+    }
 }
 
 /// Trait marker for complex symmetry (whether it is symmetric or hermitian)
-pub trait BLASSymm {}
+pub trait BLASSymm {
+    type Float: BLASFloat;
+    type HermitianFloat: BLASFloat;
+    fn is_hermitian() -> bool;
+}
 
 /// Struct marker for symmetric matrix
-pub struct BLASSymmetric {}
-impl BLASSymm for BLASSymmetric {}
+pub struct BLASSymmetric<F>
+where 
+    F: BLASFloat
+{
+    _phantom: std::marker::PhantomData<F>
+}
+
+impl<F> BLASSymm for BLASSymmetric<F>
+where 
+    F: BLASFloat
+{
+    type Float = F;
+    type HermitianFloat = F;
+    fn is_hermitian() -> bool {
+        false
+    }
+
+}
 
 /// Struct marker for hermitian matrix
-pub struct BLASHermitian {}
-impl BLASSymm for BLASHermitian {}
+pub struct BLASHermitian<F>
+where 
+    F: BLASFloat
+{
+    _phantom: std::marker::PhantomData<F>
+}
+
+impl<F> BLASSymm for BLASHermitian<F>
+where 
+    F: BLASFloat,
+{
+    type Float = F;
+    type HermitianFloat = <F as BLASFloat>::RealFloat;
+    fn is_hermitian() -> bool {
+        true
+    }
+}

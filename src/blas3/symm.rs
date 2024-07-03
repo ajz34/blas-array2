@@ -1,15 +1,14 @@
-use std::marker::PhantomData;
-
 use crate::util::*;
 use blas_sys;
 use derive_builder::Builder;
 use libc::{c_char, c_int};
 use ndarray::prelude::*;
+use std::marker::PhantomData;
 
 /* #region BLAS func */
 
 pub trait SYMMFunc<F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -31,8 +30,7 @@ where
 
 macro_rules! impl_func {
     ($type: ty, $symm: ty, $func: ident) => {
-        impl SYMMFunc<$type, $symm> for BLASFunc
-        {
+        impl SYMMFunc<$type, $symm> for BLASFunc {
             unsafe fn symm(
                 side: *const c_char,
                 uplo: *const c_char,
@@ -47,18 +45,19 @@ macro_rules! impl_func {
                 c: *mut $type,
                 ldc: *const c_int,
             ) {
+                type FFIFloat = <$type as BLASFloat>::FFIFloat;
                 blas_sys::$func(
                     side,
                     uplo,
                     m,
                     n,
-                    alpha as *const <$type as BLASFloat>::FFIFloat,
-                    a as *const <$type as BLASFloat>::FFIFloat,
+                    alpha as *const FFIFloat,
+                    a as *const FFIFloat,
                     lda,
-                    b as *const <$type as BLASFloat>::FFIFloat,
+                    b as *const FFIFloat,
                     ldb,
-                    beta as *const <$type as BLASFloat>::FFIFloat,
-                    c as *mut <$type as BLASFloat>::FFIFloat,
+                    beta as *const FFIFloat,
+                    c as *mut FFIFloat,
                     ldc,
                 );
             }
@@ -66,19 +65,19 @@ macro_rules! impl_func {
     };
 }
 
-impl_func!(f32, BLASSymmetric, ssymm_);
-impl_func!(f64, BLASSymmetric, dsymm_);
-impl_func!(c32, BLASSymmetric, csymm_);
-impl_func!(c64, BLASSymmetric, zsymm_);
-impl_func!(c32, BLASHermitian, chemm_);
-impl_func!(c64, BLASHermitian, zhemm_);
+impl_func!(f32, BLASSymmetric<f32>, ssymm_);
+impl_func!(f64, BLASSymmetric<f64>, dsymm_);
+impl_func!(c32, BLASSymmetric<c32>, csymm_);
+impl_func!(c64, BLASSymmetric<c64>, zsymm_);
+impl_func!(c32, BLASHermitian<c32>, chemm_);
+impl_func!(c64, BLASHermitian<c64>, zhemm_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
 pub struct SYMM_Driver<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -98,12 +97,12 @@ where
 }
 
 impl<'a, 'b, 'c, F, S> SYMM_Driver<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
     pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    where 
+    where
         BLASFunc: SYMMFunc<F, S>,
     {
         let side = self.side;
@@ -137,9 +136,8 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-
 pub struct SYMM_<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -154,15 +152,15 @@ where
     pub beta: F,
     #[builder(setter(into), default = "BLASSide::Left")]
     pub side: BLASSide,
-    #[builder(setter(into), default = "BLASUpLo::Upper")]
+    #[builder(setter(into), default = "BLASUpLo::Lower")]
     pub uplo: BLASUpLo,
-    
+
     #[builder(private, default = "PhantomData {}")]
     _phantom: std::marker::PhantomData<S>,
 }
 
 impl<'a, 'b, 'c, F, S> SYMM_<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -179,7 +177,7 @@ where
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
         if !(layout_a.is_fpref() && layout_b.is_fpref()) {
-            BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string());
+            Err(BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string()))?;
         }
 
         // initialize intent(hide)
@@ -190,18 +188,14 @@ where
 
         // perform check
         match side {
-            BLASSide::Left => {
-                BLASError::assert(
-                    a.dim() == (m, m),
-                    format!("Incompatible dimensions, a.dim={:?}, (m,m)={:?}.", a.dim(), (m, m))
-                )?
-            },
-            BLASSide::Right => {
-                BLASError::assert(
-                    a.dim() == (n, n),
-                    format!("Incompatible dimensions, a.dim={:?}, (n,n)={:?}.", a.dim(), (n, n))
-                )?
-            },
+            BLASSide::Left => BLASError::assert(
+                a.dim() == (m, m),
+                format!("Incompatible dimensions, a.dim={:?}, (m,m)={:?}.", a.dim(), (m, m)),
+            )?,
+            BLASSide::Right => BLASError::assert(
+                a.dim() == (n, n),
+                format!("Incompatible dimensions, a.dim={:?}, (n,n)={:?}.", a.dim(), (n, n)),
+            )?,
             _ => Err(BLASError(format!("Unknown side {side:?}")))?,
         }
 
@@ -217,7 +211,7 @@ where
                 } else {
                     ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
                 }
-            }
+            },
             None => ArrayOut2::Owned(Array2::zeros((m, n).f())),
         };
         let ldc = c.view().stride_of(Axis(1));
@@ -246,18 +240,18 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASSymmetric>;
+pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASSymmetric<F>>;
 pub type SSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f32>;
 pub type DSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f64>;
 pub type CSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c32>;
 pub type ZSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c64>;
 
-pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermitian>;
+pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermitian<F>>;
 pub type CHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c32>;
 pub type ZHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c64>;
 
 impl<'a, 'b, 'c, F, S> SYMM_Builder<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYMMFunc<F, S>,
@@ -270,36 +264,10 @@ where
         let layout_b = get_layout_array2(&obj.b);
 
         if layout_a.is_fpref() && layout_b.is_fpref() {
-            // F-contiguous: C = A B
+            // F-contiguous: C = op(A) op(B)
             return obj.driver()?.run();
-        } else if layout_a.is_cpref() && layout_b.is_cpref() {
-            // C-contiguous: C' = B' A'
-            let obj = SYMM_::<'_, '_, '_, F, S> {
-                a: obj.a.reversed_axes(),
-                b: obj.b.reversed_axes(),
-                c: match obj.c {
-                    Some(c) => Some(c.reversed_axes()),
-                    None => None,
-                },
-                alpha: obj.alpha,
-                beta: obj.beta,
-                side: match obj.side {
-                    BLASSide::Left => BLASSide::Right,
-                    BLASSide::Right => BLASSide::Left,
-                    _ => Err(BLASError(format!("Unsupported BLASSide {:?}", obj.side)))?,
-                },
-                uplo: match obj.uplo {
-                    BLASUpLo::Lower => BLASUpLo::Upper,
-                    BLASUpLo::Upper => BLASUpLo::Lower,
-                    _ => Err(BLASError(format!("Unsupported BLASUpLo {:?}", obj.uplo)))?,
-                },
-                _phantom: PhantomData {},
-            };
-            let c = obj.driver()?.run()?.reversed_axes();
-            return Ok(c);
         } else {
-            // neither F-contiguous nor C-contiguous
-            // copy to C contiguous if necessary, then C' = B' A'
+            // C-contiguous: C' = op(B') op(A')
             let a_cow = obj.a.as_standard_layout();
             let b_cow = obj.b.as_standard_layout();
             let a_view = a_cow.view();
@@ -307,10 +275,7 @@ where
             let obj = SYMM_::<'_, '_, '_, F, S> {
                 a: a_view.t(),
                 b: b_view.t(),
-                c: match obj.c {
-                    Some(c) => Some(c.reversed_axes()),
-                    None => None,
-                },
+                c: obj.c.map(|c| c.reversed_axes()),
                 alpha: obj.alpha,
                 beta: obj.beta,
                 side: match obj.side {
@@ -332,4 +297,3 @@ where
 }
 
 /* #endregion */
-
