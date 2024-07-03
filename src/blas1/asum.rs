@@ -14,7 +14,7 @@ where
 macro_rules! impl_subroutine {
     ($type:ty, $func:ident) => {
 
-impl ASUMFunc<$type> for BLASFunc<$type>
+impl ASUMFunc<$type> for BLASFunc
 where
     $type: BLASFloat
 {
@@ -68,7 +68,7 @@ where
 
     pub fn run(&mut self) -> Result<<F as BLASFloat>::RealFloat, AnyError>
     where
-        BLASFunc<F>: ASUMFunc<F>
+        BLASFunc: ASUMFunc<F>
     {
         self.initialize()?;
         self.flag_runnable = false;
@@ -76,7 +76,7 @@ where
         let n = &self.n as *const c_int;
         let x = self.x.as_ptr();
         let incx = &self.incx as *const c_int;
-        Ok(BLASFunc::<F>::asum(n, x, incx))
+        Ok(BLASFunc::asum(n, x, incx))
     }
 }
 

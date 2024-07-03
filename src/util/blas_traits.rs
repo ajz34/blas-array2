@@ -1,11 +1,9 @@
 use crate::util::{AnyError, BLASError};
 
-/// BLAS functions for a given floating point type `F`.
+/// Marker struct of BLAS functions.
 ///
 /// This struct will be implemented in modules of each function.
-pub struct BLASFunc<F> {
-    _marker: std::marker::PhantomData<F>,
-}
+pub struct BLASFunc {}
 
 /// Trait for BLAS functions.
 pub trait StructBLAS {
@@ -69,3 +67,14 @@ impl BLASFloat for c64 {
     type RealFloat = f64;
     type FFIFloat = c_double_complex;
 }
+
+/// Trait marker for complex symmetry (whether it is symmetric or hermitian)
+pub trait BLASSymm {}
+
+/// Struct marker for symmetric matrix
+pub struct BLASSymmetric {}
+impl BLASSymm for BLASSymmetric {}
+
+/// Struct marker for hermitian matrix
+pub struct BLASHermitian {}
+impl BLASSymm for BLASHermitian {}
