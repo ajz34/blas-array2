@@ -146,9 +146,9 @@ where
 
     #[builder(setter(into, strip_option), default = "None")]
     pub c: Option<ArrayViewMut2<'c, F>>,
-    #[builder(default = "F::one()")]
+    #[builder(setter(into), default = "F::one()")]
     pub alpha: F,
-    #[builder(default = "F::zero()")]
+    #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
     #[builder(setter(into), default = "BLASTrans::NoTrans")]
     pub transa: BLASTrans,

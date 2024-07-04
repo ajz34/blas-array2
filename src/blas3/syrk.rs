@@ -136,9 +136,9 @@ where
 
     #[builder(setter(into, strip_option), default = "None")]
     pub c: Option<ArrayViewMut2<'c, F>>,
-    #[builder(default = "S::HermitianFloat::one()")]
+    #[builder(setter(into), default = "S::HermitianFloat::one()")]
     pub alpha: S::HermitianFloat,
-    #[builder(default = "S::HermitianFloat::zero()")]
+    #[builder(setter(into), default = "S::HermitianFloat::zero()")]
     pub beta: S::HermitianFloat,
     #[builder(setter(into), default = "BLASUpLo::Lower")]
     pub uplo: BLASUpLo,

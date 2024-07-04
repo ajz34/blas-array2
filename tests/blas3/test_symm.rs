@@ -143,7 +143,7 @@ mod test_gemm {
 
     fn naive_hemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>, side: char, uplo: char) -> Array2<F>
     where 
-        F: BLASFloat + ComplexFloat + std::convert::From<<F as num_complex::ComplexFloat>::Real>,
+        F: BLASFloat + ComplexFloat + From<<F as ComplexFloat>::Real>,
     {
         let mut a = a.into_owned();
 
