@@ -1,4 +1,3 @@
-use itertools::izip;
 use blas_array2::util::*;
 use ndarray::{prelude::*, SliceInfo, SliceInfoElem};
 use num_complex::ComplexFloat;
@@ -92,6 +91,13 @@ where
     match trans {
         BLASTrans::NoTrans => a.into_owned(),
         BLASTrans::Trans => a.t().into_owned(),
+        BLASTrans::ConjNoTrans => match F::is_complex() {
+            true => {
+                let a = a.mapv(|x| F::conj(x));
+                a.into_owned()
+            },
+            false => a.into_owned(),
+        }
         BLASTrans::ConjTrans => match F::is_complex() {
             true => {
                 let a = a.t().into_owned();

@@ -14,6 +14,38 @@ impl BLASError {
     }
 }
 
+#[macro_export]
+macro_rules! blas_assert {
+    ($cond:expr, $($arg:tt)*) => {
+        BLASError::assert($cond,
+            format!("{:}:{:}: ", file!(), line!()) + &format!($($arg)*)
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! blas_assert_eq {
+    ($a:expr, $b:expr, $($arg:tt)*) => {
+        BLASError::assert($a == $b,
+            format!("{:}:{:}: ", file!(), line!()) + &format!($($arg)*) + &format!(": {:} = {:?}, {:} = {:?}", stringify!($a), $a, stringify!($b), $b)
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! blas_raise {
+    ($($arg:tt)*) => {
+        Err(BLASError(format!("{:}:{:}: ", file!(), line!()) + &format!($($arg)*)))
+    };
+}
+
+#[macro_export]
+macro_rules! blas_invalid {
+    ($word:expr) => {
+        Err(BLASError(format!("{:}:{:}: ", file!(), line!()) + &format!("Invalid keyowrd {:} = {:?}", stringify!($word), $word)))
+    };
+}
+
 impl std::fmt::Display for BLASError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)

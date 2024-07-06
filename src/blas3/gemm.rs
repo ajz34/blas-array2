@@ -178,34 +178,27 @@ where
         let (m, k) = match transa {
             BLASTrans::NoTrans => (a.dim().0, a.dim().1),
             BLASTrans::Trans | BLASTrans::ConjTrans => (a.dim().1, a.dim().0),
-            _ => Err(BLASError(format!("Unsupported BLASTrans {transa:?}")))?,
+            _ => blas_invalid!(transa)?,
         };
         let n = match transb {
             BLASTrans::NoTrans => b.dim().1,
             BLASTrans::Trans | BLASTrans::ConjTrans => b.dim().0,
-            _ => Err(BLASError(format!("Unsupported BLASTrans {transb:?}")))?,
+            _ => blas_invalid!(transb)?,
         };
         let lda = a.stride_of(Axis(1));
         let ldb = b.stride_of(Axis(1));
 
         // perform check
         match transb {
-            BLASTrans::NoTrans => {
-                BLASError::assert(b.dim().0 == k, format!("Incompatible dimensions, b.dim[0]={:}, k={:}.", b.dim().0, k))?;
-            },
-            BLASTrans::Trans | BLASTrans::ConjTrans => {
-                BLASError::assert(b.dim().1 == k, format!("Incompatible dimensions, b.dim[1]={:}, k={:}.", b.dim().1, k))?;
-            },
-            _ => Err(BLASError(format!("Unsupported BLASTrans {transb:?}")))?,
+            BLASTrans::NoTrans => blas_assert_eq!(b.dim().0, k, "Incompatible dimensions")?,
+            BLASTrans::Trans | BLASTrans::ConjTrans => blas_assert_eq!(b.dim().1, k, "Incompatible dimensions")?,
+            _ => blas_invalid!(transb)?,
         }
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                BLASError::assert(
-                    c.dim() == (m, n),
-                    format!("Incompatible dimensions, c.dim={:?}, (m,n)={:?}.", c.dim(), (m, n)),
-                )?;
+                blas_assert_eq!(c.dim(), (m, n), "Incompatible dimensions")?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
