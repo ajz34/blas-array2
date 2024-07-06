@@ -56,11 +56,11 @@ where
 
 /* #region Sized subatrix */
 
-// static slice_7x8_contig: SliceInfo<[SliceInfoElem; 2], Dim<[usize; 2]>, Dim<[usize; 2]>> = Lazy::new(|| s![10..17, 20..28]);
-
 pub fn slice(nrow: usize, ncol: usize, srow: usize, scol: usize) -> SliceInfo<[SliceInfoElem; 2], Ix2, Ix2> {
     s![5..(5+nrow*srow);srow, 10..(10+ncol*scol);scol]
 }
+
+/* #endregion */
 
 /* #region Basic matrix operations */
 
@@ -151,6 +151,25 @@ where
         }
     }
     return a;
+}
+
+pub fn tril_assign<F>(c: &mut ArrayViewMut2<F>, a: &ArrayView2<F>, uplo: char)
+where 
+    F: BLASFloat
+{
+    if uplo == 'L' {
+        for i in 0..a.dim().0 {
+            for j in 0..=i {
+                c[[i, j]] = a[[i, j]];
+            }
+        }
+    } else if uplo == 'U' {
+        for i in 0..a.dim().0 {
+            for j in i..a.dim().1 {
+                c[[i, j]] = a[[i, j]];
+            }
+        }
+    }
 }
 
 /* #endregion */

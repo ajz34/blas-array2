@@ -178,7 +178,8 @@ where
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
-                    ArrayOut2::ToBeCloned(c, Array2::zeros((n, n).f()))
+                    let c_buffer = c.t().as_standard_layout().into_owned().reversed_axes();
+                    ArrayOut2::ToBeCloned(c, c_buffer)
                 }
             },
             None => ArrayOut2::Owned(Array2::zeros((n, n).f())),
