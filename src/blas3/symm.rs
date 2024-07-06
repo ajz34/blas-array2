@@ -186,28 +186,20 @@ where
 
         // perform check
         match side {
-            BLASSide::Left => BLASError::assert(
-                a.dim() == (m, m),
-                format!("Incompatible dimensions, a.dim={:?}, (m,m)={:?}.", a.dim(), (m, m)),
-            )?,
-            BLASSide::Right => BLASError::assert(
-                a.dim() == (n, n),
-                format!("Incompatible dimensions, a.dim={:?}, (n,n)={:?}.", a.dim(), (n, n)),
-            )?,
-            _ => Err(BLASError(format!("Unknown side {side:?}")))?,
+            BLASSide::Left => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
+            BLASSide::Right => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
+            _ => blas_invalid!(side)?,
         }
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                BLASError::assert(
-                    c.dim() == (m, n),
-                    format!("Incompatible dimensions, c.dim={:?}, (m,n)={:?}.", c.dim(), (m, n)),
-                )?;
+                blas_assert_eq!(c.dim(), (m, n), "Incompatible dimensions")?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
-                    ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
+                    let c_buffer = c.t().as_standard_layout().into_owned().reversed_axes();
+                    ArrayOut2::ToBeCloned(c, c_buffer)
                 }
             },
             None => ArrayOut2::Owned(Array2::zeros((m, n).f())),
@@ -279,12 +271,12 @@ where
                 side: match obj.side {
                     BLASSide::Left => BLASSide::Right,
                     BLASSide::Right => BLASSide::Left,
-                    _ => Err(BLASError(format!("Unsupported BLASSide {:?}", obj.side)))?,
+                    _ => blas_invalid!(obj.side)?,
                 },
                 uplo: match obj.uplo {
                     BLASUpLo::Lower => BLASUpLo::Upper,
                     BLASUpLo::Upper => BLASUpLo::Lower,
-                    _ => Err(BLASError(format!("Unsupported BLASUpLo {:?}", obj.uplo)))?,
+                    _ => blas_invalid!(obj.uplo)?,
                 },
                 _phantom: PhantomData {},
             };

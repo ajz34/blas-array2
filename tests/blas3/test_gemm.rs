@@ -38,7 +38,7 @@ mod valid_owned {
             let err_div = err / acc;
             assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
         } else {
-            panic!("GEMM failed");
+            panic!("Failed");
         }
     }
 
@@ -81,7 +81,7 @@ mod valid_owned {
                     let err_div = err / acc;
                     assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
                 } else {
-                    panic!("GEMM failed");
+                    panic!("Failed");
                 }
             }
         };
@@ -153,7 +153,7 @@ mod valid_view {
             let err_div = err / acc;
             assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
         } else {
-            panic!("GEMM failed");
+            panic!("Failed");
         }
     }
 
@@ -193,8 +193,8 @@ mod valid_view {
 
                 let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.into());
                 let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.into());
-                let c_assign = &(alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc));
-                c_naive.slice_mut(c_slc).assign(c_assign);
+                let c_assign = alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc);
+                c_naive.slice_mut(c_slc).assign(&c_assign);
 
                 if let ArrayOut2::ViewMut(_) = c_out {
                     let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
@@ -202,7 +202,7 @@ mod valid_view {
                     let err_div = err / acc;
                     assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
                 } else {
-                    panic!("GEMM failed");
+                    panic!("Failed");
                 }
             }
         };

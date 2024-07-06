@@ -109,7 +109,7 @@ where
     }
 }
 
-pub fn symmetrize<F>(a: &ArrayView2<F>, uplo: char)
+pub fn symmetrize<F>(a: &ArrayView2<F>, uplo: char) -> Array2<F>
 where 
     F: BLASFloat
 {
@@ -127,9 +127,10 @@ where
             }
         }
     }
+    return a;
 }
 
-pub fn hermitianize<F>(a: &ArrayView2<F>, uplo: char)
+pub fn hermitianize<F>(a: &ArrayView2<F>, uplo: char) -> Array2<F>
 where 
     F: BLASFloat + ComplexFloat + From<<F as ComplexFloat>::Real>
 {
@@ -149,6 +150,7 @@ where
             }
         }
     }
+    return a;
 }
 
 /* #endregion */

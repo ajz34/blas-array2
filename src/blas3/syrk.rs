@@ -167,17 +167,14 @@ where
         let (n, k) = match trans {
             BLASTrans::NoTrans => (a.dim().0, a.dim().1),
             BLASTrans::Trans | BLASTrans::ConjTrans => (a.dim().1, a.dim().0),
-            _ => Err(BLASError(format!("Unknown trans {trans:?}")))?,
+            _ => blas_invalid!(trans)?,
         };
         let lda = a.stride_of(Axis(1));
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                BLASError::assert(
-                    c.dim() == (n, n),
-                    format!("Incompatible dimensions, c.dim={:?}, (n,n)={:?}.", c.dim(), (n, n)),
-                )?;
+                blas_assert_eq!(c.dim(), (n, n), "Incompatible dimensions")?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
@@ -246,7 +243,7 @@ where
                 uplo: match obj.uplo {
                     BLASUpLo::Lower => BLASUpLo::Upper,
                     BLASUpLo::Upper => BLASUpLo::Lower,
-                    _ => Err(BLASError(format!("Unsupported BLASUpLo {:?}", obj.uplo)))?,
+                    _ => blas_invalid!(obj.uplo)?,
                 },
                 trans: match F::is_complex() {
                     false => match obj.trans {
@@ -254,20 +251,20 @@ where
                         BLASTrans::NoTrans => BLASTrans::Trans,
                         BLASTrans::Trans => BLASTrans::NoTrans,
                         BLASTrans::ConjTrans => BLASTrans::NoTrans,
-                        _ => Err(BLASError(format!("Unsupported BLASTrans {:?}", obj.trans)))?,
+                        _ => blas_invalid!(obj.trans)?,
                     },
                     true => match S::is_hermitian() {
                         false => match obj.trans {
                             // csyrk, zsyrk: NT accepted
                             BLASTrans::NoTrans => BLASTrans::Trans,
                             BLASTrans::Trans => BLASTrans::NoTrans,
-                            _ => Err(BLASError(format!("Unsupported BLASTrans {:?}", obj.trans)))?,
+                            _ => blas_invalid!(obj.trans)?,
                         },
                         true => match obj.trans {
                             // cherk, zherk: NC accepted
                             BLASTrans::NoTrans => BLASTrans::ConjTrans,
                             BLASTrans::ConjTrans => BLASTrans::NoTrans,
-                            _ => Err(BLASError(format!("Unsupported BLASTrans {:?}", obj.trans)))?,
+                            _ => blas_invalid!(obj.trans)?,
                         }
                     },
                 },

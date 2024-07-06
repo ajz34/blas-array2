@@ -1,187 +1,264 @@
+use crate::util::*;
+use approx::*;
+use blas_array2::blas3::symm::{SYMM, HEMM};
+use blas_array2::util::*;
+use num_complex::*;
+
 #[cfg(test)]
-mod test_gemm {
-    use blas_array2::blas3::symm::*;
-    use blas_array2::util::*;
-    use ndarray::prelude::*;
-    use num_complex::*;
+mod valid_owned {
+    use super::*;
 
     #[test]
-    fn lu_f_contiguous() {
-        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let b = Array2::from_shape_vec((12, 10).f(), arr.to_vec()).unwrap();
+    fn test_example() {
+        type RT = <c32 as BLASFloat>::RealFloat;
+        let alpha = c32::rand();
+        let beta = c32::rand();
+        let a_raw = random_matrix(100, 100, 'R'.into());
+        let b_raw = random_matrix(100, 100, 'R'.into());
+        let a_slc = slice(7, 7, 1, 1);
+        let b_slc = slice(7, 9, 1, 1);
+        let side = 'L';
+        let uplo = 'U';
 
-        let a = a.slice(s![1..6, 3..8]);
-        let b = b.slice(s![2..7, 0..9]);
-
-        // output not defined
-        let c = CSYMM::default().a(a.view()).b(b.view()).side('L').uplo('U').run().unwrap().into_owned();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'U');
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
+        let c_out = SYMM::default()
+            .a(a_raw.slice(a_slc))
+            .b(b_raw.slice(b_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .side(side)
+            .uplo(uplo)
+            .run()
+            .unwrap();
         
-        // output defined, c-contiguous
-        let mut c = Array2::zeros((20, 40));
-        let c_view = c.slice_mut(s![6..11, 23..32]);
-        CSYMM::default().a(a.view()).b(b.view()).c(c_view).side('L').uplo('U').run().unwrap();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'U');
-        let c_view = c.slice(s![6..11, 23..32]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-        
-        // output defined, arbitary slice
-        let mut c = Array2::zeros((20, 40));
-        let c_view = c.slice_mut(s![6..16;2, 5..32;3]);
-        CSYMM::default().a(a.view()).b(b.view()).c(c_view).side('L').uplo('U').run().unwrap();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'U');
-        let c_view = c.slice(s![6..16;2, 5..32;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn ll_c_contiguous() {
-        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let a = Array2::from_shape_vec((10, 12), arr.to_vec()).unwrap();
-        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-
-        let a = a.slice(s![1..6, 3..8]);
-        let b = b.slice(s![2..7, 0..9]);
-
-        // output not defined
-        let c = CSYMM::default().a(a.view()).b(b.view()).side('L').uplo('L').run().unwrap().into_owned();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'L');
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-        
-        // output defined, f-contiguous
-        let mut c = Array2::zeros((20, 40).f());
-        let c_view = c.slice_mut(s![6..11, 23..32]);
-        CSYMM::default().a(a.view()).b(b.view()).c(c_view).side('L').uplo('L').run().unwrap();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'L');
-        let c_view = c.slice(s![6..11, 23..32]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-        
-        // output defined, arbitary slice
-        let mut c = Array2::zeros((20, 40));
-        let c_view = c.slice_mut(s![6..16;2, 5..32;3]);
-        CSYMM::default().a(a.view()).b(b.view()).c(c_view).side('L').uplo('L').run().unwrap();
-        let c_naive = naive_symm(&a.view(), &b.view(), 'L', 'L');
-        let c_view = c.slice(s![6..16;2, 5..32;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn rl_hybrid_contiguous_hemm() {
-        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-
-        let a = a.slice(s![1..6, 3..8]);
-        let b = b.slice(s![0..9, 2..7]);
-
-        // output not defined
-        let c = CHEMM::default().a(a.view()).b(b.view()).side('R').uplo('L').run().unwrap().into_owned();
-        let c_naive = naive_hemm(&a.view(), &b.view(), 'R', 'L');
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-        
-        // output defined, arbitary slice
-        let mut c = Array2::zeros((40, 20));
-        let c_view = c.slice_mut(s![5..32;3, 6..16;2]);
-        CHEMM::default().a(a.view()).b(b.view()).c(c_view).side('R').uplo('L').run().unwrap();
-        let c_naive = naive_hemm(&a.view(), &b.view(), 'R', 'L');
-        let c_view = c.slice(s![5..32;3, 6..16;2]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    fn naive_symm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>, side: char, uplo: char) -> Array2<F>
-    where 
-        F: BLASFloat,
-    {
-        let mut a = a.into_owned();
-
-        if uplo == 'L' {
-            for i in 0..a.dim().0 {
-                for j in 0..i {
-                    a[[j, i]] = a[[i, j]];
-                }
-            }
-        } else if uplo == 'U' {
-            for i in 0..a.dim().0 {
-                for j in i+1..a.dim().1 {
-                    a[[j, i]] = a[[i, j]];
-                }
-            }
-        }
-
-        let (m, n) = if side == 'L' {
-            (a.shape()[0], b.shape()[1])
-        } else {
-            (b.shape()[0], a.shape()[1])
+        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
+        let b_naive = &b_raw.slice(b_slc).into_owned();
+        let c_naive = match side.into() {
+            BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()),
+            BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()),
+            _ => panic!("Invalid"),
         };
-        let mut c = Array2::zeros((m, n));
-        for i in 0..m {
-            for j in 0..n {
-                let mut sum = F::zero();
-                for k in 0..a.shape()[1] {
-                    if side == 'L' {
-                        sum += a[[i, k]] * b[[k, j]];
-                    } else if side == 'R' {
-                        sum += b[[i, k]] * a[[k, j]];
-                    }
-                }
-                c[[i, j]] = sum;
-            }
-        }
-        c
-    }
 
-    fn naive_hemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>, side: char, uplo: char) -> Array2<F>
-    where 
-        F: BLASFloat + ComplexFloat + From<<F as ComplexFloat>::Real>,
-    {
-        let mut a = a.into_owned();
-
-        if uplo == 'L' {
-            for i in 0..a.dim().0 {
-                a[[i, i]] = a[[i, i]].re().into();
-                for j in 0..i {
-                    a[[j, i]] = a[[i, j]].conj();
-                }
-            }
-        } else if uplo == 'U' {
-            for i in 0..a.dim().0 {
-                a[[i, i]] = a[[i, i]].re().into();
-                for j in i+1..a.dim().1 {
-                    a[[j, i]] = a[[i, j]].conj();
-                }
-            }
-        }
-
-        let (m, n) = if side == 'L' {
-            (a.shape()[0], b.shape()[1])
+        if let ArrayOut2::Owned(c_out) = c_out {
+            let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
+            let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
+            let err_div = err / acc;
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
         } else {
-            (b.shape()[0], a.shape()[1])
-        };
-        let mut c = Array2::zeros((m, n));
-        for i in 0..m {
-            for j in 0..n {
-                let mut sum = F::zero();
-                for k in 0..a.shape()[1] {
-                    if side == 'L' {
-                        sum += a[[i, k]] * b[[k, j]];
-                    } else if side == 'R' {
-                        sum += b[[i, k]] * a[[k, j]];
-                    }
-                }
-                c[[i, j]] = sum;
-            }
+            panic!("Failed");
         }
-        c
     }
+
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F: ty,
+            ($($a_slc: expr),+), ($($b_slc: expr),+),
+            $a_layout: expr, $b_layout: expr,
+            $side: expr, $uplo: expr,
+            $blas: ident, $symm: ident
+        ) => {
+            
+            #[test]
+            #[$attr]
+            fn $test_name() {
+                type RT = <$F as BLASFloat>::RealFloat;
+                let alpha = <$F>::rand();
+                let beta = <$F>::rand();
+                let a_raw = random_matrix(100, 100, $a_layout.into());
+                let b_raw = random_matrix(100, 100, $b_layout.into());
+                let a_slc = slice($($a_slc),+);
+                let b_slc = slice($($b_slc),+);
+                let side = $side;
+                let uplo = $uplo;
+
+                let c_out = $blas::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .alpha(alpha)
+                    .beta(beta)
+                    .side(side)
+                    .uplo(uplo)
+                    .run()
+                    .unwrap();
+                
+                let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
+                let b_naive = &b_raw.slice(b_slc).into_owned();
+                let c_naive = match side.into() {
+                    BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()),
+                    BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()),
+                    _ => panic!("Invalid"),
+                };
+
+                if let ArrayOut2::Owned(c_out) = c_out {
+                    let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
+                    let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+                } else {
+                    panic!("Failed");
+                }
+            }
+        };
+    }
+
+    // successful tests
+    test_macro!(test_000: inline, f32, (7, 7, 1, 1), (7, 9, 1, 1), 'R', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_001: inline, f32, (7, 7, 1, 1), (7, 9, 1, 1), 'R', 'C', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_002: inline, f32, (9, 9, 3, 3), (7, 9, 3, 3), 'C', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_003: inline, f32, (9, 9, 3, 3), (7, 9, 3, 3), 'C', 'C', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_004: inline, f64, (7, 7, 1, 1), (7, 9, 3, 3), 'C', 'R', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_005: inline, f64, (7, 7, 3, 3), (7, 9, 1, 1), 'C', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_006: inline, f64, (9, 9, 1, 3), (7, 9, 1, 3), 'R', 'C', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_007: inline, f64, (9, 9, 3, 1), (7, 9, 3, 1), 'R', 'C', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_008: inline, c32, (7, 7, 1, 1), (7, 9, 3, 3), 'C', 'C', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_009: inline, c32, (7, 7, 3, 3), (7, 9, 1, 3), 'R', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_010: inline, c32, (9, 9, 1, 3), (7, 9, 3, 1), 'R', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_011: inline, c32, (9, 9, 3, 1), (7, 9, 1, 1), 'C', 'C', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_012: inline, c64, (7, 7, 1, 3), (7, 9, 3, 1), 'C', 'C', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_013: inline, c64, (7, 7, 3, 1), (7, 9, 3, 3), 'R', 'C', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_014: inline, c64, (9, 9, 1, 3), (7, 9, 1, 3), 'R', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_015: inline, c64, (9, 9, 3, 1), (7, 9, 1, 1), 'C', 'R', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_016: inline, c32, (7, 7, 1, 3), (7, 9, 1, 3), 'C', 'C', 'L', 'U', HEMM, hermitianize);
+    test_macro!(test_017: inline, c32, (7, 7, 3, 3), (7, 9, 3, 1), 'R', 'R', 'L', 'U', HEMM, hermitianize);
+    test_macro!(test_018: inline, c32, (9, 9, 1, 1), (7, 9, 3, 1), 'C', 'R', 'R', 'L', HEMM, hermitianize);
+    test_macro!(test_019: inline, c32, (9, 9, 3, 1), (7, 9, 1, 3), 'R', 'C', 'R', 'L', HEMM, hermitianize);
+    test_macro!(test_020: inline, c64, (7, 7, 3, 1), (7, 9, 1, 3), 'C', 'R', 'L', 'U', HEMM, hermitianize);
+    test_macro!(test_021: inline, c64, (7, 7, 3, 3), (7, 9, 3, 1), 'R', 'C', 'L', 'L', HEMM, hermitianize);
+    test_macro!(test_022: inline, c64, (9, 9, 1, 1), (7, 9, 3, 3), 'R', 'R', 'R', 'L', HEMM, hermitianize);
+    test_macro!(test_023: inline, c64, (9, 9, 1, 3), (7, 9, 1, 1), 'C', 'C', 'R', 'U', HEMM, hermitianize);
+}
+
+#[cfg(test)]
+mod valid_view {
+    use super::*;
+
+    #[test]
+    fn test_example() {
+        type RT = <c32 as BLASFloat>::RealFloat;
+        let alpha = c32::rand();
+        let beta = c32::rand();
+        let a_raw = random_matrix(100, 100, 'R'.into());
+        let b_raw = random_matrix(100, 100, 'R'.into());
+        let mut c_raw = random_matrix(100, 100, 'R'.into());
+        let a_slc = slice(7, 7, 1, 1);
+        let b_slc = slice(7, 9, 1, 1);
+        let c_slc = slice(7, 9, 1, 1);
+        let side = 'L';
+        let uplo = 'U';
+
+        let mut c_naive = c_raw.clone();
+
+        let c_out = SYMM::default()
+            .a(a_raw.slice(a_slc))
+            .b(b_raw.slice(b_slc))
+            .c(c_raw.slice_mut(c_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .side(side)
+            .uplo(uplo)
+            .run()
+            .unwrap();
+        
+        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
+        let b_naive = &b_raw.slice(b_slc).into_owned();
+        let c_assign = match side.into() {
+            BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
+            BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
+            _ => panic!("Invalid"),
+        };
+        c_naive.slice_mut(c_slc).assign(&c_assign);
+
+        if let ArrayOut2::ViewMut(_) = c_out {
+            let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
+            let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
+            let err_div = err / acc;
+            assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+        } else {
+            panic!("Failed");
+        }
+    }
+
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F: ty,
+            ($($a_slc: expr),+), ($($b_slc: expr),+), ($($c_slc: expr),+),
+            $a_layout: expr, $b_layout: expr, $c_layout: expr,
+            $side: expr, $uplo: expr,
+            $blas: ident, $symm: ident
+        ) => {    
+            #[test]
+            #[$attr]
+            fn $test_name() {
+                type RT = <$F as BLASFloat>::RealFloat;
+                let alpha = <$F>::rand();
+                let beta = <$F>::rand();
+                let a_raw = random_matrix(100, 100, $a_layout.into());
+                let b_raw = random_matrix(100, 100, $b_layout.into());
+                let mut c_raw = random_matrix(100, 100, $c_layout.into());
+                let a_slc = slice($($a_slc),+);
+                let b_slc = slice($($b_slc),+);
+                let c_slc = slice($($c_slc),+);
+                let side = $side;
+                let uplo = $uplo;
+
+                let mut c_naive = c_raw.clone();
+
+                let c_out = $blas::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .c(c_raw.slice_mut(c_slc))
+                    .alpha(alpha)
+                    .beta(beta)
+                    .side(side)
+                    .uplo(uplo)
+                    .run()
+                    .unwrap();
+                
+                let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
+                let b_naive = &b_raw.slice(b_slc).into_owned();
+                let c_assign = match side.into() {
+                    BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
+                    BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
+                    _ => panic!("Invalid"),
+                };
+                c_naive.slice_mut(c_slc).assign(&c_assign);
+
+                if let ArrayOut2::ViewMut(_) = c_out {
+                    let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
+                    let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+                } else {
+                    panic!("Failed");
+                }
+            }
+        };
+    }
+    
+    // successful tests
+    test_macro!(test_000: inline, f32, (7, 7, 1, 1), (7, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_001: inline, f32, (7, 7, 1, 3), (7, 9, 3, 3), (7, 9, 3, 3), 'C', 'C', 'C', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_002: inline, f32, (9, 9, 3, 1), (7, 9, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_003: inline, f32, (9, 9, 3, 3), (7, 9, 3, 3), (7, 9, 3, 3), 'R', 'R', 'R', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_004: inline, f64, (7, 7, 1, 1), (7, 9, 1, 1), (7, 9, 3, 3), 'R', 'R', 'C', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_005: inline, f64, (7, 7, 1, 3), (7, 9, 3, 3), (7, 9, 1, 1), 'C', 'C', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_006: inline, f64, (9, 9, 3, 1), (7, 9, 1, 3), (7, 9, 1, 3), 'R', 'C', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_007: inline, f64, (9, 9, 3, 3), (7, 9, 3, 1), (7, 9, 3, 1), 'C', 'R', 'C', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_008: inline, c32, (7, 7, 1, 1), (7, 9, 1, 3), (7, 9, 3, 3), 'C', 'R', 'C', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_009: inline, c32, (7, 7, 1, 3), (7, 9, 3, 1), (7, 9, 1, 1), 'R', 'C', 'R', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_010: inline, c32, (9, 9, 3, 1), (7, 9, 3, 1), (7, 9, 3, 3), 'C', 'C', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_011: inline, c32, (9, 9, 3, 3), (7, 9, 1, 3), (7, 9, 1, 1), 'R', 'R', 'C', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_012: inline, c64, (7, 7, 3, 1), (7, 9, 1, 3), (7, 9, 3, 1), 'C', 'C', 'R', 'L', 'L', SYMM, symmetrize);
+    test_macro!(test_013: inline, c64, (7, 7, 3, 3), (7, 9, 3, 1), (7, 9, 1, 3), 'R', 'R', 'C', 'L', 'U', SYMM, symmetrize);
+    test_macro!(test_014: inline, c64, (9, 9, 1, 1), (7, 9, 3, 3), (7, 9, 1, 3), 'R', 'C', 'C', 'R', 'L', SYMM, symmetrize);
+    test_macro!(test_015: inline, c64, (9, 9, 1, 3), (7, 9, 1, 1), (7, 9, 3, 1), 'C', 'R', 'R', 'R', 'U', SYMM, symmetrize);
+    test_macro!(test_016: inline, c32, (7, 7, 3, 1), (7, 9, 3, 1), (7, 9, 1, 3), 'C', 'R', 'R', 'L', 'L', HEMM, hermitianize);
+    test_macro!(test_017: inline, c32, (7, 7, 3, 3), (7, 9, 1, 3), (7, 9, 3, 1), 'R', 'C', 'C', 'L', 'U', HEMM, hermitianize);
+    test_macro!(test_018: inline, c32, (9, 9, 1, 1), (7, 9, 3, 1), (7, 9, 3, 1), 'R', 'C', 'C', 'R', 'L', HEMM, hermitianize);
+    test_macro!(test_019: inline, c32, (9, 9, 1, 3), (7, 9, 1, 3), (7, 9, 1, 3), 'C', 'R', 'R', 'R', 'U', HEMM, hermitianize);
+    test_macro!(test_020: inline, c64, (7, 7, 3, 1), (7, 9, 3, 3), (7, 9, 1, 1), 'C', 'R', 'C', 'L', 'U', HEMM, hermitianize);
+    test_macro!(test_021: inline, c64, (7, 7, 3, 3), (7, 9, 1, 1), (7, 9, 3, 3), 'R', 'C', 'R', 'L', 'L', HEMM, hermitianize);
+    test_macro!(test_022: inline, c64, (9, 9, 1, 1), (7, 9, 3, 3), (7, 9, 3, 1), 'R', 'R', 'R', 'R', 'U', HEMM, hermitianize);
+    test_macro!(test_023: inline, c64, (9, 9, 1, 3), (7, 9, 1, 1), (7, 9, 1, 3), 'C', 'C', 'C', 'R', 'L', HEMM, hermitianize);
 }
