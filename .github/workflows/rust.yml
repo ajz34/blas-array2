@@ -19,7 +19,7 @@ jobs:
         sudo apt install -y libopenblas-dev
     - name: Install tarpaulin
       run: |
-        cargo binstall cargo-tarpaulin
+        cargo binstall --no-confirm cargo-tarpaulin
     - name: Coverage
       env:
         RUSTFLAGS: -lopenblas
