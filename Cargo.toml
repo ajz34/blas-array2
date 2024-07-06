@@ -11,3 +11,8 @@ libc = { version = "0.2" }
 blas-sys = { version = "0.7" }
 ndarray = { version = "0.15.6" }
 num-complex = { version = "0.4" }
+
+[dev-dependencies]
+rand = { version = "0.8" }
+itertools = { version = "0.13" }
+approx = { version = "0.5" }

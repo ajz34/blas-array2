@@ -176,9 +176,7 @@ where
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
-        if !(layout_a.is_fpref() && layout_b.is_fpref()) {
-            Err(BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string()))?;
-        }
+        assert!(layout_a.is_fpref() && layout_b.is_fpref());
 
         // initialize intent(hide)
         let m = b.dim().0;

@@ -161,9 +161,7 @@ where
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
-        if !layout_a.is_fpref() {
-            Err(BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string()))?;
-        }
+        assert!(layout_a.is_fpref());
 
         // initialize intent(hide)
         let (n, k) = match trans {

@@ -47,37 +47,58 @@ pub trait BLASFloat:
     type RealFloat: BLASFloat;
     type FFIFloat;
     fn is_complex() -> bool;
+    fn conj(x: Self) -> Self;
 }
 
 impl BLASFloat for f32 {
     type RealFloat = f32;
     type FFIFloat = c_float;
+    #[inline]
     fn is_complex() -> bool {
         false
+    }
+    #[inline]
+    fn conj(x: Self) -> Self {
+        x
     }
 }
 
 impl BLASFloat for f64 {
     type RealFloat = f64;
     type FFIFloat = c_double;
+    #[inline]
     fn is_complex() -> bool {
         false
+    }
+    #[inline]
+    fn conj(x: Self) -> Self {
+        x
     }
 }
 
 impl BLASFloat for c32 {
     type RealFloat = f32;
     type FFIFloat = c_float_complex;
+    #[inline]
     fn is_complex() -> bool {
         true
+    }
+    #[inline]
+    fn conj(x: Self) -> Self {
+        x.conj()
     }
 }
 
 impl BLASFloat for c64 {
     type RealFloat = f64;
     type FFIFloat = c_double_complex;
+    #[inline]
     fn is_complex() -> bool {
         true
+    }
+    #[inline]
+    fn conj(x: Self) -> Self {
+        x.conj()
     }
 }
 
@@ -102,6 +123,7 @@ where
 {
     type Float = F;
     type HermitianFloat = F;
+    #[inline]
     fn is_hermitian() -> bool {
         false
     }
@@ -122,6 +144,7 @@ where
 {
     type Float = F;
     type HermitianFloat = <F as BLASFloat>::RealFloat;
+    #[inline]
     fn is_hermitian() -> bool {
         true
     }

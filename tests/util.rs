@@ -1,8 +1,71 @@
-use blas_array2::util::BLASFloat;
-use ndarray::prelude::*;
+use itertools::izip;
+use blas_array2::util::*;
+use ndarray::{prelude::*, SliceInfo, SliceInfoElem};
 use num_complex::ComplexFloat;
+use rand::{thread_rng, Rng};
 
-pub fn gemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>)
+/* #region Random matrix */
+
+pub trait RandomNumber<F> {
+    fn rand() -> F;
+}
+
+impl RandomNumber<f32> for f32 {
+    fn rand() -> f32 {
+        thread_rng().gen()
+    }
+}
+
+impl RandomNumber<f64> for f64 {
+    fn rand() -> f64 {
+        thread_rng().gen()
+    }
+}
+
+impl RandomNumber<c32> for c32 {
+    fn rand() -> c32 {
+        let re = thread_rng().gen();
+        let im = thread_rng().gen();
+        c32::new(re, im)
+    }
+}
+
+impl RandomNumber<c64> for c64 {
+    fn rand() -> c64 {
+        let re = thread_rng().gen();
+        let im = thread_rng().gen();
+        c64::new(re, im)
+    }
+}
+
+pub fn random_matrix<F>(row: usize, col: usize, layout: BLASLayout) -> Array2<F>
+where
+    F: RandomNumber<F> + BLASFloat
+{
+    let mut matrix = match layout {
+        BLASLayout::RowMajor => Array2::zeros((row, col)),
+        BLASLayout::ColMajor => Array2::zeros((row, col).f()),
+        _ => panic!("Invalid layout"),
+    };
+    for x in matrix.iter_mut() {
+        *x = F::rand();
+    }
+    return matrix;
+}
+
+/* #endregion */
+
+/* #region Sized subatrix */
+
+// static slice_7x8_contig: SliceInfo<[SliceInfoElem; 2], Dim<[usize; 2]>, Dim<[usize; 2]>> = Lazy::new(|| s![10..17, 20..28]);
+
+pub fn slice(nrow: usize, ncol: usize, srow: usize, scol: usize) -> SliceInfo<[SliceInfoElem; 2], Ix2, Ix2> {
+    s![5..(5+nrow*srow);srow, 10..(10+ncol*scol);scol]
+}
+
+/* #region Basic matrix operations */
+
+pub fn gemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>) -> Array2<F>
 where 
     F: BLASFloat
 {
@@ -18,6 +81,25 @@ where
             }
             c[[i, j]] = sum;
         }
+    }
+    return c;
+}
+
+pub fn transpose<F>(a: &ArrayView2<F>, trans: BLASTrans) -> Array2<F>
+where 
+    F: BLASFloat
+{
+    match trans {
+        BLASTrans::NoTrans => a.into_owned(),
+        BLASTrans::Trans => a.t().into_owned(),
+        BLASTrans::ConjTrans => match F::is_complex() {
+            true => {
+                let a = a.t().into_owned();
+                a.mapv(|x| F::conj(x))
+            },
+            false => a.t().into_owned(),
+        }
+        _ => panic!("Invalid BLASTrans"),
     }
 }
 
@@ -62,3 +144,5 @@ where
         }
     }
 }
+
+/* #endregion */

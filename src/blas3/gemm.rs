@@ -172,9 +172,7 @@ where
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
-        if !(layout_a.is_fpref() && layout_b.is_fpref()) {
-            Err(BLASError("Inner driver should be fortran-only. This is probably error of library author.".to_string()))?;
-        }
+        assert!(layout_a.is_fpref() && layout_b.is_fpref());
 
         // initialize intent(hide)
         let (m, k) = match transa {
@@ -211,7 +209,8 @@ where
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
-                    ArrayOut2::ToBeCloned(c, Array2::zeros((m, n).f()))
+                    let c_buffer = c.t().as_standard_layout().into_owned().reversed_axes();
+                    ArrayOut2::ToBeCloned(c, c_buffer)
                 }
             },
             None => ArrayOut2::Owned(Array2::zeros((m, n).f())),

@@ -1,196 +1,157 @@
+use crate::util::*;
+use approx::*;
+use blas_array2::blas3::gemm::GEMM;
+use blas_array2::util::*;
+use num_complex::*;
+
 #[cfg(test)]
-mod test_gemm {
-    use blas_array2::blas3::gemm::GEMM;
-    use blas_array2::util::*;
-    use ndarray::prelude::*;
-    use num_complex::*;
+mod valid_owned {
+    use super::*;
 
-    #[test]
-    fn nn_f_contiguous() {
-        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
-        let b = Array2::from_shape_vec((12, 10).f(), arr.to_vec()).unwrap();
-        let a = a.slice(s![1..4, 5..10]);
-        let b = b.slice(s![3..8, 4..8]);
-        let arr = Array1::<f64>::zeros(120);
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F:ty,
+            ($($a_slc: expr),+), ($($b_slc: expr),+),
+            $a_layout: expr, $b_layout: expr,
+            $a_trans: expr, $b_trans: expr
+        ) => {
+            #[test]
+            #[$attr]
+            pub fn $test_name()
+            {
+                type RT = <$F as BLASFloat>::RealFloat;
+                let alpha = <$F>::rand();
+                let beta = <$F>::rand();
+                let a_raw = random_matrix(100, 100, $a_layout.into());
+                let b_raw = random_matrix(100, 100, $b_layout.into());
+                let a_slc = slice($($a_slc),+);
+                let b_slc = slice($($b_slc),+);
 
-        // output not defined
-        let c = GEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
+                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.into());
+                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.into());
+                let c_naive = alpha * gemm(&a_naive.view(), &b_naive.view());
 
-        // output defined, f-contiguous
-        let mut c = Array2::from_shape_vec((6, 20).f(), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
+                let c_out = GEMM::<$F>::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .transa($a_trans)
+                    .transb($b_trans)
+                    .alpha(alpha)
+                    .beta(beta)
+                    .run().unwrap();
 
-        // output defined, c-contiguous
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, arbitary slice
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![0..6;2, 4..16;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn nn_c_contiguous() {
-        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
-        let a = Array2::from_shape_vec((10, 12), arr.to_vec()).unwrap();
-        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![1..4, 5..10]);
-        let b = b.slice(s![3..8, 4..8]);
-        let arr = Array1::<f64>::zeros(120);
-
-        // output not defined
-        let c = GEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, f-contiguous
-        let mut c = Array2::from_shape_vec((6, 20).f(), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, c-contiguous
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, arbitary slice
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).run().unwrap();
-        let c_view = c.slice(s![0..6;2, 4..16;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn nt_c_contiguous() {
-        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
-        let a = Array2::from_shape_vec((10, 12), arr.to_vec()).unwrap();
-        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![1..4, 5..10]);
-        let b = b.slice(s![4..8, 3..8]);
-        let arr = Array1::<f64>::zeros(120);
-
-        // output not defined
-        let c = GEMM::default().a(a.view()).b(b.view()).transb('T').run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view().t());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, f-contiguous
-        let mut c = Array2::from_shape_vec((6, 20).f(), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, c-contiguous
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![2..5, 12..16]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
-        let c_view = c.slice(s![2..5, 12..16]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, arbitary slice
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).transb('T').run().unwrap();
-        let c_view = c.slice(s![0..6;2, 4..16;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn tt_hybrid_contiguous() {
-        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![5..10, 1..4]);
-        let b = b.slice(s![4..8, 3..8]);
-        let arr = Array1::<f64>::zeros(120);
-
-        // output not defined
-        let c =
-            GEMM::default().a(a.view()).b(b.view()).transa(BLASTrans::Trans).transb('T').run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view().t(), &b.view().t());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-
-        // output defined, arbitary slice
-        let mut c = Array2::from_shape_vec((6, 20), arr.to_vec()).unwrap();
-        let c_view = c.slice_mut(s![0..6;2, 4..16;3]);
-        GEMM::default().a(a.view()).b(b.view()).c(c_view).transa(BLASTrans::Trans).transb('T').run().unwrap();
-        let c_view = c.slice(s![0..6;2, 4..16;3]);
-        assert_eq!((&c_naive - &c_view).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    #[test]
-    fn various_float_types() {
-        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![0..6, 0..8]);
-        let b = b.slice(s![0..8, 0..9]);
-        let c = GEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-
-        let arr = Array1::<f32>::linspace(1.0, 120.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f32>::linspace(2.0, 240.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c32::i() * x);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![0..6, 0..8]);
-        let b = b.slice(s![0..8, 0..9]);
-        let c = GEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-
-        let arr = Array1::<f64>::linspace(1.0, 120.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c64::i() * x);
-        let a = Array2::from_shape_vec((10, 12).f(), arr.to_vec()).unwrap();
-        let arr = Array1::<f64>::linspace(2.0, 240.0, 120);
-        let arr = arr.mapv(|x| x + 2.0 * c64::i() * x);
-        let b = Array2::from_shape_vec((12, 10), arr.to_vec()).unwrap();
-        let a = a.slice(s![0..6, 0..8]);
-        let b = b.slice(s![0..8, 0..9]);
-        let c = GEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
-        let c_naive = naive_gemm(&a.view(), &b.view());
-        assert_eq!((&c_naive - &c).mapv(|x| x.abs()).sum(), 0.0);
-    }
-
-    fn naive_gemm<F>(a: &ArrayView2<F>, b: &ArrayView2<F>) -> Array2<F>
-    where
-        F: BLASFloat,
-    {
-        let (m, k) = a.dim();
-        let (_, n) = b.dim();
-        let mut c = Array2::zeros((m, n).f());
-        for i in 0..m {
-            for j in 0..n {
-                for l in 0..k {
-                    c[[i, j]] += a[[i, l]] * b[[l, j]];
+                if let ArrayOut2::Owned(c_out) = c_out {
+                    let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
+                    let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+                } else {
+                    panic!("GEMM failed");
                 }
             }
-        }
-        c
+        };
     }
+
+    // successful tests
+    test_macro!(test_000: inline, f32, (7, 8, 1, 1), (8, 9, 1, 1), 'R', 'R', 'N', 'N');
+    test_macro!(test_001: inline, f32, (7, 8, 1, 1), (8, 9, 3, 3), 'C', 'C', 'N', 'N');
+    test_macro!(test_002: inline, f32, (8, 7, 3, 3), (9, 8, 1, 1), 'C', 'C', 'T', 'T');
+    test_macro!(test_003: inline, f32, (8, 7, 3, 3), (9, 8, 3, 3), 'R', 'R', 'T', 'T');
+    test_macro!(test_004: inline, f64, (7, 8, 3, 3), (8, 9, 1, 1), 'R', 'R', 'N', 'N');
+    test_macro!(test_005: inline, f64, (7, 8, 3, 3), (8, 9, 3, 3), 'C', 'C', 'N', 'N');
+    test_macro!(test_006: inline, f64, (8, 7, 1, 1), (9, 8, 1, 3), 'R', 'C', 'T', 'T');
+    test_macro!(test_007: inline, f64, (8, 7, 1, 1), (9, 8, 3, 1), 'C', 'R', 'T', 'T');
+    test_macro!(test_008: inline, c32, (7, 8, 1, 3), (9, 8, 1, 1), 'C', 'C', 'N', 'T');
+    test_macro!(test_009: inline, c32, (7, 8, 1, 3), (9, 8, 3, 3), 'R', 'R', 'N', 'T');
+    test_macro!(test_010: inline, c32, (8, 7, 3, 1), (8, 9, 1, 3), 'C', 'R', 'T', 'N');
+    test_macro!(test_011: inline, c32, (8, 7, 3, 1), (8, 9, 3, 1), 'R', 'C', 'T', 'N');
+    test_macro!(test_012: inline, c64, (7, 8, 3, 1), (9, 8, 1, 3), 'C', 'R', 'N', 'T');
+    test_macro!(test_013: inline, c64, (7, 8, 3, 1), (9, 8, 3, 1), 'R', 'C', 'N', 'T');
+    test_macro!(test_014: inline, c64, (8, 7, 1, 3), (8, 9, 1, 3), 'R', 'C', 'T', 'N');
+    test_macro!(test_015: inline, c64, (8, 7, 1, 3), (8, 9, 3, 1), 'C', 'R', 'T', 'N');
+
+
+    // unrecognized transpose
+    test_macro!(test_100: should_panic, f32, (7, 8, 1, 1), (9, 8, 1, 3), 'R', 'R', BLASTrans::ConjNoTrans, 'T');
+    test_macro!(test_101: should_panic, f32, (7, 8, 1, 1), (9, 8, 1, 3), 'R', 'R', 'N', BLASTrans::ConjNoTrans);
+    
+    // dimension mismatch (k)
+    test_macro!(test_102: should_panic, f32, (7, 5, 1, 1), (8, 9, 1, 1), 'R', 'R', 'N', 'N');
+    test_macro!(test_103: should_panic, f32, (7, 5, 1, 1), (9, 8, 1, 3), 'R', 'R', 'N', 'T');
 }
+
+mod valid_view {
+    use super::*;
+
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F:ty,
+            ($($a_slc: expr),+), ($($b_slc: expr),+), ($($c_slc: expr),+),
+            $a_layout: expr, $b_layout: expr, $c_layout: expr,
+            $a_trans: expr, $b_trans: expr
+        ) => {
+            #[test]
+            #[$attr]
+            pub fn $test_name()
+            {
+                type RT = <$F as BLASFloat>::RealFloat;
+                let alpha = <$F>::rand();
+                let beta = <$F>::rand();
+                let a_raw = random_matrix(100, 100, $a_layout.into());
+                let b_raw = random_matrix(100, 100, $b_layout.into());
+                let mut c_raw = random_matrix(100, 100, $c_layout.into());
+                let a_slc = slice($($a_slc),+);
+                let b_slc = slice($($b_slc),+);
+                let c_slc = slice($($c_slc),+);
+
+                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.into());
+                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.into());
+                let mut c_naive = c_raw.clone();
+                c_naive.slice_mut(c_slc).assign(&(alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_raw.slice(c_slc)));
+
+                let c_out = GEMM::<$F>::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .c(c_raw.slice_mut(c_slc))
+                    .transa($a_trans)
+                    .transb($b_trans)
+                    .alpha(alpha)
+                    .beta(beta)
+                    .run().unwrap();
+
+                if let ArrayOut2::ViewMut(_) = c_out {
+                    let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
+                    let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+                } else {
+                    panic!("GEMM failed");
+                }
+            }
+        };
+    }
+
+    // successful tests
+    test_macro!(test_000: inline, f32, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N');
+    test_macro!(test_001: inline, f32, (7, 8, 1, 1), (8, 9, 3, 3), (7, 9, 3, 3), 'C', 'C', 'C', 'N', 'N');
+    test_macro!(test_002: inline, f32, (8, 7, 3, 3), (9, 8, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'T', 'T');
+    test_macro!(test_003: inline, f32, (8, 7, 3, 3), (9, 8, 3, 3), (7, 9, 3, 3), 'R', 'R', 'R', 'T', 'T');
+    test_macro!(test_004: inline, f64, (7, 8, 3, 3), (8, 9, 1, 1), (7, 9, 3, 3), 'R', 'R', 'C', 'N', 'N');
+    test_macro!(test_005: inline, f64, (7, 8, 3, 3), (8, 9, 3, 3), (7, 9, 1, 1), 'C', 'C', 'R', 'N', 'N');
+    test_macro!(test_006: inline, f64, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 3, 3), 'C', 'C', 'R', 'T', 'T');
+    test_macro!(test_007: inline, f64, (8, 7, 1, 1), (9, 8, 3, 3), (7, 9, 1, 1), 'R', 'R', 'C', 'T', 'T');
+    test_macro!(test_008: inline, c32, (7, 8, 1, 3), (9, 8, 1, 3), (7, 9, 1, 3), 'R', 'C', 'R', 'N', 'T');
+    test_macro!(test_009: inline, c32, (7, 8, 1, 3), (9, 8, 3, 1), (7, 9, 3, 1), 'C', 'R', 'C', 'N', 'T');
+    test_macro!(test_010: inline, c32, (8, 7, 3, 1), (8, 9, 1, 3), (7, 9, 3, 1), 'C', 'R', 'R', 'T', 'N');
+    test_macro!(test_011: inline, c32, (8, 7, 3, 1), (8, 9, 3, 1), (7, 9, 1, 3), 'R', 'C', 'C', 'T', 'N');
+    test_macro!(test_012: inline, c64, (7, 8, 3, 1), (9, 8, 1, 3), (7, 9, 1, 3), 'C', 'R', 'C', 'N', 'T');
+    test_macro!(test_013: inline, c64, (7, 8, 3, 1), (9, 8, 3, 1), (7, 9, 3, 1), 'R', 'C', 'R', 'N', 'T');
+    test_macro!(test_014: inline, c64, (8, 7, 1, 3), (8, 9, 1, 3), (7, 9, 3, 1), 'R', 'C', 'C', 'T', 'N');
+    test_macro!(test_015: inline, c64, (8, 7, 1, 3), (8, 9, 3, 1), (7, 9, 1, 3), 'C', 'R', 'R', 'T', 'N');
+
+    // dimension mismatch (m, n)
+    test_macro!(test_100: should_panic, f32, (7, 8, 1, 1), (8, 9, 1, 1), (7, 8, 1, 1), 'R', 'R', 'R', 'N', 'N');
+}
+
