@@ -1,0 +1,32 @@
+name: Rust
+
+on: ["push", "pull_request"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install cargo-binstall
+      uses: cargo-bins/cargo-binstall@main
+    - name: System dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y libopenblas-dev
+    - name: Install tarpaulin
+      run: |
+        cargo binstall --no-confirm cargo-tarpaulin
+    - name: Coverage
+      env:
+        RUSTFLAGS: -lopenblas
+      run: |
+        cargo tarpaulin --out xml
+    - name: Upload to codecov.io
+      uses: codecov/codecov-action@v4.5.0
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        fail_ci_if_error: true
