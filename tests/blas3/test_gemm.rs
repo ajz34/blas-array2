@@ -5,6 +5,76 @@ use blas_array2::util::*;
 use num_complex::*;
 
 #[cfg(test)]
+mod demonstration {
+    /// Following code performs matrix multiplication out-place
+    /// ```
+    /// c = a * b
+    /// ```
+    /// Output
+    /// ```
+    /// [[-22.000, -28.000],
+    ///  [-40.000, -52.000]]
+    /// ```
+    #[test]
+    fn demonstration_dgemm_simple() {
+        use ndarray::prelude::*;
+        use blas_array2::blas3::gemm::DGEMM;
+        let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
+        let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
+        let c_out = DGEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
+        println!("{:7.3?}", c_out);
+    }
+
+    /// Following code performs matrix multiplication in-place
+    /// ```
+    /// c = alpha * a * transpose(b) + beta * c
+    /// where
+    ///     alpha = 1.0 (by default)
+    ///     beta = 1.5
+    ///     a = [[1.0, 2.0, ___],
+    ///          [3.0, 4.0, ___]]
+    ///         (sliced by `s![.., ..2]`)
+    ///     b = [[-1.0, -2.0],
+    ///          [-3.0, -4.0],
+    ///          [-5.0, -6.0]]
+    ///     c = [[1.0, 1.0, 1.0],
+    ///          [___, ___, ___],
+    ///          [1.0, 1.0, 1.0]]
+    ///         (Column-major, sliced by `s![0..3;2, ..]`)
+    /// ```
+    /// Output of `c` is
+    /// ```
+    /// [[-3.500,  -9.500, -15.500],
+    ///  [ 1.000,   1.000,   1.000],
+    ///  [-9.500, -23.500, -37.500]]
+    /// ```
+    #[test]
+    fn demonstration_dgemm_complicated() {
+        use ndarray::prelude::*;
+        use blas_array2::blas3::gemm::DGEMM;
+        
+        let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
+        let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
+        let mut c = Array::ones((3, 3).f());
+
+        let c_out = DGEMM::default()
+            .a(a.slice(s![.., ..2]))
+            .b(b.view())
+            .c(c.slice_mut(s![0..3;2, ..]))
+            .transb('T')
+            .beta(1.5)
+            .run()
+            .unwrap();
+        // one can get the result as an owned array
+        // but the result may not refer to the same memory location as `c`
+        println!("{:4.3?}", c_out.into_owned());
+        // this modification on `c` is actually performed in-place
+        // so if `c` is pre-defined, not calling `into_owned` could be more efficient
+        println!("{:4.3?}", c);
+    }
+}
+
+#[cfg(test)]
 mod valid_owned {
     use super::*;
 
