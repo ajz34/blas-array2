@@ -175,13 +175,13 @@ where
 
         // initialize intent(hide)
         let (m, k) = match transa {
-            BLASTrans::NoTrans => (a.dim().0, a.dim().1),
-            BLASTrans::Trans | BLASTrans::ConjTrans => (a.dim().1, a.dim().0),
+            BLASTrans::NoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
+            BLASTrans::Trans | BLASTrans::ConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
             _ => blas_invalid!(transa)?,
         };
         let n = match transb {
-            BLASTrans::NoTrans => b.dim().1,
-            BLASTrans::Trans | BLASTrans::ConjTrans => b.dim().0,
+            BLASTrans::NoTrans => b.len_of(Axis(1)),
+            BLASTrans::Trans | BLASTrans::ConjTrans => b.len_of(Axis(0)),
             _ => blas_invalid!(transb)?,
         };
         let lda = a.stride_of(Axis(1));
@@ -189,8 +189,8 @@ where
 
         // perform check
         match transb {
-            BLASTrans::NoTrans => blas_assert_eq!(b.dim().0, k, "Incompatible dimensions")?,
-            BLASTrans::Trans | BLASTrans::ConjTrans => blas_assert_eq!(b.dim().1, k, "Incompatible dimensions")?,
+            BLASTrans::NoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, "Incompatible dimensions")?,
+            BLASTrans::Trans | BLASTrans::ConjTrans => blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?,
             _ => blas_invalid!(transb)?,
         }
 

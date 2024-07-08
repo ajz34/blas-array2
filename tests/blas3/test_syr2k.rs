@@ -148,7 +148,7 @@ mod valid_view {
                 let b_naive = b_raw.slice(b_slc).to_owned();
                 let mut c_assign_0 = <$F>::from(beta) * &c_naive.slice(c_slc);
                 if $blas_trans == 'C' {
-                    for i in 0..c_assign_0.dim().0 {
+                    for i in 0..c_assign_0.len_of(Axis(0)) {
                         c_assign_0[[i, i]] = <$F>::from(0.5) * (c_assign_0[[i, i]] + c_assign_0[[i, i]].conj());
                     }
                 }

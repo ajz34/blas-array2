@@ -165,8 +165,8 @@ where
 
         // initialize intent(hide)
         let (n, k) = match trans {
-            BLASTrans::NoTrans => (a.dim().0, a.dim().1),
-            BLASTrans::Trans | BLASTrans::ConjTrans => (a.dim().1, a.dim().0),
+            BLASTrans::NoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
+            BLASTrans::Trans | BLASTrans::ConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
             _ => blas_invalid!(trans)?,
         };
         let lda = a.stride_of(Axis(1));

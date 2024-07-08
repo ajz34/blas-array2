@@ -20,15 +20,8 @@ mod valid_owned {
         let side = 'L';
         let uplo = 'U';
 
-        let c_out = SYMM::default()
-            .a(a_raw.slice(a_slc))
-            .b(b_raw.slice(b_slc))
-            .alpha(alpha)
-            .beta(beta)
-            .side(side)
-            .uplo(uplo)
-            .run()
-            .unwrap();
+        let c_out =
+            SYMM::default().a(a_raw.slice(a_slc)).b(b_raw.slice(b_slc)).alpha(alpha).beta(beta).side(side).uplo(uplo).run().unwrap();
 
         let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
         let b_naive = &b_raw.slice(b_slc).into_owned();

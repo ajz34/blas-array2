@@ -2,6 +2,7 @@ use crate::util::*;
 use approx::*;
 use blas_array2::blas3::trmm::TRMM;
 use blas_array2::util::*;
+use ndarray::prelude::*;
 use num_complex::*;
 
 #[cfg(test)]
@@ -25,21 +26,21 @@ mod valid {
         let mut b_naive = b_raw.clone();
 
         if BLASDiag::from(diag) == BLASDiag::Unit {
-            for i in 0..a_naive.dim().0 {
+            for i in 0..a_naive.len_of(Axis(0)) {
                 a_naive[[i, i]] = 1.0;
             }
         }
         let mut a_naive = transpose(&a_naive.view(), transa.into());
         match uplo.into() {
             BLASUpLo::Lower => {
-                for i in 0..a_naive.dim().0 {
-                    for j in i + 1..a_naive.dim().1 {
+                for i in 0..a_naive.len_of(Axis(0)) {
+                    for j in i + 1..a_naive.len_of(Axis(1)) {
                         a_naive[[i, j]] = 0.0;
                     }
                 }
             },
             BLASUpLo::Upper => {
-                for i in 0..a_naive.dim().0 {
+                for i in 0..a_naive.len_of(Axis(0)) {
                     for j in 0..i {
                         a_naive[[i, j]] = 0.0;
                     }
@@ -99,20 +100,20 @@ mod valid {
                 let mut b_naive = b_raw.clone();
 
                 if BLASDiag::from($diag) == BLASDiag::Unit {
-                    for i in 0..a_naive.dim().0 {
+                    for i in 0..a_naive.len_of(Axis(0)) {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
                 match $uplo.into() {
                     BLASUpLo::Lower => {
-                        for i in 0..a_naive.dim().0 {
-                            for j in i+1..a_naive.dim().1 {
+                        for i in 0..a_naive.len_of(Axis(0)) {
+                            for j in i+1..a_naive.len_of(Axis(1)) {
                                 a_naive[[i, j]] = <$F>::from(0.0);
                             }
                         }
                     },
                     BLASUpLo::Upper => {
-                        for i in 0..a_naive.dim().0 {
+                        for i in 0..a_naive.len_of(Axis(0)) {
                             for j in 0..i {
                                 a_naive[[i, j]] = <$F>::from(0.0);
                             }

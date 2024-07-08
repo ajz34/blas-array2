@@ -48,9 +48,7 @@ macro_rules! blas_raise {
 #[macro_export]
 macro_rules! blas_invalid {
     ($word:expr) => {
-        Err(BLASError(
-            format!("{:}:{:}: ", file!(), line!()) + &format!("Invalid keyowrd {:} = {:?}", stringify!($word), $word),
-        ))
+        Err(BLASError(format!("{:}:{:}: ", file!(), line!()) + &format!("Invalid keyowrd {:} = {:?}", stringify!($word), $word)))
     };
 }
 

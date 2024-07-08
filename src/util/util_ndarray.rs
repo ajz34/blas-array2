@@ -99,10 +99,8 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
     // ColMajor     ==>   shape=[4, 1], strides=[1, 0], layout=CFcf (0xf)
     // Sequential   ==>   shape=[1, 1], strides=[0, 0], layout=CFcf (0xf)
     // NonContig    ==>   shape=[4, 1], strides=[10, 0], layout=Custom (0x0)
-    let d0 = arr.dim().0;
-    let d1 = arr.dim().1;
-    let s0 = arr.strides()[0];
-    let s1 = arr.strides()[1];
+    let (d0, d1) = arr.dim();
+    let [s0, s1] = arr.strides().try_into().unwrap();
     if d0 == 0 || d1 == 0 {
         // empty array
         return BLASLayout::Sequential;

@@ -69,8 +69,8 @@ where
     F: BLASFloat,
 {
     let (m, k) = a.dim();
-    let n = b.dim().1;
-    assert_eq!(b.dim().0, k);
+    let n = b.len_of(Axis(1));
+    assert_eq!(b.len_of(Axis(0)), k);
     let mut c = Array2::<F>::zeros((m, n));
     for i in 0..m {
         for j in 0..n {
@@ -115,14 +115,14 @@ where
 {
     let mut a = a.into_owned();
     if uplo == 'L' {
-        for i in 0..a.dim().0 {
+        for i in 0..a.len_of(Axis(0)) {
             for j in 0..i {
                 a[[j, i]] = a[[i, j]];
             }
         }
     } else if uplo == 'U' {
-        for i in 0..a.dim().0 {
-            for j in i + 1..a.dim().1 {
+        for i in 0..a.len_of(Axis(0)) {
+            for j in i + 1..a.len_of(Axis(1)) {
                 a[[j, i]] = a[[i, j]];
             }
         }
@@ -136,16 +136,16 @@ where
 {
     let mut a = a.into_owned();
     if uplo == 'L' {
-        for i in 0..a.dim().0 {
+        for i in 0..a.len_of(Axis(0)) {
             a[[i, i]] = a[[i, i]].re().into();
             for j in 0..i {
                 a[[j, i]] = a[[i, j]].conj();
             }
         }
     } else if uplo == 'U' {
-        for i in 0..a.dim().0 {
+        for i in 0..a.len_of(Axis(0)) {
             a[[i, i]] = a[[i, i]].re().into();
-            for j in i + 1..a.dim().1 {
+            for j in i + 1..a.len_of(Axis(1)) {
                 a[[j, i]] = a[[i, j]].conj();
             }
         }
@@ -158,14 +158,14 @@ where
     F: BLASFloat,
 {
     if uplo == 'L' {
-        for i in 0..a.dim().0 {
+        for i in 0..a.len_of(Axis(0)) {
             for j in 0..=i {
                 c[[i, j]] = a[[i, j]];
             }
         }
     } else if uplo == 'U' {
-        for i in 0..a.dim().0 {
-            for j in i..a.dim().1 {
+        for i in 0..a.len_of(Axis(0)) {
+            for j in i..a.len_of(Axis(1)) {
                 c[[i, j]] = a[[i, j]];
             }
         }

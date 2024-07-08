@@ -178,8 +178,8 @@ where
         assert!(layout_a.is_fpref() && layout_b.is_fpref());
 
         // initialize intent(hide)
-        let m = b.dim().0;
-        let n = b.dim().1;
+        let m = b.len_of(Axis(0));
+        let n = b.len_of(Axis(1));
         let lda = a.stride_of(Axis(1));
         let ldb = b.stride_of(Axis(1));
 

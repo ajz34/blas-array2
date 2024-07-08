@@ -19,15 +19,12 @@ mod valid_owned {
         let uplo = 'U';
         let trans = 'T';
 
-        let c_out =
-            SYRK::default().a(a_raw.slice(a_slc)).alpha(alpha).beta(beta).uplo(uplo).trans(trans).run().unwrap();
+        let c_out = SYRK::default().a(a_raw.slice(a_slc)).alpha(alpha).beta(beta).uplo(uplo).trans(trans).run().unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
         let c_assign = match trans.into() {
             BLASTrans::NoTrans => alpha * gemm(&a_naive.view(), &transpose(&a_naive.view(), trans.into()).view()),
-            BLASTrans::Trans | BLASTrans::ConjTrans => {
-                alpha * gemm(&transpose(&a_naive.view(), trans.into()).view(), &a_naive.view())
-            },
+            BLASTrans::Trans | BLASTrans::ConjTrans => alpha * gemm(&transpose(&a_naive.view(), trans.into()).view(), &a_naive.view()),
             _ => panic!("Invalid"),
         };
         let mut c_naive = Array2::zeros(c_assign.dim());
@@ -149,15 +146,8 @@ mod valid_view {
 
         let mut c_naive = c_raw.clone();
 
-        let c_out = SYRK::default()
-            .a(a_raw.slice(a_slc))
-            .c(c_raw.slice_mut(c_slc))
-            .alpha(alpha)
-            .beta(beta)
-            .uplo(uplo)
-            .trans(trans)
-            .run()
-            .unwrap();
+        let c_out =
+            SYRK::default().a(a_raw.slice(a_slc)).c(c_raw.slice_mut(c_slc)).alpha(alpha).beta(beta).uplo(uplo).trans(trans).run().unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
         let c_assign = match trans.into() {
@@ -221,7 +211,7 @@ mod valid_view {
                 let a_naive = a_raw.slice(a_slc).to_owned();
                 let mut c_assign = <$F>::from(beta) * &c_naive.slice(c_slc);
                 if $blas_trans == 'C' {
-                    for i in 0..c_assign.dim().0 {
+                    for i in 0..c_assign.len_of(Axis(0)) {
                         c_assign[[i, i]] = <$F>::from(0.5) * (c_assign[[i, i]] + c_assign[[i, i]].conj());
                     }
                 }

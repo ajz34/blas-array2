@@ -56,14 +56,8 @@ mod demonstration {
         let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
         let mut c = Array::ones((3, 3).f());
 
-        let c_out = DGEMM::default()
-            .a(a.slice(s![.., ..2]))
-            .b(b.view())
-            .c(c.slice_mut(s![0..3;2, ..]))
-            .transb('T')
-            .beta(1.5)
-            .run()
-            .unwrap();
+        let c_out =
+            DGEMM::default().a(a.slice(s![.., ..2])).b(b.view()).c(c.slice_mut(s![0..3;2, ..])).transb('T').beta(1.5).run().unwrap();
         // one can get the result as an owned array
         // but the result may not refer to the same memory location as `c`
         println!("{:4.3?}", c_out.into_owned());
@@ -87,15 +81,8 @@ mod valid_owned {
         let a_slc = slice(7, 8, 1, 1); // s![5..12, 10..18]
         let b_slc = slice(8, 9, 1, 1); // s![5..13, 10..19]
 
-        let c_out = GEMM::default()
-            .a(a_raw.slice(a_slc))
-            .b(b_raw.slice(b_slc))
-            .transa('N')
-            .transb('N')
-            .alpha(alpha)
-            .beta(beta)
-            .run()
-            .unwrap();
+        let c_out =
+            GEMM::default().a(a_raw.slice(a_slc)).b(b_raw.slice(b_slc)).transa('N').transb('N').alpha(alpha).beta(beta).run().unwrap();
 
         let a_naive = transpose(&a_raw.slice(a_slc), 'N'.into());
         let b_naive = transpose(&b_raw.slice(b_slc), 'N'.into());
