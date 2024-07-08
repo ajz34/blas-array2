@@ -155,7 +155,7 @@ pub trait BLASDriver<'c, F, D>
 where
     D: Dimension,
 {
-    fn run(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
+    fn run_blas(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
 }
 
 /// Trait for BLAS builder prototypes

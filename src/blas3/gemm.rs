@@ -102,7 +102,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMMFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         let transa = self.transa;
         let transb = self.transb;
         let m = self.m;
@@ -253,7 +253,7 @@ where
 
         if layout_a.is_fpref() && layout_b.is_fpref() {
             // F-contiguous: C = op(A) op(B)
-            return obj.driver()?.run();
+            return obj.driver()?.run_blas();
         } else {
             // C-contiguous: C' = op(B') op(A')
             let a_cow = obj.a.as_standard_layout();
@@ -267,7 +267,7 @@ where
                 transa: obj.transb,
                 transb: obj.transa,
             };
-            let c = obj.driver()?.run()?.reversed_axes();
+            let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);
         }
     }

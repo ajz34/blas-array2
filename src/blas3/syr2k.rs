@@ -102,7 +102,7 @@ where
     S: BLASSymm,
     BLASFunc: SYR2KFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let n = self.n;
@@ -275,7 +275,7 @@ where
 
         if layout_a.is_fpref() && layout_b.is_fpref() {
             // F-contiguous: C = A op(B) + B op(A)
-            return obj.driver()?.run();
+            return obj.driver()?.run_blas();
         } else {
             // C-contiguous: C' = op(B') A' + op(A') B'
             let a_cow = obj.a.as_standard_layout();
@@ -315,7 +315,7 @@ where
                     },
                 },
             };
-            let c = obj.driver()?.run()?.reversed_axes();
+            let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);
         }
     }

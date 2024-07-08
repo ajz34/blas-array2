@@ -30,6 +30,11 @@ macro_rules! blas_assert_eq {
             format!("{:}:{:}: ", file!(), line!()) + &format!($($arg)*) + &format!(": {:} = {:?}, {:} = {:?}", stringify!($a), $a, stringify!($b), $b)
         )
     };
+    ($a:expr, $b:expr) => {
+        BLASError::assert($a == $b,
+            format!("{:}:{:}: ", file!(), line!()) + &format!(": {:} = {:?}, {:} = {:?}", stringify!($a), $a, stringify!($b), $b)
+        )
+    };
 }
 
 #[macro_export]
