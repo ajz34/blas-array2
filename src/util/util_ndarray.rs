@@ -89,6 +89,7 @@ pub type ArrayOut3<'a, F> = ArrayOut<'a, F, Ix3>;
 
 /* #region Strides */
 
+#[inline]
 pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
     // Note that this only shows order of matrix (dimension information)
     // not c/f-contiguous (memory layout)

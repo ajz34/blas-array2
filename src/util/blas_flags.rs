@@ -48,6 +48,7 @@ pub enum BLASSide {
 }
 
 impl From<char> for BLASLayout {
+    #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'R' => BLASLayout::RowMajor,
@@ -58,6 +59,7 @@ impl From<char> for BLASLayout {
 }
 
 impl From<BLASLayout> for char {
+    #[inline]
     fn from(layout: BLASLayout) -> Self {
         match layout {
             BLASLayout::RowMajor => 'R',
@@ -68,6 +70,7 @@ impl From<BLASLayout> for char {
 }
 
 impl From<BLASLayout> for c_char {
+    #[inline]
     fn from(layout: BLASLayout) -> Self {
         match layout {
             BLASLayout::RowMajor => 'R' as c_char,
@@ -78,6 +81,7 @@ impl From<BLASLayout> for c_char {
 }
 
 impl From<char> for BLASTrans {
+    #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'N' => BLASTrans::NoTrans,
@@ -89,6 +93,7 @@ impl From<char> for BLASTrans {
 }
 
 impl From<BLASTrans> for char {
+    #[inline]
     fn from(trans: BLASTrans) -> Self {
         match trans {
             BLASTrans::NoTrans => 'N',
@@ -100,6 +105,7 @@ impl From<BLASTrans> for char {
 }
 
 impl From<BLASTrans> for c_char {
+    #[inline]
     fn from(trans: BLASTrans) -> Self {
         match trans {
             BLASTrans::NoTrans => 'N' as c_char,
@@ -111,6 +117,7 @@ impl From<BLASTrans> for c_char {
 }
 
 impl From<char> for BLASUpLo {
+    #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'U' => BLASUpLo::Upper,
@@ -121,6 +128,7 @@ impl From<char> for BLASUpLo {
 }
 
 impl From<BLASUpLo> for char {
+    #[inline]
     fn from(uplo: BLASUpLo) -> Self {
         match uplo {
             BLASUpLo::Upper => 'U',
@@ -131,6 +139,7 @@ impl From<BLASUpLo> for char {
 }
 
 impl From<BLASUpLo> for c_char {
+    #[inline]
     fn from(uplo: BLASUpLo) -> Self {
         match uplo {
             BLASUpLo::Upper => 'U' as c_char,
@@ -141,6 +150,7 @@ impl From<BLASUpLo> for c_char {
 }
 
 impl From<char> for BLASDiag {
+    #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'N' => BLASDiag::NonUnit,
@@ -151,6 +161,7 @@ impl From<char> for BLASDiag {
 }
 
 impl From<BLASDiag> for char {
+    #[inline]
     fn from(diag: BLASDiag) -> Self {
         match diag {
             BLASDiag::NonUnit => 'N',
@@ -161,6 +172,7 @@ impl From<BLASDiag> for char {
 }
 
 impl From<BLASDiag> for c_char {
+    #[inline]
     fn from(diag: BLASDiag) -> Self {
         match diag {
             BLASDiag::NonUnit => 'N' as c_char,
@@ -171,6 +183,7 @@ impl From<BLASDiag> for c_char {
 }
 
 impl From<char> for BLASSide {
+    #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'L' => BLASSide::Left,
@@ -181,6 +194,7 @@ impl From<char> for BLASSide {
 }
 
 impl From<BLASSide> for char {
+    #[inline]
     fn from(side: BLASSide) -> Self {
         match side {
             BLASSide::Left => 'L',
@@ -191,6 +205,7 @@ impl From<BLASSide> for char {
 }
 
 impl From<BLASSide> for c_char {
+    #[inline]
     fn from(side: BLASSide) -> Self {
         match side {
             BLASSide::Left => 'L' as c_char,
@@ -213,6 +228,7 @@ unsafe impl Sync for BLASDiag {}
 unsafe impl Sync for BLASSide {}
 
 impl BLASLayout {
+    #[inline]
     pub fn is_cpref(&self) -> bool {
         match self {
             BLASLayout::RowMajor => true,
@@ -221,6 +237,7 @@ impl BLASLayout {
         }
     }
 
+    #[inline]
     pub fn is_fpref(&self) -> bool {
         match self {
             BLASLayout::ColMajor => true,

@@ -6,6 +6,7 @@ pub struct BLASError(pub String);
 impl std::error::Error for BLASError {}
 
 impl BLASError {
+    #[inline]
     pub fn assert(cond: bool, s: String) -> Result<(), BLASError> {
         match cond {
             true => Ok(()),
