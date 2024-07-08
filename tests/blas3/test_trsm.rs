@@ -1,6 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas3::trmm::TRMM;
+use blas_array2::blas3::trsm::TRSM;
 use blas_array2::util::*;
 use num_complex::*;
 
@@ -22,14 +22,13 @@ mod valid {
         let diag = 'N';
 
         let mut a_naive = a_raw.slice(a_slc).into_owned();
-        let mut b_naive = b_raw.clone();
+        let b_naive = b_raw.slice(b_slc).into_owned();
 
         if BLASDiag::from(diag) == BLASDiag::Unit {
             for i in 0..a_naive.dim().0 {
                 a_naive[[i, i]] = 1.0;
             }
         }
-        let mut a_naive = transpose(&a_naive.view(), transa.into());
         match uplo.into() {
             BLASUpLo::Lower => {
                 for i in 0..a_naive.dim().0 {
@@ -47,16 +46,9 @@ mod valid {
             },
             _ => panic!(),
         }
+        let a_naive = transpose(&a_naive.view(), transa.into());
 
-        let b_assign = b_raw.slice(b_slc).into_owned();
-        let b_assign = match side.into() {
-            BLASSide::Left => alpha * gemm(&a_naive.view(), &b_assign.view()),
-            BLASSide::Right => alpha * gemm(&b_naive.view(), &b_assign.view()),
-            _ => panic!(),
-        };
-        b_naive.slice_mut(b_slc).assign(&b_assign);
-
-        let b_out = TRMM::default()
+        let b_out = TRSM::default()
             .a(a_raw.slice(a_slc))
             .b(b_raw.slice_mut(b_slc))
             .alpha(alpha)
@@ -66,15 +58,18 @@ mod valid {
             .diag(diag)
             .run()
             .unwrap();
+        let b_out = b_out.into_owned();
+        let b_out = match side.into() {
+            BLASSide::Left => gemm(&a_naive.view(), &b_out.view()),
+            BLASSide::Right => gemm(&b_out.view(), &a_naive.view()),
+            _ => panic!(),
+        };
 
-        if let ArrayOut2::ViewMut(_) = b_out {
-            let err = (&b_naive - &b_raw).mapv(|x| x.abs()).sum();
-            let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
-            let err_div = err / acc;
-            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
-        } else {
-            panic!("Failed");
-        }
+        let err = (alpha * &b_naive - &b_out).mapv(|x| x.abs()).sum();
+        let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
+        let err_div = err / acc;
+        // This involves two matrix multiplications, so the error is expected to be larger
+        assert_relative_eq!(err_div, 0.0, epsilon = 2.0 * f32::sqrt(RT::EPSILON));
     }
 
     macro_rules! test_macro {
@@ -96,7 +91,7 @@ mod valid {
                 let b_slc = slice($($b_slc),+);
 
                 let mut a_naive = a_raw.slice(a_slc).into_owned();
-                let mut b_naive = b_raw.clone();
+                let b_naive = b_raw.slice(b_slc).into_owned();
 
                 if BLASDiag::from($diag) == BLASDiag::Unit {
                     for i in 0..a_naive.dim().0 {
@@ -122,15 +117,7 @@ mod valid {
                 }
                 let a_naive = transpose(&a_naive.view(), $transa.into());
 
-                let b_assign = b_raw.slice(b_slc).into_owned();
-                let b_assign = match $side.into() {
-                    BLASSide::Left => alpha * gemm(&a_naive.view(), &b_assign.view()),
-                    BLASSide::Right => alpha * gemm(&b_assign.view(), &a_naive.view()),
-                    _ => panic!(),
-                };
-                b_naive.slice_mut(b_slc).assign(&b_assign);
-
-                let b_out = TRMM::default()
+                let b_out = TRSM::default()
                     .a(a_raw.slice(a_slc))
                     .b(b_raw.slice_mut(b_slc))
                     .alpha(alpha)
@@ -140,15 +127,18 @@ mod valid {
                     .diag($diag)
                     .run()
                     .unwrap();
+                let b_out = b_out.into_owned();
+                let b_out = match $side.into() {
+                    BLASSide::Left => gemm(&a_naive.view(), &b_out.view()),
+                    BLASSide::Right => gemm(&b_out.view(), &a_naive.view()),
+                    _ => panic!(),
+                };
 
-                if let ArrayOut2::ViewMut(_) = b_out {
-                    let err = (&b_naive - &b_raw).mapv(|x| x.abs()).sum();
-                    let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
-                    let err_div = err / acc;
-                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
-                } else {
-                    panic!("Failed");
-                }
+                let err = (alpha * &b_naive - &b_out).mapv(|x| x.abs()).sum();
+                let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
+                let err_div = err / acc;
+                // This involves two matrix multiplications, so the error is expected to be larger
+                assert_relative_eq!(err_div, 0.0, epsilon = 2.0 * RT::sqrt(RT::EPSILON));
             }
         };
     }
