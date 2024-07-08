@@ -1,28 +1,26 @@
+use crate::util::*;
+use blas_sys;
 use derive_builder::Builder;
 use libc::c_int;
 use ndarray::prelude::*;
-use blas_sys;
-use crate::util::*;
 
 pub trait ASUMFunc<F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
     fn asum(n: *const c_int, x: *const F, incx: *const c_int) -> F::RealFloat;
 }
 
 macro_rules! impl_subroutine {
     ($type:ty, $func:ident) => {
-
-impl ASUMFunc<$type> for BLASFunc
-where
-    $type: BLASFloat
-{
-    fn asum(n: *const c_int, x: *const $type, incx: *const c_int) -> <$type as BLASFloat>::RealFloat {
-        unsafe { blas_sys::$func(n, x as *const <$type as BLASFloat>::FFIFloat, incx) }
-    }
-}
-
+        impl ASUMFunc<$type> for BLASFunc
+        where
+            $type: BLASFloat,
+        {
+            fn asum(n: *const c_int, x: *const $type, incx: *const c_int) -> <$type as BLASFloat>::RealFloat {
+                unsafe { blas_sys::$func(n, x as *const <$type as BLASFloat>::FFIFloat, incx) }
+            }
+        }
     };
 }
 
@@ -33,7 +31,6 @@ impl_subroutine!(c64, dzasum_);
 
 #[derive(Builder)]
 pub struct ASUM_<'a, F> {
-
     pub x: ArrayView1<'a, F>,
 
     #[builder(setter(skip))]
@@ -47,28 +44,32 @@ pub struct ASUM_<'a, F> {
 }
 
 impl<'a, F> StructBLAS for ASUM_<'a, F> {
-
     fn init_hidden(&mut self) -> Result<(), AnyError> {
         self.n = self.x.len().try_into()?;
         self.incx = self.x.stride_of(Axis(0)).try_into()?;
         Ok(())
     }
 
-    fn init_optional(&mut self) -> Result<(), AnyError> { Ok(()) }
+    fn init_optional(&mut self) -> Result<(), AnyError> {
+        Ok(())
+    }
 
-    fn check(&self) -> Result<(), AnyError> { Ok(()) }
+    fn check(&self) -> Result<(), AnyError> {
+        Ok(())
+    }
 
-    fn runnable(&self) -> bool { self.flag_runnable }
+    fn runnable(&self) -> bool {
+        self.flag_runnable
+    }
 }
 
 impl<'a, F> ASUM_<'a, F>
 where
-    F: BLASFloat
+    F: BLASFloat,
 {
-
     pub fn run(&mut self) -> Result<<F as BLASFloat>::RealFloat, AnyError>
     where
-        BLASFunc: ASUMFunc<F>
+        BLASFunc: ASUMFunc<F>,
     {
         self.initialize()?;
         self.flag_runnable = false;

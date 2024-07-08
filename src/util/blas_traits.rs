@@ -107,15 +107,15 @@ pub trait BLASSymm {
 
 /// Struct marker for symmetric matrix
 pub struct BLASSymmetric<F>
-where 
-    F: BLASFloat
+where
+    F: BLASFloat,
 {
-    _phantom: std::marker::PhantomData<F>
+    _phantom: std::marker::PhantomData<F>,
 }
 
 impl<F> BLASSymm for BLASSymmetric<F>
-where 
-    F: BLASFloat
+where
+    F: BLASFloat,
 {
     type Float = F;
     type HermitianFloat = F;
@@ -123,19 +123,18 @@ where
     fn is_hermitian() -> bool {
         false
     }
-
 }
 
 /// Struct marker for hermitian matrix
 pub struct BLASHermitian<F>
-where 
-    F: BLASFloat
+where
+    F: BLASFloat,
 {
-    _phantom: std::marker::PhantomData<F>
+    _phantom: std::marker::PhantomData<F>,
 }
 
 impl<F> BLASSymm for BLASHermitian<F>
-where 
+where
     F: BLASFloat,
 {
     type Float = F;
@@ -168,8 +167,8 @@ where
 }
 
 pub trait BLASBuilder<'c, F, D>
-where 
-    D: Dimension
+where
+    D: Dimension,
 {
     fn run(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
 }

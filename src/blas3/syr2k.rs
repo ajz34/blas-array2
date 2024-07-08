@@ -8,7 +8,7 @@ use num_traits::{One, Zero};
 /* #region BLAS func */
 
 pub trait SYR2KFunc<F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -78,7 +78,7 @@ impl_syr2k!(c64, BLASHermitian<c64>, zher2k_);
 /* #region BLAS driver */
 
 pub struct SYR2K_Driver<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -97,13 +97,12 @@ where
 }
 
 impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYR2K_Driver<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYR2KFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let n = self.n;
@@ -136,7 +135,7 @@ where
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 pub struct SYR2K_<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
     S::HermitianFloat: Zero + One,
@@ -157,7 +156,7 @@ where
 }
 
 impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYR2K_<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYR2KFunc<F, S>,
@@ -209,7 +208,7 @@ where
                     // cherk, zherk: NC accepted
                     BLASTrans::NoTrans | BLASTrans::ConjTrans => (),
                     _ => blas_invalid!(trans)?,
-                }
+                },
             },
         };
 
@@ -262,15 +261,15 @@ pub type CHER2K<'a, 'b, 'c> = HER2K<'a, 'b, 'c, c32>;
 pub type ZHER2K<'a, 'b, 'c> = HER2K<'a, 'b, 'c, c64>;
 
 impl<'a, 'b, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYR2K_Builder<'a, 'b, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
-    BLASFunc: SYR2KFunc<F, S>
+    BLASFunc: SYR2KFunc<F, S>,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
         let obj = self.build()?;
-        
+
         let layout_a = get_layout_array2(&obj.a);
         let layout_b = get_layout_array2(&obj.b);
 
@@ -312,7 +311,7 @@ where
                             BLASTrans::NoTrans => BLASTrans::ConjTrans,
                             BLASTrans::ConjTrans => BLASTrans::NoTrans,
                             _ => blas_invalid!(obj.trans)?,
-                        }
+                        },
                     },
                 },
             };

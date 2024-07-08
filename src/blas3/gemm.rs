@@ -97,14 +97,12 @@ where
     ldc: c_int,
 }
 
-impl<'a, 'b, 'c, F> GEMM_Driver<'a, 'b, 'c, F>
+impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for GEMM_Driver<'a, 'b, 'c, F>
 where
     F: BLASFloat,
+    BLASFunc: GEMMFunc<F>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    where
-        BLASFunc: GEMMFunc<F>,
-    {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         let transa = self.transa;
         let transb = self.transb;
         let m = self.m;
@@ -156,11 +154,12 @@ where
     pub transb: BLASTrans,
 }
 
-impl<'a, 'b, 'c, F> GEMM_<'a, 'b, 'c, F>
+impl<'a, 'b, 'c, F> BLASBuilder_<'c, F, Ix2> for GEMM_<'a, 'b, 'c, F>
 where
     F: BLASFloat,
+    BLASFunc: GEMMFunc<F>,
 {
-    pub fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError> {
+    fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError> {
         let a = self.a;
         let b = self.b;
         let c = self.c;
@@ -240,12 +239,12 @@ pub type DGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, f64>;
 pub type CGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, c32>;
 pub type ZGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, c64>;
 
-impl<'a, 'b, 'c, F> GEMM_Builder<'a, 'b, 'c, F>
+impl<'a, 'b, 'c, F> BLASBuilder<'c, F, Ix2> for GEMM_Builder<'a, 'b, 'c, F>
 where
     F: BLASFloat,
     BLASFunc: GEMMFunc<F>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
         let obj = self.build()?;
 

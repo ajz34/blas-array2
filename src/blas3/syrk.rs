@@ -94,8 +94,8 @@ where
     S: BLASSymm,
 {
     pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    where 
-        BLASFunc: SYRKFunc<F, S>
+    where
+        BLASFunc: SYRKFunc<F, S>,
     {
         let uplo = self.uplo;
         let trans = self.trans;
@@ -147,7 +147,7 @@ where
 }
 
 impl<'a, 'c, F, S> SYRK_<'a, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
 {
@@ -188,7 +188,7 @@ where
                     // cherk, zherk: NC accepted
                     BLASTrans::NoTrans | BLASTrans::ConjTrans => (),
                     _ => blas_invalid!(trans)?,
-                }
+                },
             },
         };
 
@@ -206,7 +206,7 @@ where
             None => ArrayOut2::Owned(Array2::zeros((n, n).f())),
         };
         let ldc = c.view().stride_of(Axis(1));
-        
+
         // finalize
         let driver = SYRK_Driver {
             uplo: uplo.into(),
@@ -239,7 +239,7 @@ pub type CHERK<'a, 'c> = HERK<'a, 'c, c32>;
 pub type ZHERK<'a, 'c> = HERK<'a, 'c, c64>;
 
 impl<'a, 'c, F, S> SYRK_Builder<'a, 'c, F, S>
-where 
+where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYRKFunc<F, S>,
@@ -286,7 +286,7 @@ where
                             BLASTrans::NoTrans => BLASTrans::ConjTrans,
                             BLASTrans::ConjTrans => BLASTrans::NoTrans,
                             _ => blas_invalid!(obj.trans)?,
-                        }
+                        },
                     },
                 },
             };

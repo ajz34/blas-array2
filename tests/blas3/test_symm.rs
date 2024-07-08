@@ -1,6 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas3::symm::{SYMM, HEMM};
+use blas_array2::blas3::symm::{HEMM, SYMM};
 use blas_array2::util::*;
 use num_complex::*;
 
@@ -29,7 +29,7 @@ mod valid_owned {
             .uplo(uplo)
             .run()
             .unwrap();
-        
+
         let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
         let b_naive = &b_raw.slice(b_slc).into_owned();
         let c_naive = match side.into() {
@@ -79,7 +79,7 @@ mod valid_owned {
                     .uplo(uplo)
                     .run()
                     .unwrap();
-                
+
                 let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
                 let c_naive = match side.into() {
@@ -157,7 +157,7 @@ mod valid_view {
             .uplo(uplo)
             .run()
             .unwrap();
-        
+
         let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
         let b_naive = &b_raw.slice(b_slc).into_owned();
         let c_assign = match side.into() {
@@ -171,7 +171,7 @@ mod valid_view {
             let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
             let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
             let err_div = err / acc;
-            assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
         } else {
             panic!("Failed");
         }
@@ -185,7 +185,7 @@ mod valid_view {
             $a_layout: expr, $b_layout: expr, $c_layout: expr,
             $side: expr, $uplo: expr,
             $blas: ident, $symm: ident
-        ) => {    
+        ) => {
             #[test]
             #[$attr]
             fn $test_name() {
@@ -213,7 +213,7 @@ mod valid_view {
                     .uplo(uplo)
                     .run()
                     .unwrap();
-                
+
                 let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
                 let c_assign = match side.into() {
@@ -234,7 +234,7 @@ mod valid_view {
             }
         };
     }
-    
+
     // successful tests
     test_macro!(test_000: inline, f32, (7, 7, 1, 1), (7, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'L', 'L', SYMM, symmetrize);
     test_macro!(test_001: inline, f32, (7, 7, 1, 3), (7, 9, 3, 3), (7, 9, 3, 3), 'C', 'C', 'C', 'L', 'U', SYMM, symmetrize);

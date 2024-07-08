@@ -96,15 +96,13 @@ where
     _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'b, 'c, F, S> SYMM_Driver<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYMM_Driver<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
+    BLASFunc: SYMMFunc<F, S>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
-    where
-        BLASFunc: SYMMFunc<F, S>,
-    {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         let side = self.side;
         let uplo = self.uplo;
         let m = self.m;
@@ -159,12 +157,13 @@ where
     _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'b, 'c, F, S> SYMM_<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYMM_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
+    BLASFunc: SYMMFunc<F, S>,
 {
-    pub fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, AnyError> {
+    fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, AnyError> {
         let a = self.a;
         let b = self.b;
         let c = self.c;
@@ -240,13 +239,13 @@ pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermitian<F>>;
 pub type CHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c32>;
 pub type ZHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c64>;
 
-impl<'a, 'b, 'c, F, S> SYMM_Builder<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYMM_Builder<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYMMFunc<F, S>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
         let obj = self.build()?;
 
