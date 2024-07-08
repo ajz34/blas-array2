@@ -1,14 +1,15 @@
-# array2-blas
+# blas-array2
 
 [![codecov](https://codecov.io/gh/ajz34/blas-array2/graph/badge.svg?token=n1ucRtIupr)](https://codecov.io/gh/ajz34/blas-array2)
 
-Implementation of parameter-optional BLAS by `ndarray::Array` (`Ix1` or `Ix2`)
+Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or `Ix2`)
 
 **This is a package under construction.**
 
 Currently,
 - Some important BLAS3 functions (`gemm`, `symm`/`hemm`, `syrk`/`herk`) have been implemented.
 - Optional parameters (`scipy.linalg.blas` convention), complex numbers, arbitary layouts (row-major, col-major, strided) supported.
+- Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values (like calling to Fortran BLAS).
 - All input in row-major (or col-major) should not involve unnecessary transpositions with explicit clone. So all-row-major or all-col-major is preferred.
 
 ## Simple example
