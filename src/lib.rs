@@ -3,4 +3,5 @@
 
 pub mod blas1;
 pub mod blas3;
+pub mod prelude;
 pub mod util;

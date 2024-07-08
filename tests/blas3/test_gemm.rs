@@ -17,8 +17,7 @@ mod demonstration {
     /// ```
     #[test]
     fn demonstration_dgemm_simple() {
-        use blas_array2::blas3::gemm::DGEMM;
-        use blas_array2::util::*;
+        use blas_array2::prelude::*;
         use ndarray::prelude::*;
         let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
         let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
@@ -51,10 +50,8 @@ mod demonstration {
     /// ```
     #[test]
     fn demonstration_dgemm_complicated() {
-        use blas_array2::blas3::gemm::DGEMM;
-        use blas_array2::util::*;
+        use blas_array2::prelude::*;
         use ndarray::prelude::*;
-
         let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
         let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
         let mut c = Array::ones((3, 3).f());

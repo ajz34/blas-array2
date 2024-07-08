@@ -173,3 +173,33 @@ where
 }
 
 /* #endregion */
+
+pub fn ndarray_to_colmajor<A, D>(arr: Array<A, D>) -> Array<A, D>
+where
+    A: Clone,
+    D: Dimension,
+{
+    let arr = arr.reversed_axes(); // data not copied
+    if arr.is_standard_layout() {
+        // arr is f-contiguous = reversed arr is c-contiguous
+        // CowArray `into_owned` will not copy if own data, but will copy if it represents view
+        // So, though `arr.as_standard_layout().reversed_axes().into_owned()` works, it clones data instead of move it
+        return arr.reversed_axes(); // data not copied
+    } else {
+        // arr is not f-contiguous
+        // make reversed arr c-contiguous, then reverse arr again
+        return arr.as_standard_layout().reversed_axes().into_owned();
+    }
+}
+
+pub fn ndarray_to_rowmajor<A, D>(arr: Array<A, D>) -> Array<A, D>
+where
+    A: Clone,
+    D: Dimension,
+{
+    if arr.is_standard_layout() {
+        return arr;
+    } else {
+        return arr.as_standard_layout().into_owned();
+    }
+}

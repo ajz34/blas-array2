@@ -11,13 +11,14 @@ Currently,
 - Optional parameters (`scipy.linalg.blas` convention), complex numbers, arbitary layouts (row-major, col-major, strided) supported.
 - Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values (like calling to Fortran BLAS).
 - All input in row-major (or col-major) should not involve unnecessary transpositions with explicit clone. So all-row-major or all-col-major is preferred.
+- Generics is able for some blas functions: you can use `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class.
 
 ## Simple example
 
 For simple illustration to this package, we perform $C = A B$ (`dgemm`):
 ```rust
+use blas_array2::prelude::*;
 use ndarray::prelude::*;
-use blas_array2::blas3::gemm::DGEMM;
 let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
 let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
 let c_out = DGEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
@@ -31,16 +32,16 @@ Important points are
 
 ## Complicated example
 
-For complicated situation, we perform $C = A B^\dagger$:
+For complicated situation, we perform $C = A B^\dagger$ by `SGEMM = GEMM<f32>`:
 ```rust
+use blas_array2::prelude::*;
 use ndarray::prelude::*;
-use blas_array2::blas3::gemm::DGEMM;
 
 let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
 let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
 let mut c = Array::ones((3, 3).f());
 
-let c_out = DGEMM::default()
+let c_out = GEMM::<f32>::default()
     .a(a.slice(s![.., ..2]))
     .b(b.view())
     .c(c.slice_mut(s![0..3;2, ..]))

@@ -1,30 +1,4 @@
 use crate::util::*;
-
-/// Trait for BLAS functions.
-pub trait StructBLAS {
-    // `optional, depend`
-    fn init_optional(&mut self) -> Result<(), AnyError>;
-    // `intent(hide)`
-    fn init_hidden(&mut self) -> Result<(), AnyError>;
-    // `check`
-    fn check(&self) -> Result<(), AnyError>;
-    fn runnable(&self) -> bool;
-    fn initialize(&mut self) -> Result<(), AnyError> {
-        println!("runnable: {:?}", self.runnable());
-        if !self.runnable() {
-            return Err(BLASError(
-                "Current BLAS is not runnable. This struct may have execuated once and shouldn't be execuated anymore."
-                    .to_string(),
-            )
-            .into());
-        }
-        self.init_optional()?;
-        self.init_hidden()?;
-        self.check()?;
-        Ok(())
-    }
-}
-
 use blas_sys::{c_double_complex, c_float_complex};
 use libc::{c_double, c_float};
 use ndarray::Dimension;
