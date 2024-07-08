@@ -126,7 +126,7 @@ where
         unsafe {
             BLASFunc::symm(&side, &uplo, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }
-        Ok(c.clone_to_view_mut())
+        return Ok(c.clone_to_view_mut());
     }
 }
 
@@ -260,11 +260,9 @@ where
             // C-contiguous: C' = op(B') op(A')
             let a_cow = obj.a.as_standard_layout();
             let b_cow = obj.b.as_standard_layout();
-            let a_view = a_cow.view();
-            let b_view = b_cow.view();
             let obj = SYMM_::<'_, '_, '_, F, S> {
-                a: a_view.t(),
-                b: b_view.t(),
+                a: a_cow.t(),
+                b: b_cow.t(),
                 c: obj.c.map(|c| c.reversed_axes()),
                 alpha: obj.alpha,
                 beta: obj.beta,

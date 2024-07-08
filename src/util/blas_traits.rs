@@ -1,9 +1,4 @@
-use crate::util::{AnyError, BLASError};
-
-/// Marker struct of BLAS functions.
-///
-/// This struct will be implemented in modules of each function.
-pub struct BLASFunc {}
+use crate::util::*;
 
 /// Trait for BLAS functions.
 pub trait StructBLAS {
@@ -32,6 +27,7 @@ pub trait StructBLAS {
 
 use blas_sys::{c_double_complex, c_float_complex};
 use libc::{c_double, c_float};
+use ndarray::Dimension;
 use num_complex::Complex;
 use num_traits::{Num, NumAssignOps};
 
@@ -148,4 +144,32 @@ where
     fn is_hermitian() -> bool {
         true
     }
+}
+
+/// Marker struct of BLAS functions.
+///
+/// This struct will be implemented in modules of each function.
+pub struct BLASFunc {}
+
+/// Trait for BLAS drivers
+pub trait BLASDriver<'c, F, D>
+where
+    D: Dimension,
+{
+    fn run(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
+}
+
+/// Trait for BLAS builder prototypes
+pub trait BLASBuilder_<'c, F, D>
+where
+    D: Dimension,
+{
+    fn driver(self) -> Result<impl BLASDriver<'c, F, D>, AnyError>;
+}
+
+pub trait BLASBuilder<'c, F, D>
+where 
+    D: Dimension
+{
+    fn run(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
 }

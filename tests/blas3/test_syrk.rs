@@ -57,7 +57,6 @@ mod valid_owned {
             $trans: expr,
             $blas: ident, $blas_trans: expr, $blas_ty: ty
         ) => {
-
             #[test]
             #[$attr]
             fn $test_name() {
@@ -88,6 +87,8 @@ mod valid_owned {
                 tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);
 
                 if let ArrayOut2::Owned(c_out) = c_out {
+                    println!("{:7.3?}", &c_naive);
+                    println!("{:7.3?}", &c_out);
                     let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
                     let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
                     let err_div = err / acc;
@@ -129,6 +130,8 @@ mod valid_owned {
     test_macro!(test_100: inline, f32, (7, 5, 1, 1), 'R', 'L', 'C', SYRK, 'T', f32);
     test_macro!(test_101: should_panic, c64, (7, 5, 1, 1), 'R', 'L', 'C', SYRK, 'T', c64);
     test_macro!(test_102: should_panic, c64, (7, 5, 1, 1), 'R', 'L', 'T', HERK, 'C', f64);
+    test_macro!(test_103: should_panic, c64, (7, 5, 1, 1), 'C', 'L', 'C', SYRK, 'T', c64);
+    test_macro!(test_104: should_panic, c64, (7, 5, 1, 1), 'C', 'L', 'T', HERK, 'C', f64);
 }
 
 #[cfg(test)]
@@ -192,7 +195,6 @@ mod valid_view {
             $trans: expr,
             $blas: ident, $blas_trans: expr, $blas_ty: ty
         ) => {
-            
             #[test]
             #[$attr]
             fn $test_name() {

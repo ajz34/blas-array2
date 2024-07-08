@@ -57,7 +57,6 @@ mod valid_owned {
             $side: expr, $uplo: expr,
             $blas: ident, $symm: ident
         ) => {
-            
             #[test]
             #[$attr]
             fn $test_name() {

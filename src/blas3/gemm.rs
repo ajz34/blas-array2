@@ -127,7 +127,7 @@ where
         unsafe {
             BLASFunc::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }
-        Ok(c.clone_to_view_mut())
+        return Ok(c.clone_to_view_mut());
     }
 }
 
@@ -259,11 +259,9 @@ where
             // C-contiguous: C' = op(B') op(A')
             let a_cow = obj.a.as_standard_layout();
             let b_cow = obj.b.as_standard_layout();
-            let a_view = a_cow.view();
-            let b_view = b_cow.view();
             let obj = GEMM_ {
-                a: b_view.t(),
-                b: a_view.t(),
+                a: b_cow.t(),
+                b: a_cow.t(),
                 c: obj.c.map(|c| c.reversed_axes()),
                 alpha: obj.alpha,
                 beta: obj.beta,
