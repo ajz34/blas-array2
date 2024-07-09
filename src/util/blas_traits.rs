@@ -11,7 +11,9 @@ pub type c32 = Complex<f32>;
 pub type c64 = Complex<f64>;
 
 /// Trait for defining real part float types
-pub trait BLASFloat: Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display + 'static {
+pub trait BLASFloat:
+    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display + 'static
+{
     type RealFloat: BLASFloat;
     type FFIFloat;
     fn is_complex() -> bool;

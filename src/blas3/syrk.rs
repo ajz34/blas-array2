@@ -88,12 +88,13 @@ where
     ldc: c_int,
 }
 
-impl<'a, 'c, F, S> SYRK_Driver<'a, 'c, F, S>
+impl<'a, 'c, F, S> BLASDriver<'c, F, Ix2> for SYRK_Driver<'a, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
+    BLASFunc: SYRKFunc<F, S>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError>
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError>
     where
         BLASFunc: SYRKFunc<F, S>,
     {
@@ -146,12 +147,13 @@ where
     pub trans: BLASTrans,
 }
 
-impl<'a, 'c, F, S> SYRK_<'a, 'c, F, S>
+impl<'a, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYRK_<'a, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
+    BLASFunc: SYRKFunc<F, S>,
 {
-    pub fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, AnyError> {
+    fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, AnyError> {
         let a = self.a;
         let c = self.c;
         let alpha = self.alpha;
@@ -238,13 +240,13 @@ pub type HERK<'a, 'c, F> = SYRK_Builder<'a, 'c, F, BLASHermitian<F>>;
 pub type CHERK<'a, 'c> = HERK<'a, 'c, c32>;
 pub type ZHERK<'a, 'c> = HERK<'a, 'c, c64>;
 
-impl<'a, 'c, F, S> SYRK_Builder<'a, 'c, F, S>
+impl<'a, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYRK_Builder<'a, 'c, F, S>
 where
     F: BLASFloat,
     S: BLASSymm,
     BLASFunc: SYRKFunc<F, S>,
 {
-    pub fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
         let obj = self.build()?;
 
@@ -252,7 +254,7 @@ where
 
         if layout_a.is_fpref() {
             // F-contiguous: C = A op(A) or C = op(A) A
-            return obj.driver()?.run();
+            return obj.driver()?.run_blas();
         } else {
             // C-contiguous: C' = op(A') A' or C' = A' op(A')
             let a_cow = obj.a.as_standard_layout();
@@ -290,7 +292,7 @@ where
                     },
                 },
             };
-            let c = obj.driver()?.run()?.reversed_axes();
+            let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);
         }
     }

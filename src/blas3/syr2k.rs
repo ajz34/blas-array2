@@ -188,7 +188,9 @@ where
         // dimension of b
         match trans {
             BLASTrans::NoTrans => blas_assert_eq!(b.dim(), (n, k), "Incompatible dimensions")?,
-            BLASTrans::Trans | BLASTrans::ConjTrans => blas_assert_eq!(b.dim(), (k, n), "Incompatible dimensions")?,
+            BLASTrans::Trans | BLASTrans::ConjTrans => {
+                blas_assert_eq!(b.dim(), (k, n), "Incompatible dimensions")?
+            },
             _ => blas_invalid!(trans)?,
         };
         // trans keyword

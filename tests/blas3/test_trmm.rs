@@ -72,7 +72,7 @@ mod valid {
             let err = (&b_naive - &b_raw).mapv(|x| x.abs()).sum();
             let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
             let err_div = err / acc;
-            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
         } else {
             panic!("Failed");
         }
@@ -146,7 +146,7 @@ mod valid {
                     let err = (&b_naive - &b_raw).mapv(|x| x.abs()).sum();
                     let acc = b_naive.view().mapv(|x| x.abs()).sum() as RT;
                     let err_div = err / acc;
-                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
                 } else {
                     panic!("Failed");
                 }

@@ -52,12 +52,27 @@ where
     return matrix;
 }
 
+pub fn random_array<F>(size: usize) -> Array1<F>
+where
+    F: RandomNumber<F> + BLASFloat,
+{
+    let mut array = Array1::zeros(size);
+    for x in array.iter_mut() {
+        *x = F::rand();
+    }
+    return array;
+}
+
 /* #endregion */
 
 /* #region Sized subatrix */
 
 pub fn slice(nrow: usize, ncol: usize, srow: usize, scol: usize) -> SliceInfo<[SliceInfoElem; 2], Ix2, Ix2> {
     s![5..(5+nrow*srow);srow, 10..(10+ncol*scol);scol]
+}
+
+pub fn slice_1d(n: usize, s: usize) -> SliceInfo<[SliceInfoElem; 1], Ix1, Ix1> {
+    s![50..(50+n*s);s]
 }
 
 /* #endregion */
@@ -82,6 +97,23 @@ where
         }
     }
     return c;
+}
+
+pub fn gemv<F>(a: &ArrayView2<F>, x: &ArrayView1<F>) -> Array1<F>
+where
+    F: BLASFloat,
+{
+    let (m, n) = a.dim();
+    assert_eq!(x.len(), n);
+    let mut y = Array1::<F>::zeros(m);
+    for i in 0..m {
+        let mut sum = F::zero();
+        for j in 0..n {
+            sum += a[[i, j]] * x[j];
+        }
+        y[i] = sum;
+    }
+    return y;
 }
 
 pub fn transpose<F>(a: &ArrayView2<F>, trans: BLASTrans) -> Array2<F>

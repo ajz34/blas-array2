@@ -123,7 +123,9 @@ where
         let ldc = self.ldc;
 
         unsafe {
-            BLASFunc::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
+            BLASFunc::gemm(
+                &transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc,
+            );
         }
         return Ok(c.clone_to_view_mut());
     }
@@ -190,7 +192,9 @@ where
         // perform check
         match transb {
             BLASTrans::NoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, "Incompatible dimensions")?,
-            BLASTrans::Trans | BLASTrans::ConjTrans => blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?,
+            BLASTrans::Trans | BLASTrans::ConjTrans => {
+                blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?
+            },
             _ => blas_invalid!(transb)?,
         }
 

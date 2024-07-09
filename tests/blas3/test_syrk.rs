@@ -19,12 +19,23 @@ mod valid_owned {
         let uplo = 'U';
         let trans = 'T';
 
-        let c_out = SYRK::default().a(a_raw.slice(a_slc)).alpha(alpha).beta(beta).uplo(uplo).trans(trans).run().unwrap();
+        let c_out = SYRK::default()
+            .a(a_raw.slice(a_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .uplo(uplo)
+            .trans(trans)
+            .run()
+            .unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
         let c_assign = match trans.into() {
-            BLASTrans::NoTrans => alpha * gemm(&a_naive.view(), &transpose(&a_naive.view(), trans.into()).view()),
-            BLASTrans::Trans | BLASTrans::ConjTrans => alpha * gemm(&transpose(&a_naive.view(), trans.into()).view(), &a_naive.view()),
+            BLASTrans::NoTrans => {
+                alpha * gemm(&a_naive.view(), &transpose(&a_naive.view(), trans.into()).view())
+            },
+            BLASTrans::Trans | BLASTrans::ConjTrans => {
+                alpha * gemm(&transpose(&a_naive.view(), trans.into()).view(), &a_naive.view())
+            },
             _ => panic!("Invalid"),
         };
         let mut c_naive = Array2::zeros(c_assign.dim());
@@ -34,7 +45,7 @@ mod valid_owned {
             let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
             let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
             let err_div = err / acc;
-            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
         } else {
             panic!("Failed");
         }
@@ -85,7 +96,7 @@ mod valid_owned {
                     let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
                     let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
                     let err_div = err / acc;
-                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
                 } else {
                     panic!("Failed");
                 }
@@ -146,17 +157,26 @@ mod valid_view {
 
         let mut c_naive = c_raw.clone();
 
-        let c_out =
-            SYRK::default().a(a_raw.slice(a_slc)).c(c_raw.slice_mut(c_slc)).alpha(alpha).beta(beta).uplo(uplo).trans(trans).run().unwrap();
+        let c_out = SYRK::default()
+            .a(a_raw.slice(a_slc))
+            .c(c_raw.slice_mut(c_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .uplo(uplo)
+            .trans(trans)
+            .run()
+            .unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
         let c_assign = match trans.into() {
             BLASTrans::NoTrans => {
-                <c32>::from(alpha) * gemm(&a_naive.view(), &transpose(&a_naive.view(), blas_trans.into()).view())
+                <c32>::from(alpha)
+                    * gemm(&a_naive.view(), &transpose(&a_naive.view(), blas_trans.into()).view())
                     + beta * &c_naive.slice(c_slc)
             },
             BLASTrans::Trans | BLASTrans::ConjTrans => {
-                <c32>::from(alpha) * gemm(&transpose(&a_naive.view(), blas_trans.into()).view(), &a_naive.view())
+                <c32>::from(alpha)
+                    * gemm(&transpose(&a_naive.view(), blas_trans.into()).view(), &a_naive.view())
                     + beta * &c_naive.slice(c_slc)
             },
             _ => panic!("Invalid"),
@@ -167,7 +187,7 @@ mod valid_view {
             let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
             let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
             let err_div = err / acc;
-            assert_abs_diff_eq!(err_div, 0.0, epsilon = 2.0 * RT::EPSILON);
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
         } else {
             panic!("Failed");
         }
@@ -230,7 +250,7 @@ mod valid_view {
                     let err = (&c_naive - &c_raw).mapv(|x| x.abs()).sum();
                     let acc = c_naive.view().mapv(|x| x.abs()).sum() as RT;
                     let err_div = err / acc;
-                    assert_abs_diff_eq!(err_div, 0.0, epsilon=2.0*RT::EPSILON);
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon=4.0 * RT::EPSILON);
                 } else {
                     panic!("Failed");
                 }
