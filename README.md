@@ -7,14 +7,14 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 **This is a package under construction.**
 
 Currently,
-- BLAS3 functions have been implemented. BLAS1/2 functions implementation is on-going work.
-- Optional parameters (`scipy.linalg.blas` convention), complex numbers, arbitary layouts (row-major, col-major, strided) supported.
-- Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values (like calling to Fortran BLAS).
-- All input in row-major (or col-major) should not involve unnecessary transpositions with explicit clone. So all-row-major or all-col-major is preferred.
-- Generics is able for some blas functions: you can use `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class.
+- BLAS3 functions have been implemented. BLAS1/2 functions implementation is on-going.
+- **Optional Parameters**: `scipy.linalg.blas` convention. Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values.
+- **Row-major Layout**: Row-major support to Fortran API only (CBLAS functionality without CBLAS functions).
+- **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc.
+- **Arbitary Layout**: Supports strides that `ndarray` allows (for correctness and API convenience only, but require explicit raw data clone among DRAM).
+- **View instead of Clone if possible**: All input in row-major (or col-major) should not involve unnecessary transpositions with explicit clone (a few exceptions occurs for complex BLAS2 functions). So all-row-major or all-col-major is preferred.
 
 ## Simple example
-
 For simple illustration to this package, we perform $C = A B$ (`dgemm`):
 ```rust
 use blas_array2::prelude::*;
