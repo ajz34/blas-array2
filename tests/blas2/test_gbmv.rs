@@ -1,0 +1,203 @@
+use crate::util::*;
+use approx::*;
+use blas_array2::blas2::gbmv::GBMV;
+use blas_array2::prelude::*;
+use ndarray::prelude::*;
+use num_complex::*;
+
+#[cfg(test)]
+mod valid {
+    use super::*;
+
+    #[test]
+    fn test_example() {
+        type RT = <f32 as BLASFloat>::RealFloat;
+        let alpha = <f32>::rand();
+        let beta = <f32>::rand();
+        let m = 10;
+        let n = 8;
+        let kl = 4;
+        let ku = 2;
+        let trans = 'T';
+        let a_raw = random_matrix(100, 100, 'R'.into());
+        let x_raw = random_array(100);
+        let mut y_raw = random_array(100);
+
+        let a_slc = slice(kl + ku + 1, n, 1, 1);
+        let x_slc = slice_1d(if trans == 'N' { n } else { m }, 3);
+        let y_slc = slice_1d(if trans == 'N' { m } else { n }, 3);
+
+        let mut a_naive = Array2::<f32>::zeros((m, n));
+        for j in 0..n {
+            let k = ku as isize - j as isize;
+            for i in (if j > ku { j - ku } else { 0 })..std::cmp::min(m, j + kl + 1) {
+                a_naive[[i as usize, j]] = a_raw.slice(a_slc)[[(k + i as isize) as usize, j]];
+            }
+        }
+
+        let a_naive = transpose(&a_naive.view(), trans.into());
+        let x_naive = x_raw.slice(x_slc).into_owned();
+        let mut y_naive = y_raw.clone();
+        let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
+        let y_assign = &y_bare + beta * &y_naive.slice(&y_slc);
+        y_naive.slice_mut(y_slc).assign(&y_assign);
+        println!("{:?}", y_naive.slice(y_slc));
+
+        // mut_view
+        let y_out = GBMV::default()
+            .a(a_raw.slice(a_slc))
+            .x(x_raw.slice(x_slc))
+            .y(y_raw.slice_mut(y_slc))
+            .m(m)
+            .kl(kl)
+            .ku(ku)
+            .trans(trans)
+            .alpha(alpha)
+            .beta(beta)
+            .run()
+            .unwrap();
+        if let ArrayOut1::ViewMut(_) = y_out {
+            let err = (&y_naive - &y_raw).mapv(|x| x.abs()).sum();
+            let acc = y_naive.view().mapv(|x| x.abs()).sum() as RT;
+            let err_div = err / acc;
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
+        } else {
+            panic!("Failed");
+        }
+
+        // owned
+        let y_out = GBMV::default()
+            .a(a_raw.slice(a_slc))
+            .x(x_raw.slice(x_slc))
+            .m(m)
+            .kl(kl)
+            .ku(ku)
+            .trans(trans)
+            .alpha(alpha)
+            .beta(beta)
+            .run()
+            .unwrap();
+        if let ArrayOut1::Owned(y_out) = y_out {
+            let err = (&y_bare - &y_out).mapv(|x| x.abs()).sum();
+            let acc = y_bare.view().mapv(|x| x.abs()).sum() as RT;
+            let err_div = err / acc;
+            assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
+        } else {
+            panic!("Failed");
+        }
+    }
+
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F:ty,
+            $a_stride_0: expr, $a_stride_1: expr, $x_stride: expr, $y_stride: expr,
+            $a_layout: expr,
+            $trans: expr
+        ) => {
+            #[test]
+            #[$attr]
+            fn $test_name() {
+                type RT = <$F as BLASFloat>::RealFloat;
+                let alpha = <$F>::rand();
+                let beta = <$F>::rand();
+                let m = 10;
+                let n = 8;
+                let kl = 4;
+                let ku = 2;
+                let trans = $trans;
+                let a_raw = random_matrix(100, 100, 'R'.into());
+                let x_raw = random_array(100);
+                let mut y_raw = random_array(100);
+
+                let a_slc = slice(kl + ku + 1, n, $a_stride_0, $a_stride_1);
+                let x_slc = slice_1d(if trans == 'N' { n } else { m }, $x_stride);
+                let y_slc = slice_1d(if trans == 'N' { m } else { n }, $y_stride);
+
+                let mut a_naive = Array2::zeros((m, n));
+                for j in 0..n {
+                    let k = ku as isize - j as isize;
+                    for i in (if j > ku { j - ku } else { 0 })..std::cmp::min(m, j + kl + 1) {
+                        a_naive[[i as usize, j]] = a_raw.slice(a_slc)[[(k + i as isize) as usize, j]];
+                    }
+                }
+
+                let a_naive = transpose(&a_naive.view(), trans.into());
+                let x_naive = x_raw.slice(x_slc).into_owned();
+                let mut y_naive = y_raw.clone();
+                let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
+                let y_assign = &y_bare + beta * &y_naive.slice(&y_slc);
+                y_naive.slice_mut(y_slc).assign(&y_assign);
+                println!("{:?}", y_naive.slice(y_slc));
+
+                // mut_view
+                let y_out = GBMV::default()
+                    .a(a_raw.slice(a_slc))
+                    .x(x_raw.slice(x_slc))
+                    .y(y_raw.slice_mut(y_slc))
+                    .m(m)
+                    .kl(kl)
+                    .ku(ku)
+                    .trans(trans)
+                    .alpha(alpha)
+                    .beta(beta)
+                    .run()
+                    .unwrap();
+                if let ArrayOut1::ViewMut(_) = y_out {
+                    let err = (&y_naive - &y_raw).mapv(|x| x.abs()).sum();
+                    let acc = y_naive.view().mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
+                } else {
+                    panic!("Failed");
+                }
+
+                // owned
+                let y_out = GBMV::default()
+                    .a(a_raw.slice(a_slc))
+                    .x(x_raw.slice(x_slc))
+                    .m(m)
+                    .kl(kl)
+                    .ku(ku)
+                    .trans(trans)
+                    .alpha(alpha)
+                    .beta(beta)
+                    .run()
+                    .unwrap();
+                if let ArrayOut1::Owned(y_out) = y_out {
+                    let err = (&y_bare - &y_out).mapv(|x| x.abs()).sum();
+                    let acc = y_bare.view().mapv(|x| x.abs()).sum() as RT;
+                    let err_div = err / acc;
+                    assert_abs_diff_eq!(err_div, 0.0, epsilon = 4.0 * RT::EPSILON);
+                } else {
+                    panic!("Failed");
+                }
+            }
+        };
+    }
+
+    test_macro!(test_000: inline, f32, 1, 1, 1, 1, 'R', 'N');
+    test_macro!(test_001: inline, f32, 1, 1, 1, 1, 'C', 'N');
+    test_macro!(test_002: inline, f32, 1, 1, 3, 3, 'R', 'T');
+    test_macro!(test_003: inline, f32, 3, 3, 1, 3, 'C', 'T');
+    test_macro!(test_004: inline, f32, 3, 3, 3, 1, 'R', 'C');
+    test_macro!(test_005: inline, f32, 3, 3, 3, 3, 'C', 'C');
+    test_macro!(test_006: inline, f64, 1, 1, 1, 3, 'C', 'C');
+    test_macro!(test_007: inline, f64, 1, 3, 1, 1, 'C', 'T');
+    test_macro!(test_008: inline, f64, 1, 3, 3, 1, 'R', 'T');
+    test_macro!(test_009: inline, f64, 3, 1, 1, 1, 'R', 'C');
+    test_macro!(test_010: inline, f64, 3, 1, 3, 3, 'R', 'N');
+    test_macro!(test_011: inline, f64, 3, 3, 3, 3, 'C', 'N');
+    test_macro!(test_012: inline, c32, 1, 1, 3, 1, 'C', 'C');
+    test_macro!(test_013: inline, c32, 1, 3, 1, 3, 'C', 'C');
+    test_macro!(test_014: inline, c32, 1, 3, 3, 3, 'R', 'N');
+    test_macro!(test_015: inline, c32, 3, 1, 1, 3, 'R', 'T');
+    test_macro!(test_016: inline, c32, 3, 1, 3, 1, 'C', 'N');
+    test_macro!(test_017: inline, c32, 3, 3, 1, 1, 'R', 'T');
+    test_macro!(test_018: inline, c64, 1, 1, 3, 3, 'C', 'T');
+    test_macro!(test_019: inline, c64, 1, 3, 1, 3, 'R', 'N');
+    test_macro!(test_020: inline, c64, 1, 3, 3, 1, 'R', 'C');
+    test_macro!(test_021: inline, c64, 3, 1, 1, 3, 'R', 'C');
+    test_macro!(test_022: inline, c64, 3, 1, 3, 1, 'C', 'T');
+    test_macro!(test_023: inline, c64, 3, 3, 1, 1, 'C', 'N');
+}
