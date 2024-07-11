@@ -41,7 +41,6 @@ mod valid {
         let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
         let y_assign = &y_bare + beta * &y_naive.slice(&y_slc);
         y_naive.slice_mut(y_slc).assign(&y_assign);
-        println!("{:?}", y_naive.slice(y_slc));
 
         // mut_view
         let y_out = GBMV::default()
@@ -91,7 +90,7 @@ mod valid {
         (
             $test_name: ident: $attr: ident,
             $F:ty,
-            $a_stride_0: expr, $a_stride_1: expr, $x_stride: expr, $y_stride: expr,
+            ($($a_slc: expr),+), ($($x_slc: expr),+), ($($y_slc: expr),+),
             $a_layout: expr,
             $trans: expr
         ) => {
@@ -110,9 +109,9 @@ mod valid {
                 let x_raw = random_array(100);
                 let mut y_raw = random_array(100);
 
-                let a_slc = slice(kl + ku + 1, n, $a_stride_0, $a_stride_1);
-                let x_slc = slice_1d(if trans == 'N' { n } else { m }, $x_stride);
-                let y_slc = slice_1d(if trans == 'N' { m } else { n }, $y_stride);
+                let a_slc = slice($($a_slc),+);
+                let x_slc = slice_1d($($x_slc),+);
+                let y_slc = slice_1d($($y_slc),+);
 
                 let mut a_naive = Array2::zeros((m, n));
                 for j in 0..n {
@@ -176,28 +175,28 @@ mod valid {
         };
     }
 
-    test_macro!(test_000: inline, f32, 1, 1, 1, 1, 'R', 'N');
-    test_macro!(test_001: inline, f32, 1, 1, 1, 1, 'C', 'N');
-    test_macro!(test_002: inline, f32, 1, 1, 3, 3, 'R', 'T');
-    test_macro!(test_003: inline, f32, 3, 3, 1, 3, 'C', 'T');
-    test_macro!(test_004: inline, f32, 3, 3, 3, 1, 'R', 'C');
-    test_macro!(test_005: inline, f32, 3, 3, 3, 3, 'C', 'C');
-    test_macro!(test_006: inline, f64, 1, 1, 1, 3, 'C', 'C');
-    test_macro!(test_007: inline, f64, 1, 3, 1, 1, 'C', 'T');
-    test_macro!(test_008: inline, f64, 1, 3, 3, 1, 'R', 'T');
-    test_macro!(test_009: inline, f64, 3, 1, 1, 1, 'R', 'C');
-    test_macro!(test_010: inline, f64, 3, 1, 3, 3, 'R', 'N');
-    test_macro!(test_011: inline, f64, 3, 3, 3, 3, 'C', 'N');
-    test_macro!(test_012: inline, c32, 1, 1, 3, 1, 'C', 'C');
-    test_macro!(test_013: inline, c32, 1, 3, 1, 3, 'C', 'C');
-    test_macro!(test_014: inline, c32, 1, 3, 3, 3, 'R', 'N');
-    test_macro!(test_015: inline, c32, 3, 1, 1, 3, 'R', 'T');
-    test_macro!(test_016: inline, c32, 3, 1, 3, 1, 'C', 'N');
-    test_macro!(test_017: inline, c32, 3, 3, 1, 1, 'R', 'T');
-    test_macro!(test_018: inline, c64, 1, 1, 3, 3, 'C', 'T');
-    test_macro!(test_019: inline, c64, 1, 3, 1, 3, 'R', 'N');
-    test_macro!(test_020: inline, c64, 1, 3, 3, 1, 'R', 'C');
-    test_macro!(test_021: inline, c64, 3, 1, 1, 3, 'R', 'C');
-    test_macro!(test_022: inline, c64, 3, 1, 3, 1, 'C', 'T');
-    test_macro!(test_023: inline, c64, 3, 3, 1, 1, 'C', 'N');
+    test_macro!(test_000: inline, f32, (7, 8, 1, 1), (8, 1), (10, 1), 'R', 'N');
+    test_macro!(test_001: inline, f32, (7, 8, 1, 1), (8, 1), (10, 1), 'C', 'N');
+    test_macro!(test_002: inline, f32, (7, 8, 1, 1), (10, 3), (8, 3), 'R', 'T');
+    test_macro!(test_003: inline, f32, (7, 8, 3, 3), (10, 1), (8, 3), 'C', 'T');
+    test_macro!(test_004: inline, f32, (7, 8, 3, 3), (10, 3), (8, 1), 'R', 'C');
+    test_macro!(test_005: inline, f32, (7, 8, 3, 3), (10, 3), (8, 3), 'C', 'C');
+    test_macro!(test_006: inline, f64, (7, 8, 1, 1), (10, 1), (8, 3), 'C', 'C');
+    test_macro!(test_007: inline, f64, (7, 8, 1, 3), (10, 1), (8, 1), 'C', 'T');
+    test_macro!(test_008: inline, f64, (7, 8, 1, 3), (10, 3), (8, 1), 'R', 'T');
+    test_macro!(test_009: inline, f64, (7, 8, 3, 1), (10, 1), (8, 1), 'R', 'C');
+    test_macro!(test_010: inline, f64, (7, 8, 3, 1), (8, 3), (10, 3), 'R', 'N');
+    test_macro!(test_011: inline, f64, (7, 8, 3, 3), (8, 3), (10, 3), 'C', 'N');
+    test_macro!(test_012: inline, c32, (7, 8, 1, 1), (10, 3), (8, 1), 'C', 'C');
+    test_macro!(test_013: inline, c32, (7, 8, 1, 3), (10, 1), (8, 3), 'C', 'C');
+    test_macro!(test_014: inline, c32, (7, 8, 1, 3), (8, 3), (10, 3), 'R', 'N');
+    test_macro!(test_015: inline, c32, (7, 8, 3, 1), (10, 1), (8, 3), 'R', 'T');
+    test_macro!(test_016: inline, c32, (7, 8, 3, 1), (8, 3), (10, 1), 'C', 'N');
+    test_macro!(test_017: inline, c32, (7, 8, 3, 3), (10, 1), (8, 1), 'R', 'T');
+    test_macro!(test_018: inline, c64, (7, 8, 1, 1), (10, 3), (8, 3), 'C', 'T');
+    test_macro!(test_019: inline, c64, (7, 8, 1, 3), (8, 1), (10, 3), 'R', 'N');
+    test_macro!(test_020: inline, c64, (7, 8, 1, 3), (10, 3), (8, 1), 'R', 'C');
+    test_macro!(test_021: inline, c64, (7, 8, 3, 1), (10, 1), (8, 3), 'R', 'C');
+    test_macro!(test_022: inline, c64, (7, 8, 3, 1), (10, 3), (8, 1), 'C', 'T');
+    test_macro!(test_023: inline, c64, (7, 8, 3, 3), (8, 1), (10, 1), 'C', 'N');
 }
