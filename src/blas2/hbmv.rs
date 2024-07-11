@@ -139,7 +139,7 @@ where
     pub alpha: F,
     #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
-    #[builder(setter(into), default = "BLASUpLo::Upper")]
+    #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
 }
 

@@ -148,9 +148,9 @@ where
     pub alpha: F,
     #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
-    #[builder(setter(into), default = "BLASSide::Left")]
+    #[builder(setter(into), default = "BLASLeft")]
     pub side: BLASSide,
-    #[builder(setter(into), default = "BLASUpLo::Lower")]
+    #[builder(setter(into), default = "BLASLower")]
     pub uplo: BLASUpLo,
 
     #[builder(private, default = "PhantomData {}")]
@@ -185,8 +185,8 @@ where
 
         // perform check
         match side {
-            BLASSide::Left => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
-            BLASSide::Right => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
+            BLASLeft => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
+            BLASRight => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
             _ => blas_invalid!(side)?,
         }
 
@@ -266,13 +266,13 @@ where
                 alpha: obj.alpha,
                 beta: obj.beta,
                 side: match obj.side {
-                    BLASSide::Left => BLASSide::Right,
-                    BLASSide::Right => BLASSide::Left,
+                    BLASLeft => BLASRight,
+                    BLASRight => BLASLeft,
                     _ => blas_invalid!(obj.side)?,
                 },
                 uplo: match obj.uplo {
-                    BLASUpLo::Lower => BLASUpLo::Upper,
-                    BLASUpLo::Upper => BLASUpLo::Lower,
+                    BLASLower => BLASUpper,
+                    BLASUpper => BLASLower,
                     _ => blas_invalid!(obj.uplo)?,
                 },
                 _phantom: PhantomData {},

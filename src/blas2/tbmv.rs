@@ -112,11 +112,11 @@ where
     pub a: ArrayView2<'a, F>,
     pub x: ArrayViewMut1<'x, F>,
 
-    #[builder(setter(into), default = "BLASUpLo::Upper")]
+    #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub trans: BLASTrans,
-    #[builder(setter(into), default = "BLASDiag::NonUnit")]
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub trans: BLASTranspose,
+    #[builder(setter(into), default = "BLASNonUnit")]
     pub diag: BLASDiag,
 }
 

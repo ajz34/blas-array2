@@ -25,20 +25,20 @@ mod valid {
         let mut a_naive = a_raw.slice(a_slc).into_owned();
         let b_naive = b_raw.slice(b_slc).into_owned();
 
-        if BLASDiag::from(diag) == BLASDiag::Unit {
+        if BLASDiag::from(diag) == BLASUnit {
             for i in 0..a_naive.len_of(Axis(0)) {
                 a_naive[[i, i]] = 1.0;
             }
         }
         match uplo.into() {
-            BLASUpLo::Lower => {
+            BLASLower => {
                 for i in 0..a_naive.len_of(Axis(0)) {
                     for j in i + 1..a_naive.len_of(Axis(1)) {
                         a_naive[[i, j]] = 0.0;
                     }
                 }
             },
-            BLASUpLo::Upper => {
+            BLASUpper => {
                 for i in 0..a_naive.len_of(Axis(0)) {
                     for j in 0..i {
                         a_naive[[i, j]] = 0.0;
@@ -61,8 +61,8 @@ mod valid {
             .unwrap();
         let b_out = b_out.into_owned();
         let b_out = match side.into() {
-            BLASSide::Left => gemm(&a_naive.view(), &b_out.view()),
-            BLASSide::Right => gemm(&b_out.view(), &a_naive.view()),
+            BLASLeft => gemm(&a_naive.view(), &b_out.view()),
+            BLASRight => gemm(&b_out.view(), &a_naive.view()),
             _ => panic!(),
         };
 
@@ -94,20 +94,20 @@ mod valid {
                 let mut a_naive = a_raw.slice(a_slc).into_owned();
                 let b_naive = b_raw.slice(b_slc).into_owned();
 
-                if BLASDiag::from($diag) == BLASDiag::Unit {
+                if BLASDiag::from($diag) == BLASUnit {
                     for i in 0..a_naive.len_of(Axis(0)) {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
                 match $uplo.into() {
-                    BLASUpLo::Lower => {
+                    BLASLower => {
                         for i in 0..a_naive.len_of(Axis(0)) {
                             for j in i+1..a_naive.len_of(Axis(1)) {
                                 a_naive[[i, j]] = <$F>::from(0.0);
                             }
                         }
                     },
-                    BLASUpLo::Upper => {
+                    BLASUpper => {
                         for i in 0..a_naive.len_of(Axis(0)) {
                             for j in 0..i {
                                 a_naive[[i, j]] = <$F>::from(0.0);
@@ -130,8 +130,8 @@ mod valid {
                     .unwrap();
                 let b_out = b_out.into_owned();
                 let b_out = match $side.into() {
-                    BLASSide::Left => gemm(&a_naive.view(), &b_out.view()),
-                    BLASSide::Right => gemm(&b_out.view(), &a_naive.view()),
+                    BLASLeft => gemm(&a_naive.view(), &b_out.view()),
+                    BLASRight => gemm(&b_out.view(), &a_naive.view()),
                     _ => panic!(),
                 };
 

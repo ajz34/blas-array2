@@ -141,10 +141,10 @@ where
     pub alpha: S::HermitianFloat,
     #[builder(setter(into), default = "S::HermitianFloat::zero()")]
     pub beta: S::HermitianFloat,
-    #[builder(setter(into), default = "BLASUpLo::Lower")]
+    #[builder(setter(into), default = "BLASLower")]
     pub uplo: BLASUpLo,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub trans: BLASTrans,
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub trans: BLASTranspose,
 }
 
 impl<'a, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYRK_<'a, 'c, F, S>
@@ -167,8 +167,8 @@ where
 
         // initialize intent(hide)
         let (n, k) = match trans {
-            BLASTrans::NoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
-            BLASTrans::Trans | BLASTrans::ConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
+            BLASNoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
+            BLASTrans | BLASConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
             _ => blas_invalid!(trans)?,
         };
         let lda = a.stride_of(Axis(1));
@@ -177,18 +177,18 @@ where
         match F::is_complex() {
             false => match trans {
                 // ssyrk, dsyrk: NTC accepted
-                BLASTrans::NoTrans | BLASTrans::Trans | BLASTrans::ConjTrans => (),
+                BLASNoTrans | BLASTrans | BLASConjTrans => (),
                 _ => blas_invalid!(trans)?,
             },
             true => match S::is_hermitian() {
                 false => match trans {
                     // csyrk, zsyrk: NT accepted
-                    BLASTrans::NoTrans | BLASTrans::Trans => (),
+                    BLASNoTrans | BLASTrans => (),
                     _ => blas_invalid!(trans)?,
                 },
                 true => match trans {
                     // cherk, zherk: NC accepted
-                    BLASTrans::NoTrans | BLASTrans::ConjTrans => (),
+                    BLASNoTrans | BLASConjTrans => (),
                     _ => blas_invalid!(trans)?,
                 },
             },
@@ -264,29 +264,29 @@ where
                 alpha: obj.alpha,
                 beta: obj.beta,
                 uplo: match obj.uplo {
-                    BLASUpLo::Lower => BLASUpLo::Upper,
-                    BLASUpLo::Upper => BLASUpLo::Lower,
+                    BLASLower => BLASUpper,
+                    BLASUpper => BLASLower,
                     _ => blas_invalid!(obj.uplo)?,
                 },
                 trans: match F::is_complex() {
                     false => match obj.trans {
                         // ssyrk, dsyrk: NTC accepted
-                        BLASTrans::NoTrans => BLASTrans::Trans,
-                        BLASTrans::Trans => BLASTrans::NoTrans,
-                        BLASTrans::ConjTrans => BLASTrans::NoTrans,
+                        BLASNoTrans => BLASTrans,
+                        BLASTrans => BLASNoTrans,
+                        BLASConjTrans => BLASNoTrans,
                         _ => blas_invalid!(obj.trans)?,
                     },
                     true => match S::is_hermitian() {
                         false => match obj.trans {
                             // csyrk, zsyrk: NT accepted
-                            BLASTrans::NoTrans => BLASTrans::Trans,
-                            BLASTrans::Trans => BLASTrans::NoTrans,
+                            BLASNoTrans => BLASTrans,
+                            BLASTrans => BLASNoTrans,
                             _ => blas_invalid!(obj.trans)?,
                         },
                         true => match obj.trans {
                             // cherk, zherk: NC accepted
-                            BLASTrans::NoTrans => BLASTrans::ConjTrans,
-                            BLASTrans::ConjTrans => BLASTrans::NoTrans,
+                            BLASNoTrans => BLASConjTrans,
+                            BLASConjTrans => BLASNoTrans,
                             _ => blas_invalid!(obj.trans)?,
                         },
                     },

@@ -33,8 +33,8 @@ mod valid_owned {
         let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
         let b_naive = &b_raw.slice(b_slc).into_owned();
         let c_naive = match side.into() {
-            BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()),
-            BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()),
+            BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()),
+            BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()),
             _ => panic!("Invalid"),
         };
 
@@ -83,8 +83,8 @@ mod valid_owned {
                 let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
                 let c_naive = match side.into() {
-                    BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()),
-                    BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()),
+                    BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()),
+                    BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()),
                     _ => panic!("Invalid"),
                 };
 
@@ -161,8 +161,8 @@ mod valid_view {
         let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
         let b_naive = &b_raw.slice(b_slc).into_owned();
         let c_assign = match side.into() {
-            BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
-            BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
+            BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
+            BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
             _ => panic!("Invalid"),
         };
         c_naive.slice_mut(c_slc).assign(&c_assign);
@@ -217,8 +217,8 @@ mod valid_view {
                 let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
                 let c_assign = match side.into() {
-                    BLASSide::Left => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
-                    BLASSide::Right => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
+                    BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
+                    BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
                     _ => panic!("Invalid"),
                 };
                 c_naive.slice_mut(c_slc).assign(&c_assign);

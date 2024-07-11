@@ -134,13 +134,13 @@ where
 
     #[builder(setter(into), default = "F::one()")]
     pub alpha: F,
-    #[builder(setter(into), default = "BLASSide::Left")]
+    #[builder(setter(into), default = "BLASLeft")]
     pub side: BLASSide,
-    #[builder(setter(into), default = "BLASUpLo::Upper")]
+    #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub transa: BLASTrans,
-    #[builder(setter(into), default = "BLASDiag::NonUnit")]
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub transa: BLASTranspose,
+    #[builder(setter(into), default = "BLASNonUnit")]
     pub diag: BLASDiag,
 }
 
@@ -168,8 +168,8 @@ where
 
         // perform check
         match side {
-            BLASSide::Left => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
-            BLASSide::Right => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
+            BLASLeft => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
+            BLASRight => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
             _ => blas_invalid!(side)?,
         };
 
@@ -232,13 +232,13 @@ where
                 b: obj.b.reversed_axes(),
                 alpha: obj.alpha,
                 side: match obj.side {
-                    BLASSide::Left => BLASSide::Right,
-                    BLASSide::Right => BLASSide::Left,
+                    BLASLeft => BLASRight,
+                    BLASRight => BLASLeft,
                     _ => blas_invalid!(obj.side)?,
                 },
                 uplo: match obj.uplo {
-                    BLASUpLo::Upper => BLASUpLo::Lower,
-                    BLASUpLo::Lower => BLASUpLo::Upper,
+                    BLASUpper => BLASLower,
+                    BLASLower => BLASUpper,
                     _ => blas_invalid!(obj.uplo)?,
                 },
                 transa: obj.transa,

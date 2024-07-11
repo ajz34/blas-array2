@@ -42,8 +42,8 @@ where
     F: RandomNumber<F> + BLASFloat,
 {
     let mut matrix = match layout {
-        BLASLayout::RowMajor => Array2::zeros((row, col)),
-        BLASLayout::ColMajor => Array2::zeros((row, col).f()),
+        BLASRowMajor => Array2::zeros((row, col)),
+        BLASColMajor => Array2::zeros((row, col).f()),
         _ => panic!("Invalid layout"),
     };
     for x in matrix.iter_mut() {
@@ -116,21 +116,21 @@ where
     return y;
 }
 
-pub fn transpose<F>(a: &ArrayView2<F>, trans: BLASTrans) -> Array2<F>
+pub fn transpose<F>(a: &ArrayView2<F>, trans: BLASTranspose) -> Array2<F>
 where
     F: BLASFloat,
 {
     match trans {
-        BLASTrans::NoTrans => a.into_owned(),
-        BLASTrans::Trans => a.t().into_owned(),
-        BLASTrans::ConjNoTrans => match F::is_complex() {
+        BLASNoTrans => a.into_owned(),
+        BLASTrans => a.t().into_owned(),
+        BLASTranspose::ConjNoTrans => match F::is_complex() {
             true => {
                 let a = a.mapv(|x| F::conj(x));
                 a.into_owned()
             },
             false => a.into_owned(),
         },
-        BLASTrans::ConjTrans => match F::is_complex() {
+        BLASConjTrans => match F::is_complex() {
             true => {
                 let a = a.t().into_owned();
                 a.mapv(|x| F::conj(x))

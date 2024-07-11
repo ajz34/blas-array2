@@ -150,10 +150,10 @@ where
     pub alpha: F,
     #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub transa: BLASTrans,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub transb: BLASTrans,
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub transa: BLASTranspose,
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub transb: BLASTranspose,
 }
 
 impl<'a, 'b, 'c, F> BLASBuilder_<'c, F, Ix2> for GEMM_<'a, 'b, 'c, F>
@@ -177,13 +177,13 @@ where
 
         // initialize intent(hide)
         let (m, k) = match transa {
-            BLASTrans::NoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
-            BLASTrans::Trans | BLASTrans::ConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
+            BLASNoTrans => (a.len_of(Axis(0)), a.len_of(Axis(1))),
+            BLASTrans | BLASConjTrans => (a.len_of(Axis(1)), a.len_of(Axis(0))),
             _ => blas_invalid!(transa)?,
         };
         let n = match transb {
-            BLASTrans::NoTrans => b.len_of(Axis(1)),
-            BLASTrans::Trans | BLASTrans::ConjTrans => b.len_of(Axis(0)),
+            BLASNoTrans => b.len_of(Axis(1)),
+            BLASTrans | BLASConjTrans => b.len_of(Axis(0)),
             _ => blas_invalid!(transb)?,
         };
         let lda = a.stride_of(Axis(1));
@@ -191,10 +191,8 @@ where
 
         // perform check
         match transb {
-            BLASTrans::NoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, "Incompatible dimensions")?,
-            BLASTrans::Trans | BLASTrans::ConjTrans => {
-                blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?
-            },
+            BLASNoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, "Incompatible dimensions")?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?,
             _ => blas_invalid!(transb)?,
         }
 

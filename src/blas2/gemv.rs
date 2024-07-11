@@ -139,8 +139,8 @@ where
     pub alpha: F,
     #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub trans: BLASTrans,
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub trans: BLASTranspose,
 }
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for GEMV_<'a, 'x, 'y, F>
@@ -167,10 +167,8 @@ where
 
         // perform check
         match trans {
-            BLASTrans::NoTrans => blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?,
-            BLASTrans::Trans | BLASTrans::ConjTrans => {
-                blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?
-            },
+            BLASNoTrans => blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?,
             _ => blas_invalid!(trans)?,
         };
 
@@ -178,8 +176,8 @@ where
         let y = match y {
             Some(y) => {
                 match trans {
-                    BLASTrans::NoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
-                    BLASTrans::Trans | BLASTrans::ConjTrans => {
+                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
+                    BLASTrans | BLASConjTrans => {
                         blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?
                     },
                     _ => blas_invalid!(trans)?,
@@ -187,8 +185,8 @@ where
                 ArrayOut1::ViewMut(y)
             },
             None => ArrayOut1::Owned(Array1::zeros(match trans {
-                BLASTrans::NoTrans => m,
-                BLASTrans::Trans | BLASTrans::ConjTrans => n,
+                BLASNoTrans => m,
+                BLASTrans | BLASConjTrans => n,
                 _ => blas_invalid!(trans)?,
             })),
         };
@@ -240,17 +238,17 @@ where
             // C-contiguous
             let a_cow = obj.a.as_standard_layout();
             match obj.trans {
-                BLASTrans::NoTrans => {
+                BLASNoTrans => {
                     // N -> T: y = alpha (A')' x + beta y
-                    let obj = GEMV_ { a: a_cow.t(), trans: BLASTrans::Trans, ..obj };
+                    let obj = GEMV_ { a: a_cow.t(), trans: BLASTrans, ..obj };
                     return obj.driver()?.run_blas();
                 },
-                BLASTrans::Trans => {
+                BLASTrans => {
                     // T -> N: y = alpha (A') x + beta y
-                    let obj = GEMV_ { a: a_cow.t(), trans: BLASTrans::NoTrans, ..obj };
+                    let obj = GEMV_ { a: a_cow.t(), trans: BLASNoTrans, ..obj };
                     return obj.driver()?.run_blas();
                 },
-                BLASTrans::ConjTrans => {
+                BLASConjTrans => {
                     // C -> N: y* = alpha* (A') x* + beta* y*; y = y*
                     let x = obj.x.mapv(F::conj);
                     let y = obj.y.map(|mut y| {
@@ -259,7 +257,7 @@ where
                     });
                     let obj = GEMV_ {
                         a: a_cow.t(),
-                        trans: BLASTrans::NoTrans,
+                        trans: BLASNoTrans,
                         x: x.view(),
                         y,
                         alpha: F::conj(obj.alpha),

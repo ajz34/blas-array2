@@ -12,9 +12,10 @@ pub enum BLASLayout {
 }
 
 pub type BALSOrder = BLASLayout;
+pub use BLASLayout::{ColMajor as BLASColMajor, RowMajor as BLASRowMajor};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum BLASTrans {
+pub enum BLASTranspose {
     #[default]
     Undefined = -1,
     NoTrans = 111,
@@ -22,6 +23,8 @@ pub enum BLASTrans {
     ConjTrans = 113,
     ConjNoTrans = 114,
 }
+
+pub use BLASTranspose::{ConjTrans as BLASConjTrans, NoTrans as BLASNoTrans, Trans as BLASTrans};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BLASUpLo {
@@ -31,6 +34,8 @@ pub enum BLASUpLo {
     Lower = 122,
 }
 
+pub use BLASUpLo::{Lower as BLASLower, Upper as BLASUpper};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BLASDiag {
     #[default]
@@ -38,6 +43,8 @@ pub enum BLASDiag {
     NonUnit = 131,
     Unit = 132,
 }
+
+pub use BLASDiag::{NonUnit as BLASNonUnit, Unit as BLASUnit};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BLASSide {
@@ -47,12 +54,14 @@ pub enum BLASSide {
     Right = 142,
 }
 
+pub use BLASSide::{Left as BLASLeft, Right as BLASRight};
+
 impl From<char> for BLASLayout {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
-            'R' => BLASLayout::RowMajor,
-            'C' => BLASLayout::ColMajor,
+            'R' => BLASRowMajor,
+            'C' => BLASColMajor,
             _ => panic!("Invalid character for BLASOrder: {}", c),
         }
     }
@@ -62,8 +71,8 @@ impl From<BLASLayout> for char {
     #[inline]
     fn from(layout: BLASLayout) -> Self {
         match layout {
-            BLASLayout::RowMajor => 'R',
-            BLASLayout::ColMajor => 'C',
+            BLASRowMajor => 'R',
+            BLASColMajor => 'C',
             _ => panic!("Invalid BLASOrder: {:?}", layout),
         }
     }
@@ -73,44 +82,44 @@ impl From<BLASLayout> for c_char {
     #[inline]
     fn from(layout: BLASLayout) -> Self {
         match layout {
-            BLASLayout::RowMajor => 'R' as c_char,
-            BLASLayout::ColMajor => 'C' as c_char,
+            BLASRowMajor => 'R' as c_char,
+            BLASColMajor => 'C' as c_char,
             _ => panic!("Invalid BLASOrder: {:?}", layout),
         }
     }
 }
 
-impl From<char> for BLASTrans {
+impl From<char> for BLASTranspose {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
-            'N' => BLASTrans::NoTrans,
-            'T' => BLASTrans::Trans,
-            'C' => BLASTrans::ConjTrans,
+            'N' => BLASNoTrans,
+            'T' => BLASTrans,
+            'C' => BLASConjTrans,
             _ => panic!("Invalid character for BLASTrans: {}", c),
         }
     }
 }
 
-impl From<BLASTrans> for char {
+impl From<BLASTranspose> for char {
     #[inline]
-    fn from(trans: BLASTrans) -> Self {
+    fn from(trans: BLASTranspose) -> Self {
         match trans {
-            BLASTrans::NoTrans => 'N',
-            BLASTrans::Trans => 'T',
-            BLASTrans::ConjTrans => 'C',
+            BLASNoTrans => 'N',
+            BLASTrans => 'T',
+            BLASConjTrans => 'C',
             _ => panic!("Invalid BLASTrans: {:?}", trans),
         }
     }
 }
 
-impl From<BLASTrans> for c_char {
+impl From<BLASTranspose> for c_char {
     #[inline]
-    fn from(trans: BLASTrans) -> Self {
+    fn from(trans: BLASTranspose) -> Self {
         match trans {
-            BLASTrans::NoTrans => 'N' as c_char,
-            BLASTrans::Trans => 'T' as c_char,
-            BLASTrans::ConjTrans => 'C' as c_char,
+            BLASNoTrans => 'N' as c_char,
+            BLASTrans => 'T' as c_char,
+            BLASConjTrans => 'C' as c_char,
             _ => panic!("Invalid BLASTrans: {:?}", trans),
         }
     }
@@ -120,8 +129,8 @@ impl From<char> for BLASUpLo {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
-            'U' => BLASUpLo::Upper,
-            'L' => BLASUpLo::Lower,
+            'U' => BLASUpper,
+            'L' => BLASLower,
             _ => panic!("Invalid character for BLASUpLo: {}", c),
         }
     }
@@ -131,8 +140,8 @@ impl From<BLASUpLo> for char {
     #[inline]
     fn from(uplo: BLASUpLo) -> Self {
         match uplo {
-            BLASUpLo::Upper => 'U',
-            BLASUpLo::Lower => 'L',
+            BLASUpper => 'U',
+            BLASLower => 'L',
             _ => panic!("Invalid BLASUpLo: {:?}", uplo),
         }
     }
@@ -142,8 +151,8 @@ impl From<BLASUpLo> for c_char {
     #[inline]
     fn from(uplo: BLASUpLo) -> Self {
         match uplo {
-            BLASUpLo::Upper => 'U' as c_char,
-            BLASUpLo::Lower => 'L' as c_char,
+            BLASUpper => 'U' as c_char,
+            BLASLower => 'L' as c_char,
             _ => panic!("Invalid BLASUpLo: {:?}", uplo),
         }
     }
@@ -153,8 +162,8 @@ impl From<char> for BLASDiag {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
-            'N' => BLASDiag::NonUnit,
-            'U' => BLASDiag::Unit,
+            'N' => BLASNonUnit,
+            'U' => BLASUnit,
             _ => panic!("Invalid character for BLASDiag: {}", c),
         }
     }
@@ -164,8 +173,8 @@ impl From<BLASDiag> for char {
     #[inline]
     fn from(diag: BLASDiag) -> Self {
         match diag {
-            BLASDiag::NonUnit => 'N',
-            BLASDiag::Unit => 'U',
+            BLASNonUnit => 'N',
+            BLASUnit => 'U',
             _ => panic!("Invalid BLASDiag: {:?}", diag),
         }
     }
@@ -175,8 +184,8 @@ impl From<BLASDiag> for c_char {
     #[inline]
     fn from(diag: BLASDiag) -> Self {
         match diag {
-            BLASDiag::NonUnit => 'N' as c_char,
-            BLASDiag::Unit => 'U' as c_char,
+            BLASNonUnit => 'N' as c_char,
+            BLASUnit => 'U' as c_char,
             _ => panic!("Invalid BLASDiag: {:?}", diag),
         }
     }
@@ -186,8 +195,8 @@ impl From<char> for BLASSide {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
-            'L' => BLASSide::Left,
-            'R' => BLASSide::Right,
+            'L' => BLASLeft,
+            'R' => BLASRight,
             _ => panic!("Invalid character for BLASSide: {}", c),
         }
     }
@@ -197,8 +206,8 @@ impl From<BLASSide> for char {
     #[inline]
     fn from(side: BLASSide) -> Self {
         match side {
-            BLASSide::Left => 'L',
-            BLASSide::Right => 'R',
+            BLASLeft => 'L',
+            BLASRight => 'R',
             _ => panic!("Invalid BLASSide: {:?}", side),
         }
     }
@@ -208,21 +217,21 @@ impl From<BLASSide> for c_char {
     #[inline]
     fn from(side: BLASSide) -> Self {
         match side {
-            BLASSide::Left => 'L' as c_char,
-            BLASSide::Right => 'R' as c_char,
+            BLASLeft => 'L' as c_char,
+            BLASRight => 'R' as c_char,
             _ => panic!("Invalid BLASSide: {:?}", side),
         }
     }
 }
 
 unsafe impl Send for BLASLayout {}
-unsafe impl Send for BLASTrans {}
+unsafe impl Send for BLASTranspose {}
 unsafe impl Send for BLASUpLo {}
 unsafe impl Send for BLASDiag {}
 unsafe impl Send for BLASSide {}
 
 unsafe impl Sync for BLASLayout {}
-unsafe impl Sync for BLASTrans {}
+unsafe impl Sync for BLASTranspose {}
 unsafe impl Sync for BLASUpLo {}
 unsafe impl Sync for BLASDiag {}
 unsafe impl Sync for BLASSide {}
@@ -231,7 +240,7 @@ impl BLASLayout {
     #[inline]
     pub fn is_cpref(&self) -> bool {
         match self {
-            BLASLayout::RowMajor => true,
+            BLASRowMajor => true,
             BLASLayout::Sequential => true,
             _ => false,
         }
@@ -240,7 +249,7 @@ impl BLASLayout {
     #[inline]
     pub fn is_fpref(&self) -> bool {
         match self {
-            BLASLayout::ColMajor => true,
+            BLASColMajor => true,
             BLASLayout::Sequential => true,
             _ => false,
         }

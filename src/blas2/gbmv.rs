@@ -152,8 +152,8 @@ where
     pub alpha: F,
     #[builder(setter(into), default = "F::zero()")]
     pub beta: F,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub trans: BLASTrans,
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub trans: BLASTranspose,
 }
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for GBMV_<'a, 'x, 'y, F>
@@ -185,12 +185,10 @@ where
         blas_assert!(m >= kl + ku + 1, "Incompatible dimensions")?;
         blas_assert!(k == kl + ku + 1, "Incompatible dimensions")?;
         match trans {
-            BLASTrans::NoTrans => {
+            BLASNoTrans => {
                 blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
             },
-            BLASTrans::Trans | BLASTrans::ConjTrans => {
-                blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?
-            },
+            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?,
             _ => blas_invalid!(trans)?,
         };
 
@@ -198,8 +196,8 @@ where
         let y = match y {
             Some(y) => {
                 match trans {
-                    BLASTrans::NoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
-                    BLASTrans::Trans | BLASTrans::ConjTrans => {
+                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
+                    BLASTrans | BLASConjTrans => {
                         blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?
                     },
                     _ => blas_invalid!(trans)?,
@@ -207,8 +205,8 @@ where
                 ArrayOut1::ViewMut(y)
             },
             None => ArrayOut1::Owned(Array1::zeros(match trans {
-                BLASTrans::NoTrans => m,
-                BLASTrans::Trans | BLASTrans::ConjTrans => n,
+                BLASNoTrans => m,
+                BLASTrans | BLASConjTrans => n,
                 _ => blas_invalid!(trans)?,
             })),
         };

@@ -109,10 +109,10 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
         return BLASLayout::Sequential;
     } else if s1 == 1 {
         // row-major
-        return BLASLayout::RowMajor;
+        return BLASRowMajor;
     } else if s0 == 1 {
         // col-major
-        return BLASLayout::ColMajor;
+        return BLASColMajor;
     } else {
         // non-contiguous
         return BLASLayout::NonContiguous;

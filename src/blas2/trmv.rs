@@ -108,11 +108,11 @@ where
     pub a: ArrayView2<'a, F>,
     pub x: ArrayViewMut1<'x, F>,
 
-    #[builder(setter(into), default = "BLASUpLo::Upper")]
+    #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
-    #[builder(setter(into), default = "BLASTrans::NoTrans")]
-    pub trans: BLASTrans,
-    #[builder(setter(into), default = "BLASDiag::NonUnit")]
+    #[builder(setter(into), default = "BLASNoTrans")]
+    pub trans: BLASTranspose,
+    #[builder(setter(into), default = "BLASNonUnit")]
     pub diag: BLASDiag,
 }
 
@@ -187,45 +187,45 @@ where
             // C-contiguous:
             let a_cow = obj.a.as_standard_layout();
             match obj.trans {
-                BLASTrans::NoTrans => {
+                BLASNoTrans => {
                     // N -> T: x = op(A')' x
                     let obj = TRMV_ {
                         a: a_cow.t(),
-                        trans: BLASTrans::Trans,
+                        trans: BLASTrans,
                         uplo: match obj.uplo {
-                            BLASUpLo::Upper => BLASUpLo::Lower,
-                            BLASUpLo::Lower => BLASUpLo::Upper,
+                            BLASUpper => BLASLower,
+                            BLASLower => BLASUpper,
                             _ => blas_invalid!(obj.uplo)?,
                         },
                         ..obj
                     };
                     return obj.driver()?.run_blas();
                 },
-                BLASTrans::Trans => {
+                BLASTrans => {
                     // T -> N: x = op(A') x
                     let obj = TRMV_ {
                         a: a_cow.t(),
-                        trans: BLASTrans::NoTrans,
+                        trans: BLASNoTrans,
                         uplo: match obj.uplo {
-                            BLASUpLo::Upper => BLASUpLo::Lower,
-                            BLASUpLo::Lower => BLASUpLo::Upper,
+                            BLASUpper => BLASLower,
+                            BLASLower => BLASUpper,
                             _ => blas_invalid!(obj.uplo)?,
                         },
                         ..obj
                     };
                     return obj.driver()?.run_blas();
                 },
-                BLASTrans::ConjTrans => {
+                BLASConjTrans => {
                     // C -> T: x* = op(A') x*; x = x*
                     let mut x = obj.x;
                     x.mapv_inplace(F::conj);
                     let obj = TRMV_ {
                         a: a_cow.t(),
                         x,
-                        trans: BLASTrans::NoTrans,
+                        trans: BLASNoTrans,
                         uplo: match obj.uplo {
-                            BLASUpLo::Upper => BLASUpLo::Lower,
-                            BLASUpLo::Lower => BLASUpLo::Upper,
+                            BLASUpper => BLASLower,
+                            BLASLower => BLASUpper,
                             _ => blas_invalid!(obj.uplo)?,
                         },
                         ..obj

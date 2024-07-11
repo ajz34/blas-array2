@@ -45,10 +45,10 @@ mod valid_owned {
                 let a_naive = a_raw.slice(a_slc).to_owned();
                 let b_naive = b_raw.slice(b_slc).to_owned();
                 let c_assign = match trans.into() {
-                    BLASTrans::NoTrans => (
+                    BLASNoTrans => (
                         <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.into()).view())
                     ),
-                    BLASTrans::Trans | BLASTrans::ConjTrans => (
+                    BLASTrans | BLASConjTrans => (
                         <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &b_naive.view())
                     ),
                     _ => panic!("Invalid"),
@@ -153,10 +153,10 @@ mod valid_view {
                     }
                 }
                 let c_assign_1 = match trans.into() {
-                    BLASTrans::NoTrans => {
+                    BLASNoTrans => {
                         <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.into()).view())
                     },
-                    BLASTrans::Trans | BLASTrans::ConjTrans => {
+                    BLASTrans | BLASConjTrans => {
                         <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &b_naive.view())
                     },
                     _ => panic!("Invalid"),
