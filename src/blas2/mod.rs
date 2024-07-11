@@ -4,3 +4,4 @@ pub mod hbmv;
 pub mod tbmv;
 pub mod tbsv;
 pub mod trmv;
+pub mod trsv;
