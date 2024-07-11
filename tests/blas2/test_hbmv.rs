@@ -65,7 +65,6 @@ mod valid {
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
                 let y_assign = &y_bare + beta * &y_naive.slice(&y_slc);
                 y_naive.slice_mut(y_slc).assign(&y_assign);
-                println!("{:?}", y_naive.slice(y_slc));
 
                 // mut_view
                 let y_out = HBMV::default()
@@ -77,7 +76,6 @@ mod valid {
                     .beta(beta)
                     .run()
                     .unwrap();
-                println!("{:?}", y_out.view());
                 if let ArrayOut1::ViewMut(_) = y_out {
                     let err = (&y_naive - &y_raw).mapv(|x| x.abs()).sum();
                     let acc = y_naive.view().mapv(|x| x.abs()).sum() as RT;

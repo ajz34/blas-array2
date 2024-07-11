@@ -127,7 +127,6 @@ mod valid {
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
                 let y_assign = &y_bare + beta * &y_naive.slice(&y_slc);
                 y_naive.slice_mut(y_slc).assign(&y_assign);
-                println!("{:?}", y_naive.slice(y_slc));
 
                 // mut_view
                 let y_out = GBMV::default()

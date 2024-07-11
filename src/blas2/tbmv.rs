@@ -6,116 +6,95 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait HBMVFunc<F>
+pub trait TBMVFunc<F>
 where
     F: BLASFloat,
 {
-    unsafe fn hbmv(
+    unsafe fn tbmv(
         uplo: *const c_char,
+        trans: *const c_char,
+        diag: *const c_char,
         n: *const c_int,
         k: *const c_int,
-        alpha: *const F,
         a: *const F,
         lda: *const c_int,
-        x: *const F,
+        x: *mut F,
         incx: *const c_int,
-        beta: *const F,
-        y: *mut F,
-        incy: *const c_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl HBMVFunc<$type> for BLASFunc
+        impl TBMVFunc<$type> for BLASFunc
         where
             $type: BLASFloat,
         {
-            unsafe fn hbmv(
+            unsafe fn tbmv(
                 uplo: *const c_char,
+                trans: *const c_char,
+                diag: *const c_char,
                 n: *const c_int,
                 k: *const c_int,
-                alpha: *const $type,
                 a: *const $type,
                 lda: *const c_int,
-                x: *const $type,
+                x: *mut $type,
                 incx: *const c_int,
-                beta: *const $type,
-                y: *mut $type,
-                incy: *const c_int,
             ) {
                 type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    uplo,
-                    n,
-                    k,
-                    alpha as *const FFIFloat,
-                    a as *const FFIFloat,
-                    lda,
-                    x as *const FFIFloat,
-                    incx,
-                    beta as *const FFIFloat,
-                    y as *mut FFIFloat,
-                    incy,
-                );
+                blas_sys::$func(uplo, trans, diag, n, k, a as *const FFIFloat, lda, x as *mut FFIFloat, incx);
             }
         }
     };
 }
 
-impl_func!(f32, ssbmv_);
-impl_func!(f64, dsbmv_);
-impl_func!(c32, chbmv_);
-impl_func!(c64, zhbmv_);
+impl_func!(f32, stbmv_);
+impl_func!(f64, dtbmv_);
+impl_func!(c32, ctbmv_);
+impl_func!(c64, ztbmv_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct HBMV_Driver<'a, 'x, 'y, F>
+pub struct TBMV_Driver<'a, 'x, F>
 where
     F: BLASFloat,
 {
     uplo: c_char,
+    trans: c_char,
+    diag: c_char,
     n: c_int,
     k: c_int,
-    alpha: F,
     a: ArrayView2<'a, F>,
     lda: c_int,
-    x: ArrayView1<'x, F>,
+    x: ArrayOut1<'x, F>,
     incx: c_int,
-    beta: F,
-    y: ArrayOut1<'y, F>,
-    incy: c_int,
 }
 
-impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for HBMV_Driver<'a, 'x, 'y, F>
+impl<'a, 'x, F> BLASDriver<'x, F, Ix1> for TBMV_Driver<'a, 'x, F>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    BLASFunc: TBMVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'x, F>, AnyError> {
         let uplo = self.uplo;
+        let trans = self.trans;
+        let diag = self.diag;
         let n = self.n;
         let k = self.k;
-        let alpha = self.alpha;
         let a_ptr = self.a.as_ptr();
         let lda = self.lda;
-        let x_ptr = self.x.as_ptr();
-        let incx = self.incx;
-        let beta = self.beta;
-        let mut y = self.y;
-        let y_ptr = match &mut y {
-            ArrayOut1::Owned(y) => y.as_mut_ptr(),
+        let mut x = self.x;
+        let x_ptr = match &mut x {
             ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 won't be ToBeCloned"),
+            _ => panic!("Ix1 with triangular A, won't be ToBeCloned or Owned"),
         };
-        let incy = self.incy;
+        let incx = self.incx;
 
         unsafe {
-            BLASFunc::hbmv(&uplo, &n, &k, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
+            BLASFunc::tbmv(&uplo, &trans, &diag, &n, &k, a_ptr, &lda, x_ptr, &incx);
         }
-        return Ok(y);
+        return Ok(x);
     }
 }
 
@@ -126,35 +105,32 @@ where
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 
-pub struct HBMV_<'a, 'x, 'y, F>
+pub struct TBMV_<'a, 'x, F>
 where
     F: BLASFloat,
 {
     pub a: ArrayView2<'a, F>,
-    pub x: ArrayView1<'x, F>,
+    pub x: ArrayViewMut1<'x, F>,
 
-    #[builder(setter(into, strip_option), default = "None")]
-    pub y: Option<ArrayViewMut1<'y, F>>,
-    #[builder(setter(into), default = "F::one()")]
-    pub alpha: F,
-    #[builder(setter(into), default = "F::zero()")]
-    pub beta: F,
     #[builder(setter(into), default = "BLASUpLo::Upper")]
     pub uplo: BLASUpLo,
+    #[builder(setter(into), default = "BLASTrans::NoTrans")]
+    pub trans: BLASTrans,
+    #[builder(setter(into), default = "BLASDiag::NonUnit")]
+    pub diag: BLASDiag,
 }
 
-impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for HBMV_<'a, 'x, 'y, F>
+impl<'a, 'x, F> BLASBuilder_<'x, F, Ix1> for TBMV_<'a, 'x, F>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    BLASFunc: TBMVFunc<F>,
 {
-    fn driver(self) -> Result<HBMV_Driver<'a, 'x, 'y, F>, AnyError> {
+    fn driver(self) -> Result<TBMV_Driver<'a, 'x, F>, AnyError> {
         let a = self.a;
         let x = self.x;
-        let y = self.y;
-        let alpha = self.alpha;
-        let beta = self.beta;
         let uplo = self.uplo;
+        let trans = self.trans;
+        let diag = self.diag;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -171,28 +147,19 @@ where
         blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
 
         // prepare output
-        let y = match y {
-            Some(y) => {
-                blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?;
-                ArrayOut1::ViewMut(y)
-            },
-            None => ArrayOut1::Owned(Array1::zeros(n)),
-        };
-        let incy = y.view().stride_of(Axis(0));
+        let x = ArrayOut1::ViewMut(x);
 
         // finalize
-        let driver = HBMV_Driver {
+        let driver = TBMV_Driver {
             uplo: uplo.into(),
+            trans: trans.into(),
+            diag: diag.into(),
             n: n.try_into()?,
             k: k.try_into()?,
-            alpha,
             a,
             lda: lda.try_into()?,
             x,
             incx: incx.try_into()?,
-            beta,
-            y,
-            incy: incy.try_into()?,
         };
         return Ok(driver);
     }
@@ -202,18 +169,18 @@ where
 
 /* #region BLAS wrapper */
 
-pub type HBMV<'a, 'x, 'y, F> = HBMV_Builder<'a, 'x, 'y, F>;
-pub type SSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f32>;
-pub type DSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f64>;
-pub type CHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c32>;
-pub type ZHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c64>;
+pub type TBMV<'a, 'x, F> = TBMV_Builder<'a, 'x, F>;
+pub type STBMV<'a, 'x> = TBMV<'a, 'x, f32>;
+pub type DTBMV<'a, 'x> = TBMV<'a, 'x, f64>;
+pub type CTBMV<'a, 'x> = TBMV<'a, 'x, c32>;
+pub type ZTBMV<'a, 'x> = TBMV<'a, 'x, c64>;
 
-impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for HBMV_Builder<'a, 'x, 'y, F>
+impl<'a, 'x, F> BLASBuilder<'x, F, Ix1> for TBMV_Builder<'a, 'x, F>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    BLASFunc: TBMVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'x, F>, AnyError> {
         // initialize
         let obj = self.build()?;
 
@@ -228,7 +195,7 @@ where
             eprintln!("Banded storage not suitable for C-contiguous without explicit transposition.");
             eprintln!("Also see https://github.com/Reference-LAPACK/lapack/issues/1032.");
             let a_fpref = obj.a.reversed_axes().as_standard_layout().reversed_axes().into_owned();
-            let obj = HBMV_ { a: a_fpref.view(), ..obj };
+            let obj = TBMV_ { a: a_fpref.view(), ..obj };
             return obj.driver()?.run_blas();
         }
     }
