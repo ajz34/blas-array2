@@ -105,7 +105,7 @@ mod valid {
                 let kl = 4;
                 let ku = 2;
                 let trans = $trans;
-                let a_raw = random_matrix(100, 100, 'R'.into());
+                let a_raw = random_matrix(100, 100, $a_layout.into());
                 let x_raw = random_array(100);
                 let mut y_raw = random_array(100);
 

@@ -26,7 +26,7 @@ mod valid {
                 let uplo = $uplo;
                 let trans = $trans;
                 let diag = $diag;
-                let a_raw = random_matrix(100, 100, 'R'.into());
+                let a_raw = random_matrix(100, 100, $a_layout.into());
                 let mut x_raw = random_array(100);
 
                 let a_slc = slice($($a_slc),+);
@@ -71,7 +71,6 @@ mod valid {
                     .diag(diag)
                     .run()
                     .unwrap();
-                println!("{:?}", x_out.view());
                 if let ArrayOut1::ViewMut(_) = x_out {
                     let err = (&x_naive - &x_raw).mapv(|x| x.abs()).sum();
                     let acc = x_naive.view().mapv(|x| x.abs()).sum() as RT;

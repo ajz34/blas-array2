@@ -243,14 +243,12 @@ where
                 BLASTrans::NoTrans => {
                     // N -> T: y = alpha (A')' x + beta y
                     let obj = GEMV_ { a: a_cow.t(), trans: BLASTrans::Trans, ..obj };
-                    let y = obj.driver()?.run_blas()?.reversed_axes();
-                    return Ok(y);
+                    return obj.driver()?.run_blas();
                 },
                 BLASTrans::Trans => {
                     // T -> N: y = alpha (A') x + beta y
                     let obj = GEMV_ { a: a_cow.t(), trans: BLASTrans::NoTrans, ..obj };
-                    let y = obj.driver()?.run_blas()?.reversed_axes();
-                    return Ok(y);
+                    return obj.driver()?.run_blas();
                 },
                 BLASTrans::ConjTrans => {
                     // C -> N: y* = alpha* (A') x* + beta* y*; y = y*
@@ -267,14 +265,13 @@ where
                         alpha: F::conj(obj.alpha),
                         beta: F::conj(obj.beta),
                     };
-                    let mut y = obj.driver()?.run_blas()?.reversed_axes();
+                    let mut y = obj.driver()?.run_blas()?;
                     y.view_mut().mapv_inplace(F::conj);
                     return Ok(y);
                 },
-                _ => blas_invalid!(&obj.trans)?,
+                _ => return blas_invalid!(&obj.trans)?,
             };
         }
-        blas_raise!("Program should not stop here")?
     }
 }
 
