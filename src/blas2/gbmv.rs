@@ -154,6 +154,8 @@ where
     pub beta: F,
     #[builder(setter(into), default = "BLASNoTrans")]
     pub trans: BLASTranspose,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 }
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for GBMV_<'a, 'x, 'y, F>
@@ -171,10 +173,12 @@ where
         let alpha = self.alpha;
         let beta = self.beta;
         let trans = self.trans;
+        let layout = self.layout;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
         assert!(layout_a.is_fpref());
+        assert!(layout == Some(BLASLayout::ColMajor));
 
         // initialize intent(hide)
         let (k, n) = a.dim();
@@ -252,18 +256,75 @@ where
         let obj = self.build()?;
 
         let layout_a = get_layout_array2(&obj.a);
+        let layout = match obj.layout {
+            Some(layout) => layout,
+            None => match layout_a {
+                BLASLayout::Sequential => BLASColMajor,
+                BLASRowMajor => BLASRowMajor,
+                BLASColMajor => BLASColMajor,
+                _ => blas_raise!("Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
+            }
+        };
 
-        if layout_a.is_fpref() {
-            // F-contiguous: y = alpha op(A) x + beta y
+        if layout == BLASColMajor {
+            // F-contiguous
+            let a_cow = obj.a.reversed_axes();
+            let a_cow = a_cow.as_standard_layout().reversed_axes();
+            let obj = GBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
-            // C-contiguous: transpose to F-contiguous
-            eprintln!("{:}:{:}: Warning message from blas-array2", file!(), line!());
-            eprintln!("Banded storage not suitable for C-contiguous without explicit transposition.");
-            eprintln!("Also see https://github.com/Reference-LAPACK/lapack/issues/1032.");
-            let a_fpref = obj.a.reversed_axes().as_standard_layout().reversed_axes().into_owned();
-            let obj = GBMV_ { a: a_fpref.view(), ..obj };
-            return obj.driver()?.run_blas();
+            // C-contiguous
+            let a_cow = obj.a.as_standard_layout();
+            match obj.trans {
+                BLASNoTrans => {
+                    // N -> T
+                    let obj = GBMV_ {
+                        a: a_cow.t(),
+                        trans: BLASTrans,
+                        ku: obj.kl,
+                        kl: obj.ku,
+                        layout: Some(BLASColMajor),
+                        ..obj
+                    };
+                    return obj.driver()?.run_blas();
+                },
+                BLASTrans => {
+                    // N -> T
+                    let obj = GBMV_ {
+                        a: a_cow.t(),
+                        trans: BLASNoTrans,
+                        ku: obj.kl,
+                        kl: obj.ku,
+                        layout: Some(BLASColMajor),
+                        ..obj
+                    };
+                    return obj.driver()?.run_blas();
+                },
+                BLASConjTrans => {
+                    // C -> N
+                    let x = obj.x.mapv(F::conj);
+                    let y = obj.y.map(|mut y| {
+                        y.mapv_inplace(F::conj);
+                        y
+                    });
+                    let obj = GBMV_ {
+                        a: a_cow.t(),
+                        trans: BLASNoTrans,
+                        x: x.view(),
+                        y,
+                        ku: obj.kl,
+                        kl: obj.ku,
+                        alpha: F::conj(obj.alpha),
+                        beta: F::conj(obj.beta),
+                        layout: Some(BLASColMajor),
+                        ..obj
+                    };
+                    let mut y = obj.driver()?.run_blas()?;
+                    y.view_mut().mapv_inplace(F::conj);
+                    return Ok(y);
+                },
+                _ => return blas_invalid!(obj.trans)?,
+            }
         }
     }
 }

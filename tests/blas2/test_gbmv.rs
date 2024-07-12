@@ -1,12 +1,14 @@
 use crate::util::*;
 use approx::*;
 use blas_array2::blas2::gbmv::GBMV;
-use blas_array2::prelude::*;
+use blas_array2::util::*;
+use cblas_sys::*;
+use itertools::iproduct;
 use ndarray::prelude::*;
 use num_complex::*;
 
 #[cfg(test)]
-mod valid {
+mod valid_col_major {
     use super::*;
 
     #[test]
@@ -50,6 +52,7 @@ mod valid {
             .m(m)
             .kl(kl)
             .ku(ku)
+            .layout('C')
             .trans(trans)
             .alpha(alpha)
             .beta(beta)
@@ -71,6 +74,7 @@ mod valid {
             .m(m)
             .kl(kl)
             .ku(ku)
+            .layout('C')
             .trans(trans)
             .alpha(alpha)
             .beta(beta)
@@ -136,6 +140,7 @@ mod valid {
                     .m(m)
                     .kl(kl)
                     .ku(ku)
+                    .layout('C')
                     .trans(trans)
                     .alpha(alpha)
                     .beta(beta)
@@ -157,6 +162,7 @@ mod valid {
                     .m(m)
                     .kl(kl)
                     .ku(ku)
+                    .layout('C')
                     .trans(trans)
                     .alpha(alpha)
                     .beta(beta)
@@ -198,4 +204,89 @@ mod valid {
     test_macro!(test_021: inline, c64, (7, 8, 3, 1), (10, 1), (8, 3), 'R', 'C');
     test_macro!(test_022: inline, c64, (7, 8, 3, 1), (10, 3), (8, 1), 'C', 'T');
     test_macro!(test_023: inline, c64, (7, 8, 3, 3), (8, 1), (10, 1), 'C', 'N');
+}
+
+#[cfg(test)]
+mod valid_row_major {
+
+    use super::*;
+
+    #[test]
+    fn test_cblas_row_major() {
+        let cblas_layout = 'R';
+
+        // set parameters of test configuration
+        type F = c32;
+        for (a_layout, trans) in iproduct!(['R', 'C'], ['N', 'T', 'C']) {
+            println!("a_layout {a_layout:?}, trans {trans:?}");
+            let m = 10;
+            let n = 8;
+            let ku = 3;
+            let kl = 2;
+            let k = ku + kl + 1;
+
+            // slice definition
+            let a_slc = slice(n, k, 3, 3);
+            let x_slc = slice_1d(if trans == 'N' { m } else { n }, 3);
+            let y_slc = slice_1d(if trans == 'N' { n } else { m }, 3);
+
+            // type definition
+            type FFI = <F as BLASFloat>::FFIFloat;
+
+            // data assignment
+            let alpha = F::rand();
+            let beta = F::rand();
+            let a_raw = random_matrix::<F>(100, 100, a_layout.into());
+            let x_raw = random_array::<F>(1000);
+            let mut y_raw = random_array::<F>(1000);
+            let mut y_origin = y_raw.clone();
+
+            // cblas computation - mut
+            let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+            let x_naive = x_raw.slice(x_slc).into_owned();
+            let mut y_naive = y_raw.slice_mut(y_slc).into_owned();
+            let lda = *a_naive.strides().iter().max().unwrap();
+            let incx = 1;
+            let incy = 1;
+            unsafe {
+                cblas_cgbmv(
+                    to_cblas_layout(cblas_layout),
+                    to_cblas_trans(trans),
+                    n.try_into().unwrap(),
+                    m.try_into().unwrap(),
+                    kl.try_into().unwrap(),
+                    ku.try_into().unwrap(),
+                    [alpha].as_ptr() as *const FFI,
+                    a_naive.as_ptr() as *const FFI,
+                    lda.try_into().unwrap(),
+                    x_naive.as_ptr() as *const FFI,
+                    incx.try_into().unwrap(),
+                    [beta].as_ptr() as *const FFI,
+                    y_naive.as_mut_ptr() as *mut FFI,
+                    incy.try_into().unwrap(),
+                );
+            }
+
+            let y_out = GBMV::<F>::default()
+                .a(a_raw.slice(a_slc))
+                .x(x_raw.slice(x_slc))
+                .y(y_raw.slice_mut(y_slc))
+                .m(m)
+                .kl(kl)
+                .ku(ku)
+                .alpha(alpha)
+                .beta(beta)
+                .trans(trans)
+                .layout(cblas_layout)
+                .run()
+                .unwrap()
+                .into_owned();
+
+            check_same(&y_out.view(), &y_naive.view(), 4.0 * F::EPSILON);
+            check_same(&y_raw.slice(y_slc), &y_naive.view(), 4.0 * F::EPSILON);
+            y_raw.slice_mut(y_slc).fill(F::from(0.0));
+            y_origin.slice_mut(y_slc).fill(F::from(0.0));
+            check_same(&y_raw.view(), &y_origin.view(), 4.0 * F::EPSILON);
+        }
+    }
 }

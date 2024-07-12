@@ -432,10 +432,10 @@ mod valid_cblas {
                 let transa = $a_trans;
                 let transb = $b_trans;
                 let cblas_layout = $cblas_layout;
-        
+
                 // type definition
                 type FFI = <F as BLASFloat>::FFIFloat;
-        
+
                 // data assignment
                 let alpha = F::rand();
                 let beta = F::rand();
@@ -443,7 +443,7 @@ mod valid_cblas {
                 let b_raw = random_matrix::<F>(100, 100, b_layout.into());
                 let mut c_raw = random_matrix::<F>(100, 100, c_layout.into());
                 let mut c_origin = c_raw.clone();
-        
+
                 // cblas computation - mut
                 let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
                 let b_naive = ndarray_to_layout(b_raw.slice(b_slc).into_owned(), cblas_layout);
@@ -471,7 +471,7 @@ mod valid_cblas {
                         ldc.try_into().unwrap(),
                     );
                 }
-        
+
                 let c_out = GEMM::<F>::default()
                     .a(a_raw.slice(a_slc))
                     .b(b_raw.slice(b_slc))
@@ -483,13 +483,13 @@ mod valid_cblas {
                     .run()
                     .unwrap()
                     .into_owned();
-        
+
                 check_same(&c_out.view(), &c_naive.view(), 4.0 * F::EPSILON);
                 check_same(&c_raw.slice(c_slc), &c_naive.view(), 4.0 * F::EPSILON);
                 c_raw.slice_mut(c_slc).fill(F::from(0.0));
                 c_origin.slice_mut(c_slc).fill(F::from(0.0));
                 check_same(&c_raw.view(), &c_origin.view(), 4.0 * F::EPSILON);
-        
+
                 // cblas computation - own
                 c_naive.fill(F::from(0.0));
                 unsafe {
@@ -510,7 +510,7 @@ mod valid_cblas {
                         ldc.try_into().unwrap(),
                     );
                 }
-        
+
                 let c_out = GEMM::<F>::default()
                     .a(a_raw.slice(a_slc))
                     .b(b_raw.slice(b_slc))
@@ -525,7 +525,7 @@ mod valid_cblas {
             }
         };
     }
-    
+
     test_macro!(test_000: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N', 'R');
     test_macro!(test_001: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N', 'R');
     test_macro!(test_002: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'N', 'N', 'C');
