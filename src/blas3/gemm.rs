@@ -130,7 +130,7 @@ where
             if beta == F::zero() {
                 c.view_mut().fill(F::zero());
             } else if beta != F::one() {
-                c.view_mut().mapv_inplace(| v | v * beta);
+                c.view_mut().mapv_inplace(|v| v * beta);
             }
             return Ok(c.clone_to_view_mut());
         }

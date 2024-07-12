@@ -207,6 +207,48 @@ where
     }
 }
 
+pub fn unpack_tril<F>(ap: &ArrayView1<F>, a: &mut ArrayViewMut2<F>, layout: char, uplo: char)
+where
+    F: BLASFloat,
+{
+    let n = a.len_of(Axis(0));
+    if layout == 'R' {
+        let mut k = 0;
+        if uplo == 'L' {
+            for i in 0..n {
+                for j in 0..=i {
+                    a[[i, j]] = ap[k];
+                    k += 1;
+                }
+            }
+        } else if uplo == 'U' {
+            for i in 0..n {
+                for j in i..n {
+                    a[[i, j]] = ap[k];
+                    k += 1;
+                }
+            }
+        }
+    } else if layout == 'C' {
+        let mut k = 0;
+        if uplo == 'U' {
+            for j in 0..n {
+                for i in 0..=j {
+                    a[[i, j]] = ap[k];
+                    k += 1;
+                }
+            }
+        } else if uplo == 'L' {
+            for j in 0..n {
+                for i in j..n {
+                    a[[i, j]] = ap[k];
+                    k += 1;
+                }
+            }
+        }
+    }
+}
+
 pub fn check_same<F, D>(a: &ArrayView<F, D>, b: &ArrayView<F, D>, eps: <F::RealFloat as AbsDiffEq>::Epsilon)
 where
     F: BLASFloat,
