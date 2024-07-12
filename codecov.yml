@@ -1,0 +1,6 @@
+coverage:
+  # do not run coverage on patch nor changes
+  patch:
+    default:
+      enabled: false
+  changes: no
