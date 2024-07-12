@@ -10,7 +10,7 @@ use num_traits::{One, Zero};
 pub trait SYRKFunc<F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
 {
     unsafe fn syrk(
         uplo: *const c_char,
@@ -34,15 +34,15 @@ macro_rules! impl_syrk {
                 trans: *const c_char,
                 n: *const c_int,
                 k: *const c_int,
-                alpha: *const <$symm as BLASSymm>::HermitianFloat,
+                alpha: *const <$symm as BLASSymmetric>::HermitianFloat,
                 a: *const $type,
                 lda: *const c_int,
-                beta: *const <$symm as BLASSymm>::HermitianFloat,
+                beta: *const <$symm as BLASSymmetric>::HermitianFloat,
                 c: *mut $type,
                 ldc: *const c_int,
             ) {
                 type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                type FFIHermitialFloat = <<$symm as BLASSymm>::HermitianFloat as BLASFloat>::FFIFloat;
+                type FFIHermitialFloat = <<$symm as BLASSymmetric>::HermitianFloat as BLASFloat>::FFIFloat;
                 blas_sys::$func(
                     uplo,
                     trans,
@@ -60,12 +60,12 @@ macro_rules! impl_syrk {
     };
 }
 
-impl_syrk!(f32, BLASSymmetric<f32>, ssyrk_);
-impl_syrk!(f64, BLASSymmetric<f64>, dsyrk_);
-impl_syrk!(c32, BLASSymmetric<c32>, csyrk_);
-impl_syrk!(c64, BLASSymmetric<c64>, zsyrk_);
-impl_syrk!(c32, BLASHermitian<c32>, cherk_);
-impl_syrk!(c64, BLASHermitian<c64>, zherk_);
+impl_syrk!(f32, BLASSymm<f32>, ssyrk_);
+impl_syrk!(f64, BLASSymm<f64>, dsyrk_);
+impl_syrk!(c32, BLASSymm<c32>, csyrk_);
+impl_syrk!(c64, BLASSymm<c64>, zsyrk_);
+impl_syrk!(c32, BLASHermi<c32>, cherk_);
+impl_syrk!(c64, BLASHermi<c64>, zherk_);
 
 /* #endregion */
 
@@ -74,7 +74,7 @@ impl_syrk!(c64, BLASHermitian<c64>, zherk_);
 pub struct SYRK_Driver<'a, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
 {
     uplo: c_char,
     trans: c_char,
@@ -91,7 +91,7 @@ where
 impl<'a, 'c, F, S> BLASDriver<'c, F, Ix2> for SYRK_Driver<'a, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError>
@@ -130,7 +130,7 @@ where
 pub struct SYRK_<'a, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     S::HermitianFloat: Zero + One,
 {
     pub a: ArrayView2<'a, F>,
@@ -150,7 +150,7 @@ where
 impl<'a, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYRK_<'a, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
     fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, AnyError> {
@@ -230,20 +230,20 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYRK<'a, 'c, F> = SYRK_Builder<'a, 'c, F, BLASSymmetric<F>>;
+pub type SYRK<'a, 'c, F> = SYRK_Builder<'a, 'c, F, BLASSymm<F>>;
 pub type SSYRK<'a, 'c> = SYRK<'a, 'c, f32>;
 pub type DSYRK<'a, 'c> = SYRK<'a, 'c, f64>;
 pub type CSYRK<'a, 'c> = SYRK<'a, 'c, c32>;
 pub type ZSYRK<'a, 'c> = SYRK<'a, 'c, c64>;
 
-pub type HERK<'a, 'c, F> = SYRK_Builder<'a, 'c, F, BLASHermitian<F>>;
+pub type HERK<'a, 'c, F> = SYRK_Builder<'a, 'c, F, BLASHermi<F>>;
 pub type CHERK<'a, 'c> = HERK<'a, 'c, c32>;
 pub type ZHERK<'a, 'c> = HERK<'a, 'c, c64>;
 
 impl<'a, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYRK_Builder<'a, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {

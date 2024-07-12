@@ -95,21 +95,21 @@ impl BLASFloat for c64 {
 }
 
 /// Trait marker for complex symmetry (whether it is symmetric or hermitian)
-pub trait BLASSymm {
+pub trait BLASSymmetric {
     type Float: BLASFloat;
     type HermitianFloat: BLASFloat;
     fn is_hermitian() -> bool;
 }
 
 /// Struct marker for symmetric matrix
-pub struct BLASSymmetric<F>
+pub struct BLASSymm<F>
 where
     F: BLASFloat,
 {
     _phantom: std::marker::PhantomData<F>,
 }
 
-impl<F> BLASSymm for BLASSymmetric<F>
+impl<F> BLASSymmetric for BLASSymm<F>
 where
     F: BLASFloat,
 {
@@ -122,14 +122,14 @@ where
 }
 
 /// Struct marker for hermitian matrix
-pub struct BLASHermitian<F>
+pub struct BLASHermi<F>
 where
     F: BLASFloat,
 {
     _phantom: std::marker::PhantomData<F>,
 }
 
-impl<F> BLASSymm for BLASHermitian<F>
+impl<F> BLASSymmetric for BLASHermi<F>
 where
     F: BLASFloat,
 {

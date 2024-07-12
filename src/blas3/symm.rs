@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 pub trait SYMMFunc<F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
 {
     unsafe fn symm(
         side: *const c_char,
@@ -65,12 +65,12 @@ macro_rules! impl_func {
     };
 }
 
-impl_func!(f32, BLASSymmetric<f32>, ssymm_);
-impl_func!(f64, BLASSymmetric<f64>, dsymm_);
-impl_func!(c32, BLASSymmetric<c32>, csymm_);
-impl_func!(c64, BLASSymmetric<c64>, zsymm_);
-impl_func!(c32, BLASHermitian<c32>, chemm_);
-impl_func!(c64, BLASHermitian<c64>, zhemm_);
+impl_func!(f32, BLASSymm<f32>, ssymm_);
+impl_func!(f64, BLASSymm<f64>, dsymm_);
+impl_func!(c32, BLASSymm<c32>, csymm_);
+impl_func!(c64, BLASSymm<c64>, zsymm_);
+impl_func!(c32, BLASHermi<c32>, chemm_);
+impl_func!(c64, BLASHermi<c64>, zhemm_);
 
 /* #endregion */
 
@@ -79,7 +79,7 @@ impl_func!(c64, BLASHermitian<c64>, zhemm_);
 pub struct SYMM_Driver<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
 {
     side: c_char,
     uplo: c_char,
@@ -99,7 +99,7 @@ where
 impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYMM_Driver<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
@@ -137,7 +137,7 @@ where
 pub struct SYMM_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayView2<'b, F>,
@@ -160,7 +160,7 @@ where
 impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYMM_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
     fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, AnyError> {
@@ -229,20 +229,20 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASSymmetric<F>>;
+pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASSymm<F>>;
 pub type SSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f32>;
 pub type DSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f64>;
 pub type CSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c32>;
 pub type ZSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c64>;
 
-pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermitian<F>>;
+pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermi<F>>;
 pub type CHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c32>;
 pub type ZHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c64>;
 
 impl<'a, 'b, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYMM_Builder<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
-    S: BLASSymm,
+    S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
