@@ -6,9 +6,10 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait HBMVFunc<F>
+pub trait SBMVFunc<F, S>
 where
     F: BLASFloat,
+    S: BLASSymmetric,
 {
     unsafe fn hbmv(
         uplo: *const c_char,
@@ -26,8 +27,8 @@ where
 }
 
 macro_rules! impl_func {
-    ($type: ty, $func: ident) => {
-        impl HBMVFunc<$type> for BLASFunc
+    ($type: ty, $symm: ty, $func: ident) => {
+        impl SBMVFunc<$type, $symm> for BLASFunc
         where
             $type: BLASFloat,
         {
@@ -63,16 +64,16 @@ macro_rules! impl_func {
     };
 }
 
-impl_func!(f32, ssbmv_);
-impl_func!(f64, dsbmv_);
-impl_func!(c32, chbmv_);
-impl_func!(c64, zhbmv_);
+impl_func!(f32, BLASSymm<f32>, ssbmv_);
+impl_func!(f64, BLASSymm<f64>, dsbmv_);
+impl_func!(c32, BLASHermi<c32>, chbmv_);
+impl_func!(c64, BLASHermi<c64>, zhbmv_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct HBMV_Driver<'a, 'x, 'y, F>
+pub struct SBMV_Driver<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
 {
@@ -87,12 +88,14 @@ where
     beta: F,
     y: ArrayOut1<'y, F>,
     incy: c_int,
+    _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for HBMV_Driver<'a, 'x, 'y, F>
+impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SBMV_Driver<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    S: BLASSymmetric,
+    BLASFunc: SBMVFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
         let uplo = self.uplo;
@@ -126,7 +129,7 @@ where
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 
-pub struct HBMV_<'a, 'x, 'y, F>
+pub struct SBMV_<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
 {
@@ -143,14 +146,18 @@ where
     pub uplo: BLASUpLo,
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
+
+    #[builder(private, default = "std::marker::PhantomData {}")]
+    _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for HBMV_<'a, 'x, 'y, F>
+impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SBMV_<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    S: BLASSymmetric,
+    BLASFunc: SBMVFunc<F, S>,
 {
-    fn driver(self) -> Result<HBMV_Driver<'a, 'x, 'y, F>, AnyError> {
+    fn driver(self) -> Result<SBMV_Driver<'a, 'x, 'y, F, S>, AnyError> {
         let a = self.a;
         let x = self.x;
         let y = self.y;
@@ -185,7 +192,7 @@ where
         let incy = y.view().stride_of(Axis(0));
 
         // finalize
-        let driver = HBMV_Driver {
+        let driver = SBMV_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             k: k.try_into()?,
@@ -197,6 +204,7 @@ where
             beta,
             y,
             incy: incy.try_into()?,
+            _phantom: std::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -206,16 +214,19 @@ where
 
 /* #region BLAS wrapper */
 
-pub type HBMV<'a, 'x, 'y, F> = HBMV_Builder<'a, 'x, 'y, F>;
-pub type SSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f32>;
-pub type DSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f64>;
+pub type SBMV<'a, 'x, 'y, F> = SBMV_Builder<'a, 'x, 'y, F, BLASSymm<F>>;
+pub type SSBMV<'a, 'x, 'y> = SBMV<'a, 'x, 'y, f32>;
+pub type DSBMV<'a, 'x, 'y> = SBMV<'a, 'x, 'y, f64>;
+
+pub type HBMV<'a, 'x, 'y, F> = SBMV_Builder<'a, 'x, 'y, F, BLASHermi<F>>;
 pub type CHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c32>;
 pub type ZHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c64>;
 
-impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for HBMV_Builder<'a, 'x, 'y, F>
+impl<'a, 'x, 'y, F, S> BLASBuilder<'y, F, Ix1> for SBMV_Builder<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
-    BLASFunc: HBMVFunc<F>,
+    S: BLASSymmetric,
+    BLASFunc: SBMVFunc<F, S>,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
         // initialize
@@ -236,7 +247,7 @@ where
             // F-contiguous
             let a_cow = obj.a.reversed_axes();
             let a_cow = a_cow.as_standard_layout().reversed_axes();
-            let obj = HBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
+            let obj = SBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
@@ -247,7 +258,7 @@ where
                     y.mapv_inplace(F::conj);
                     y
                 });
-                let obj = HBMV_ {
+                let obj = SBMV_ {
                     a: a_cow.t(),
                     x: x.view(),
                     y,
@@ -265,7 +276,7 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = HBMV_ {
+                let obj = SBMV_ {
                     a: a_cow.t(),
                     uplo: match obj.uplo {
                         BLASUpper => BLASLower,

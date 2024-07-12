@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::util::*;
 use blas_sys;
 use derive_builder::Builder;
@@ -8,7 +6,7 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait HEMVFunc<F, S>
+pub trait SYMVFunc<F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
@@ -29,7 +27,7 @@ where
 
 macro_rules! impl_func {
     ($type: ty, $symm: ty, $func: ident) => {
-        impl HEMVFunc<$type, $symm> for BLASFunc
+        impl SYMVFunc<$type, $symm> for BLASFunc
         where
             $type: BLASFloat,
         {
@@ -75,7 +73,7 @@ impl_func!(c64, BLASHermi<c64>, zhemv_);
 
 /* #region BLAS driver */
 
-pub struct HEMV_Driver<'a, 'x, 'y, F, S>
+pub struct SYMV_Driver<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
@@ -93,11 +91,11 @@ where
     _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for HEMV_Driver<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SYMV_Driver<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
-    BLASFunc: HEMVFunc<F, S>,
+    BLASFunc: SYMVFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
         let uplo = self.uplo;
@@ -130,7 +128,7 @@ where
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 
-pub struct HEMV_<'a, 'x, 'y, F, S>
+pub struct SYMV_<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
@@ -147,17 +145,17 @@ where
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
 
-    #[builder(private, default = "PhantomData {}")]
+    #[builder(private, default = "std::marker::PhantomData {}")]
     _phantom: std::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for HEMV_<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SYMV_<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
-    BLASFunc: HEMVFunc<F, S>,
+    BLASFunc: SYMVFunc<F, S>,
 {
-    fn driver(self) -> Result<HEMV_Driver<'a, 'x, 'y, F, S>, AnyError> {
+    fn driver(self) -> Result<SYMV_Driver<'a, 'x, 'y, F, S>, AnyError> {
         let a = self.a;
         let x = self.x;
         let y = self.y;
@@ -189,7 +187,7 @@ where
         let incy = y.view().stride_of(Axis(0));
 
         // finalize
-        let driver = HEMV_Driver {
+        let driver = SYMV_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             alpha,
@@ -200,7 +198,7 @@ where
             beta,
             y,
             incy: incy.try_into()?,
-            _phantom: PhantomData {},
+            _phantom: std::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -210,19 +208,19 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYMV<'a, 'x, 'y, F> = HEMV_Builder<'a, 'x, 'y, F, BLASSymm<F>>;
+pub type SYMV<'a, 'x, 'y, F> = SYMV_Builder<'a, 'x, 'y, F, BLASSymm<F>>;
 pub type SSYMV<'a, 'x, 'y> = SYMV<'a, 'x, 'y, f32>;
 pub type DSYMV<'a, 'x, 'y> = SYMV<'a, 'x, 'y, f64>;
 
-pub type HEMV<'a, 'x, 'y, F> = HEMV_Builder<'a, 'x, 'y, F, BLASHermi<F>>;
+pub type HEMV<'a, 'x, 'y, F> = SYMV_Builder<'a, 'x, 'y, F, BLASHermi<F>>;
 pub type CHEMV<'a, 'x, 'y> = HEMV<'a, 'x, 'y, c32>;
 pub type ZHEMV<'a, 'x, 'y> = HEMV<'a, 'x, 'y, c64>;
 
-impl<'a, 'x, 'y, F, S> BLASBuilder<'y, F, Ix1> for HEMV_Builder<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F, S> BLASBuilder<'y, F, Ix1> for SYMV_Builder<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,
     S: BLASSymmetric,
-    BLASFunc: HEMVFunc<F, S>,
+    BLASFunc: SYMVFunc<F, S>,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
         // initialize
@@ -242,7 +240,7 @@ where
                     y.mapv_inplace(F::conj);
                     y
                 });
-                let obj = HEMV_ {
+                let obj = SYMV_ {
                     a: a_cow.t(),
                     x: x.view(),
                     y,
@@ -259,7 +257,7 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = HEMV_ {
+                let obj = SYMV_ {
                     a: a_cow.t(),
                     uplo: match obj.uplo {
                         BLASUpper => BLASLower,

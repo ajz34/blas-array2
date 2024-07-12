@@ -1,6 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas2::hbmv::HBMV;
+use blas_array2::blas2::sbmv::{SBMV, HBMV};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -17,7 +17,8 @@ mod valid_col_major {
             $F:ty,
             ($($a_slc: expr),+), ($($x_slc: expr),+), ($($y_slc: expr),+),
             $a_layout: expr,
-            $uplo: expr
+            $uplo: expr,
+            $blas: ident, $symm: ident
         ) => {
             #[test]
             #[$attr]
@@ -44,7 +45,6 @@ mod valid_col_major {
                             let mi = (m + i as isize) as usize;
                             let i = i as usize;
                             a_naive[[i, j]] = a_raw.slice(a_slc)[[mi, j]];
-                            a_naive[[j, i]] = <$F as BLASFloat>::conj(a_naive[[i, j]]);
                         }
                     }
                 } else {
@@ -54,14 +54,10 @@ mod valid_col_major {
                             let mi = (m + i as isize) as usize;
                             let i = i as usize;
                             a_naive[[i, j]] = a_raw.slice(a_slc)[[mi, j]];
-                            a_naive[[j, i]] = <$F as BLASFloat>::conj(a_naive[[i, j]]);
                         }
                     }
                 }
-                for i in 0..n {
-                    a_naive[[i, i]] = <$F>::from(0.5) * (a_naive[[i, i]] + <$F as BLASFloat>::conj(a_naive[[i, i]]));
-                }
-
+                let a_naive = $symm(&a_naive.view(), uplo.into());
                 let x_naive = x_raw.slice(x_slc).into_owned();
                 let mut y_naive = y_raw.clone();
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
@@ -69,7 +65,7 @@ mod valid_col_major {
                 y_naive.slice_mut(y_slc).assign(&y_assign);
 
                 // mut_view
-                let y_out = HBMV::default()
+                let y_out = $blas::default()
                     .a(a_raw.slice(a_slc))
                     .x(x_raw.slice(x_slc))
                     .y(y_raw.slice_mut(y_slc))
@@ -89,7 +85,7 @@ mod valid_col_major {
                 }
 
                 // owned
-                let y_out = HBMV::default()
+                let y_out = $blas::default()
                     .a(a_raw.slice(a_slc))
                     .x(x_raw.slice(x_slc))
                     .uplo(uplo)
@@ -110,22 +106,22 @@ mod valid_col_major {
         };
     }
 
-    test_macro!(test_000: inline, f32, (4, 8, 1, 1), (8, 1), (8, 1), 'R', 'U');
-    test_macro!(test_001: inline, f32, (4, 8, 1, 1), (8, 1), (8, 3), 'C', 'L');
-    test_macro!(test_002: inline, f32, (4, 8, 3, 3), (8, 3), (8, 1), 'R', 'U');
-    test_macro!(test_003: inline, f32, (4, 8, 3, 3), (8, 3), (8, 3), 'C', 'L');
-    test_macro!(test_004: inline, f64, (4, 8, 1, 1), (8, 3), (8, 1), 'R', 'L');
-    test_macro!(test_005: inline, f64, (4, 8, 1, 1), (8, 3), (8, 3), 'C', 'U');
-    test_macro!(test_006: inline, f64, (4, 8, 3, 3), (8, 1), (8, 1), 'C', 'U');
-    test_macro!(test_007: inline, f64, (4, 8, 3, 3), (8, 1), (8, 3), 'R', 'L');
-    test_macro!(test_008: inline, c32, (4, 8, 1, 3), (8, 1), (8, 1), 'R', 'L');
-    test_macro!(test_009: inline, c32, (4, 8, 1, 3), (8, 1), (8, 3), 'C', 'U');
-    test_macro!(test_010: inline, c32, (4, 8, 3, 1), (8, 3), (8, 1), 'C', 'L');
-    test_macro!(test_011: inline, c32, (4, 8, 3, 1), (8, 3), (8, 3), 'R', 'U');
-    test_macro!(test_012: inline, c64, (4, 8, 1, 3), (8, 3), (8, 1), 'C', 'U');
-    test_macro!(test_013: inline, c64, (4, 8, 1, 3), (8, 3), (8, 3), 'R', 'L');
-    test_macro!(test_014: inline, c64, (4, 8, 3, 1), (8, 1), (8, 1), 'C', 'L');
-    test_macro!(test_015: inline, c64, (4, 8, 3, 1), (8, 1), (8, 3), 'R', 'U');
+    test_macro!(test_000: inline, f32, (4, 8, 1, 1), (8, 1), (8, 1), 'R', 'U', SBMV, symmetrize);
+    test_macro!(test_001: inline, f32, (4, 8, 1, 1), (8, 1), (8, 3), 'C', 'L', SBMV, symmetrize);
+    test_macro!(test_002: inline, f32, (4, 8, 3, 3), (8, 3), (8, 1), 'R', 'U', SBMV, symmetrize);
+    test_macro!(test_003: inline, f32, (4, 8, 3, 3), (8, 3), (8, 3), 'C', 'L', SBMV, symmetrize);
+    test_macro!(test_004: inline, f64, (4, 8, 1, 1), (8, 3), (8, 1), 'R', 'L', SBMV, symmetrize);
+    test_macro!(test_005: inline, f64, (4, 8, 1, 1), (8, 3), (8, 3), 'C', 'U', SBMV, symmetrize);
+    test_macro!(test_006: inline, f64, (4, 8, 3, 3), (8, 1), (8, 1), 'C', 'U', SBMV, symmetrize);
+    test_macro!(test_007: inline, f64, (4, 8, 3, 3), (8, 1), (8, 3), 'R', 'L', SBMV, symmetrize);
+    test_macro!(test_008: inline, c32, (4, 8, 1, 3), (8, 1), (8, 1), 'R', 'L', HBMV, hermitianize);
+    test_macro!(test_009: inline, c32, (4, 8, 1, 3), (8, 1), (8, 3), 'C', 'U', HBMV, hermitianize);
+    test_macro!(test_010: inline, c32, (4, 8, 3, 1), (8, 3), (8, 1), 'C', 'L', HBMV, hermitianize);
+    test_macro!(test_011: inline, c32, (4, 8, 3, 1), (8, 3), (8, 3), 'R', 'U', HBMV, hermitianize);
+    test_macro!(test_012: inline, c64, (4, 8, 1, 3), (8, 3), (8, 1), 'C', 'U', HBMV, hermitianize);
+    test_macro!(test_013: inline, c64, (4, 8, 1, 3), (8, 3), (8, 3), 'R', 'L', HBMV, hermitianize);
+    test_macro!(test_014: inline, c64, (4, 8, 3, 1), (8, 1), (8, 1), 'C', 'L', HBMV, hermitianize);
+    test_macro!(test_015: inline, c64, (4, 8, 3, 1), (8, 1), (8, 3), 'R', 'U', HBMV, hermitianize);
 }
 
 #[cfg(test)]
@@ -250,7 +246,7 @@ mod valid_row_major {
                 );
             }
 
-            let y_out = HBMV::<F>::default()
+            let y_out = SBMV::<F>::default()
                 .a(a_raw.slice(a_slc))
                 .x(x_raw.slice(x_slc))
                 .y(y_raw.slice_mut(y_slc))

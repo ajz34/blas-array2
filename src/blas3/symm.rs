@@ -3,7 +3,6 @@ use blas_sys;
 use derive_builder::Builder;
 use libc::{c_char, c_int};
 use ndarray::prelude::*;
-use std::marker::PhantomData;
 
 /* #region BLAS func */
 
@@ -153,7 +152,7 @@ where
     #[builder(setter(into), default = "BLASLower")]
     pub uplo: BLASUpLo,
 
-    #[builder(private, default = "PhantomData {}")]
+    #[builder(private, default = "std::marker::PhantomData {}")]
     _phantom: std::marker::PhantomData<S>,
 }
 
@@ -219,7 +218,7 @@ where
             beta,
             c,
             ldc: ldc.try_into()?,
-            _phantom: PhantomData {},
+            _phantom: std::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -275,7 +274,7 @@ where
                     BLASUpper => BLASLower,
                     _ => blas_invalid!(obj.uplo)?,
                 },
-                _phantom: PhantomData {},
+                _phantom: std::marker::PhantomData {},
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);
