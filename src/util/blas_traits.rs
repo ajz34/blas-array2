@@ -2,8 +2,8 @@ use crate::util::*;
 use blas_sys::{c_double_complex, c_float_complex};
 use libc::{c_double, c_float};
 use ndarray::Dimension;
-use num_complex::Complex;
-use num_traits::{Num, NumAssignOps};
+use num_complex::*;
+use num_traits::*;
 
 #[allow(non_camel_case_types)]
 pub type c32 = Complex<f32>;
@@ -12,17 +12,20 @@ pub type c64 = Complex<f64>;
 
 /// Trait for defining real part float types
 pub trait BLASFloat:
-    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display + 'static
+    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display
 {
     type RealFloat: BLASFloat;
     type FFIFloat;
+    const EPSILON: Self::RealFloat;
     fn is_complex() -> bool;
     fn conj(x: Self) -> Self;
+    fn abs(x: Self) -> Self::RealFloat;
 }
 
 impl BLASFloat for f32 {
     type RealFloat = f32;
     type FFIFloat = c_float;
+    const EPSILON: Self::RealFloat = f32::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         false
@@ -30,12 +33,17 @@ impl BLASFloat for f32 {
     #[inline]
     fn conj(x: Self) -> Self {
         x
+    }
+    #[inline]
+    fn abs(x: Self) -> Self::RealFloat {
+        x.abs()
     }
 }
 
 impl BLASFloat for f64 {
     type RealFloat = f64;
     type FFIFloat = c_double;
+    const EPSILON: Self::RealFloat = f64::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         false
@@ -44,11 +52,16 @@ impl BLASFloat for f64 {
     fn conj(x: Self) -> Self {
         x
     }
+    #[inline]
+    fn abs(x: Self) -> Self::RealFloat {
+        x.abs()
+    }
 }
 
 impl BLASFloat for c32 {
     type RealFloat = f32;
     type FFIFloat = c_float_complex;
+    const EPSILON: Self::RealFloat = f32::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         true
@@ -56,12 +69,17 @@ impl BLASFloat for c32 {
     #[inline]
     fn conj(x: Self) -> Self {
         x.conj()
+    }
+    #[inline]
+    fn abs(x: Self) -> Self::RealFloat {
+        x.abs()
     }
 }
 
 impl BLASFloat for c64 {
     type RealFloat = f64;
     type FFIFloat = c_double_complex;
+    const EPSILON: Self::RealFloat = f64::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         true
@@ -69,6 +87,10 @@ impl BLASFloat for c64 {
     #[inline]
     fn conj(x: Self) -> Self {
         x.conj()
+    }
+    #[inline]
+    fn abs(x: Self) -> Self::RealFloat {
+        x.abs()
     }
 }
 

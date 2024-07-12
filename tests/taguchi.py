@@ -2,10 +2,10 @@ import numpy as np
 import oapackage
 
 
-def taguchi(levels, run_size, nkeep=100):
+def taguchi(levels, run_size, nkeep=100, strength=2):
     number_of_factors = len(levels)
     factor_levels = levels
-    strength = 2
+    strength = strength
     
     arrayclass = oapackage.arraydata_t(factor_levels, run_size, strength, number_of_factors)
 
@@ -34,7 +34,7 @@ def taguchi(levels, run_size, nkeep=100):
     return np.array(arraylist[0])
 
 
-def taguchi_by_list(lst, run_size, nkeep=100):
+def taguchi_by_list(lst, run_size, nkeep=100, strength=2):
     lst_levels = [len(l) for l in lst]
-    lst_taguchi = taguchi(lst_levels, run_size, nkeep)
+    lst_taguchi = taguchi(lst_levels, run_size, nkeep, strength)
     return [[lst[n][i] for (n, i) in enumerate(l)] for l in lst_taguchi]

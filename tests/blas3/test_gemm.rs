@@ -2,6 +2,8 @@ use crate::util::*;
 use approx::*;
 use blas_array2::blas3::gemm::GEMM;
 use blas_array2::util::*;
+use cblas_sys::*;
+use ndarray::prelude::*;
 use num_complex::*;
 
 #[cfg(test)]
@@ -297,4 +299,243 @@ mod valid_view {
 
     // dimension mismatch (m, n)
     test_macro!(test_100: should_panic, f32, (7, 8, 1, 1), (8, 9, 1, 1), (7, 8, 1, 1), 'R', 'R', 'R', 'N', 'N');
+}
+
+#[cfg(test)]
+mod valid_cblas {
+    use super::*;
+
+    #[test]
+    fn test_cblas() {
+        // set parameters of test configuration
+        type F = c32;
+        let a_slc = slice(7, 8, 1, 1);
+        let b_slc = slice(8, 9, 1, 1);
+        let c_slc = slice(7, 9, 1, 1);
+        let a_layout = 'R';
+        let b_layout = 'R';
+        let c_layout = 'R';
+        let transa = 'N';
+        let transb = 'N';
+        let cblas_layout = 'R';
+
+        // type definition
+        type FFI = <F as BLASFloat>::FFIFloat;
+
+        // data assignment
+        let alpha = F::rand();
+        let beta = F::rand();
+        let a_raw = random_matrix::<F>(100, 100, a_layout.into());
+        let b_raw = random_matrix::<F>(100, 100, b_layout.into());
+        let mut c_raw = random_matrix::<F>(100, 100, c_layout.into());
+        let mut c_origin = c_raw.clone();
+
+        // cblas computation - mut
+        let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+        let b_naive = ndarray_to_layout(b_raw.slice(b_slc).into_owned(), cblas_layout);
+        let mut c_naive = ndarray_to_layout(c_raw.slice(c_slc).into_owned(), cblas_layout);
+        let (m, n) = c_naive.dim();
+        let k = if transa == 'N' { a_naive.len_of(Axis(1)) } else { a_naive.len_of(Axis(0)) };
+        let lda = *a_naive.strides().iter().max().unwrap();
+        let ldb = *b_naive.strides().iter().max().unwrap();
+        let ldc = *c_naive.strides().iter().max().unwrap();
+        unsafe {
+            cblas_cgemm(
+                to_cblas_layout(cblas_layout),
+                to_cblas_trans(transa),
+                to_cblas_trans(transb),
+                m.try_into().unwrap(),
+                n.try_into().unwrap(),
+                k.try_into().unwrap(),
+                [alpha].as_ptr() as *const FFI,
+                a_naive.as_ptr() as *const FFI,
+                lda.try_into().unwrap(),
+                b_naive.as_ptr() as *const FFI,
+                ldb.try_into().unwrap(),
+                [beta].as_ptr() as *const FFI,
+                c_naive.as_mut_ptr() as *mut FFI,
+                ldc.try_into().unwrap(),
+            );
+        }
+
+        let c_out = GEMM::<F>::default()
+            .a(a_raw.slice(a_slc))
+            .b(b_raw.slice(b_slc))
+            .c(c_raw.slice_mut(c_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .transa(transa)
+            .transb(transb)
+            .run()
+            .unwrap()
+            .into_owned();
+
+        check_same(&c_out.view(), &c_naive.view(), 4.0 * F::EPSILON);
+        check_same(&c_raw.slice(c_slc), &c_naive.view(), 4.0 * F::EPSILON);
+        c_raw.slice_mut(c_slc).fill(F::from(0.0));
+        c_origin.slice_mut(c_slc).fill(F::from(0.0));
+        check_same(&c_raw.view(), &c_origin.view(), 4.0 * F::EPSILON);
+
+        // cblas computation - own
+        c_naive.fill(F::from(0.0));
+        unsafe {
+            cblas_cgemm(
+                to_cblas_layout(cblas_layout),
+                to_cblas_trans(transa),
+                to_cblas_trans(transb),
+                m.try_into().unwrap(),
+                n.try_into().unwrap(),
+                k.try_into().unwrap(),
+                [alpha].as_ptr() as *const FFI,
+                a_naive.as_ptr() as *const FFI,
+                lda.try_into().unwrap(),
+                b_naive.as_ptr() as *const FFI,
+                ldb.try_into().unwrap(),
+                [beta].as_ptr() as *const FFI,
+                c_naive.as_mut_ptr() as *mut FFI,
+                ldc.try_into().unwrap(),
+            );
+        }
+
+        let c_out = GEMM::<F>::default()
+            .a(a_raw.slice(a_slc))
+            .b(b_raw.slice(b_slc))
+            .alpha(alpha)
+            .beta(beta)
+            .transa(transa)
+            .transb(transb)
+            .run()
+            .unwrap()
+            .into_owned();
+        check_same(&c_out.view(), &c_naive.view(), 4.0 * F::EPSILON);
+    }
+
+    macro_rules! test_macro {
+        (
+            $test_name: ident: $attr: ident,
+            $F:ty, $cblas_func: ident,
+            ($($a_slc: expr),+), ($($b_slc: expr),+), ($($c_slc: expr),+),
+            $a_layout: expr, $b_layout: expr, $c_layout: expr,
+            $a_trans: expr, $b_trans: expr, $cblas_layout: expr
+        ) => {
+            #[test]
+            #[$attr]
+            fn $test_name() {
+                // set parameters of test configuration
+                type F = $F;
+                let a_slc = slice($($a_slc),+);
+                let b_slc = slice($($b_slc),+);
+                let c_slc = slice($($c_slc),+);
+                let a_layout = $a_layout;
+                let b_layout = $b_layout;
+                let c_layout = $c_layout;
+                let transa = $a_trans;
+                let transb = $b_trans;
+                let cblas_layout = $cblas_layout;
+        
+                // type definition
+                type FFI = <F as BLASFloat>::FFIFloat;
+        
+                // data assignment
+                let alpha = F::rand();
+                let beta = F::rand();
+                let a_raw = random_matrix::<F>(100, 100, a_layout.into());
+                let b_raw = random_matrix::<F>(100, 100, b_layout.into());
+                let mut c_raw = random_matrix::<F>(100, 100, c_layout.into());
+                let mut c_origin = c_raw.clone();
+        
+                // cblas computation - mut
+                let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+                let b_naive = ndarray_to_layout(b_raw.slice(b_slc).into_owned(), cblas_layout);
+                let mut c_naive = ndarray_to_layout(c_raw.slice(c_slc).into_owned(), cblas_layout);
+                let (m, n) = c_naive.dim();
+                let k = if transa == 'N' { a_naive.len_of(Axis(1)) } else { a_naive.len_of(Axis(0)) };
+                let lda = *a_naive.strides().iter().max().unwrap();
+                let ldb = *b_naive.strides().iter().max().unwrap();
+                let ldc = *c_naive.strides().iter().max().unwrap();
+                unsafe {
+                    $cblas_func(
+                        to_cblas_layout(cblas_layout),
+                        to_cblas_trans(transa),
+                        to_cblas_trans(transb),
+                        m.try_into().unwrap(),
+                        n.try_into().unwrap(),
+                        k.try_into().unwrap(),
+                        [alpha].as_ptr() as *const FFI,
+                        a_naive.as_ptr() as *const FFI,
+                        lda.try_into().unwrap(),
+                        b_naive.as_ptr() as *const FFI,
+                        ldb.try_into().unwrap(),
+                        [beta].as_ptr() as *const FFI,
+                        c_naive.as_mut_ptr() as *mut FFI,
+                        ldc.try_into().unwrap(),
+                    );
+                }
+        
+                let c_out = GEMM::<F>::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .c(c_raw.slice_mut(c_slc))
+                    .alpha(alpha)
+                    .beta(beta)
+                    .transa(transa)
+                    .transb(transb)
+                    .run()
+                    .unwrap()
+                    .into_owned();
+        
+                check_same(&c_out.view(), &c_naive.view(), 4.0 * F::EPSILON);
+                check_same(&c_raw.slice(c_slc), &c_naive.view(), 4.0 * F::EPSILON);
+                c_raw.slice_mut(c_slc).fill(F::from(0.0));
+                c_origin.slice_mut(c_slc).fill(F::from(0.0));
+                check_same(&c_raw.view(), &c_origin.view(), 4.0 * F::EPSILON);
+        
+                // cblas computation - own
+                c_naive.fill(F::from(0.0));
+                unsafe {
+                    $cblas_func(
+                        to_cblas_layout(cblas_layout),
+                        to_cblas_trans(transa),
+                        to_cblas_trans(transb),
+                        m.try_into().unwrap(),
+                        n.try_into().unwrap(),
+                        k.try_into().unwrap(),
+                        [alpha].as_ptr() as *const FFI,
+                        a_naive.as_ptr() as *const FFI,
+                        lda.try_into().unwrap(),
+                        b_naive.as_ptr() as *const FFI,
+                        ldb.try_into().unwrap(),
+                        [beta].as_ptr() as *const FFI,
+                        c_naive.as_mut_ptr() as *mut FFI,
+                        ldc.try_into().unwrap(),
+                    );
+                }
+        
+                let c_out = GEMM::<F>::default()
+                    .a(a_raw.slice(a_slc))
+                    .b(b_raw.slice(b_slc))
+                    .alpha(alpha)
+                    .beta(beta)
+                    .transa(transa)
+                    .transb(transb)
+                    .run()
+                    .unwrap()
+                    .into_owned();
+                check_same(&c_out.view(), &c_naive.view(), 4.0 * F::EPSILON);
+            }
+        };
+    }
+    
+    test_macro!(test_000: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N', 'R');
+    test_macro!(test_001: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N', 'R');
+    test_macro!(test_002: inline, c32, cblas_cgemm, (7, 8, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'N', 'N', 'C');
+    test_macro!(test_003: inline, c32, cblas_cgemm, (7, 8, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'T', 'R');
+    test_macro!(test_004: inline, c32, cblas_cgemm, (8, 7, 1, 1), (8, 9, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'T', 'N', 'C');
+    test_macro!(test_005: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'T', 'T', 'R');
+    test_macro!(test_006: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'T', 'C', 'R');
+    test_macro!(test_007: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'T', 'C', 'R');
+    test_macro!(test_008: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'C', 'T', 'C');
+    test_macro!(test_009: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'C', 'T', 'C');
+    test_macro!(test_010: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'C', 'C', 'C');
+    test_macro!(test_011: inline, c32, cblas_cgemm, (8, 7, 1, 1), (9, 8, 1, 1), (7, 9, 1, 1), 'C', 'C', 'C', 'C', 'C', 'C');
 }

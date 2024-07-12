@@ -75,6 +75,36 @@ def gen_valid_view():
     return tokens
 
 
+def gen_valid_cblas():
+    list_layout = ["R", "C"]
+    list_shape_a = [(7, 8, "N"), (8, 7, "T"), (8, 7, "C")]
+    list_shape_b = [(8, 9, "N"), (9, 8, "T"), (9, 8, "C")]
+
+    set_inp = [
+        list_shape_a, list_shape_b,
+        list_layout
+    ]
+    run_size = 12
+
+    tokens = []
+    for n, list_taguchi in enumerate(taguchi_by_list(set_inp, run_size, strength=1)):
+        (
+            (ad0, ad1, transa), (bd0, bd1, transb),
+            layout
+        ) = list_taguchi
+        token = (
+            f"test_macro!(test_{n:03d}: inline, c32, cblas_cgemm, "
+            f"{(ad0, ad1, 1, 1)}, "
+            f"{(bd0, bd1, 1, 1)}, "
+            f"{(7, 9, 1, 1)}, "
+            f"'{layout}', '{layout}', '{layout}', "
+            f"'{transa}', '{transb}', '{layout}');"
+        )
+        tokens.append(token)
+    return tokens
+
+
 if __name__ == "__main__":
-    print("\n".join(gen_valid_owned()))
-    print("\n".join(gen_valid_view()))
+    # print("\n".join(gen_valid_owned()))
+    # print("\n".join(gen_valid_view()))
+    print("\n".join(gen_valid_cblas()))

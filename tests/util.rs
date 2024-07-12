@@ -1,6 +1,9 @@
+use approx::*;
 use blas_array2::util::*;
+use cblas_sys::*;
 use ndarray::{prelude::*, SliceInfo, SliceInfoElem};
-use num_complex::ComplexFloat;
+use num_complex::*;
+use num_traits::*;
 use rand::{thread_rng, Rng};
 
 /* #region Random matrix */
@@ -204,7 +207,21 @@ where
     }
 }
 
+pub fn check_same<F, D>(a: &ArrayView<F, D>, b: &ArrayView<F, D>, eps: <F::RealFloat as AbsDiffEq>::Epsilon)
+where
+    F: BLASFloat,
+    D: Dimension,
+    <F as BLASFloat>::RealFloat: approx::AbsDiffEq,
+{
+    let err: F::RealFloat = (a - b).mapv(F::abs).sum();
+    let acc: F::RealFloat = a.mapv(F::abs).sum();
+    let err_div = err / acc;
+    assert_abs_diff_eq!(err_div, F::RealFloat::zero(), epsilon = eps);
+}
+
 /* #endregion */
+
+/* #region array alignment */
 
 pub fn ndarray_to_colmajor<A, D>(arr: Array<A, D>) -> Array<A, D>
 where
@@ -235,3 +252,62 @@ where
         return arr.as_standard_layout().into_owned();
     }
 }
+
+pub fn ndarray_to_layout<A, D>(arr: Array<A, D>, layout: char) -> Array<A, D>
+where
+    A: Clone,
+    D: Dimension,
+{
+    match layout {
+        'R' => ndarray_to_rowmajor(arr),
+        'C' => ndarray_to_colmajor(arr),
+        _ => panic!("invalid layout"),
+    }
+}
+
+/* #endregion */
+
+/* #region cblas enums */
+
+pub fn to_cblas_layout(layout: char) -> CBLAS_LAYOUT {
+    match layout {
+        'R' => CblasRowMajor,
+        'C' => CblasColMajor,
+        _ => panic!("Invalid layout"),
+    }
+}
+
+pub fn to_cblas_trans(trans: char) -> CBLAS_TRANSPOSE {
+    match trans {
+        'N' => CblasNoTrans,
+        'T' => CblasTrans,
+        'C' => CblasConjTrans,
+        _ => panic!("Invalid trans"),
+    }
+}
+
+pub fn to_cblas_uplo(uplo: char) -> CBLAS_UPLO {
+    match uplo {
+        'L' => CblasLower,
+        'U' => CblasUpper,
+        _ => panic!("Invalid uplo"),
+    }
+}
+
+pub fn to_cblas_side(side: char) -> CBLAS_SIDE {
+    match side {
+        'L' => CblasLeft,
+        'R' => CblasRight,
+        _ => panic!("Invalid side"),
+    }
+}
+
+pub fn to_cblas_diag(diag: char) -> CBLAS_DIAG {
+    match diag {
+        'N' => CblasNonUnit,
+        'U' => CblasUnit,
+        _ => panic!("Invalid diag"),
+    }
+}
+
+/* #endregion */
