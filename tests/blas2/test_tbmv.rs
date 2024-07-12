@@ -2,11 +2,13 @@ use crate::util::*;
 use approx::*;
 use blas_array2::blas2::tbmv::TBMV;
 use blas_array2::prelude::*;
+use cblas_sys::*;
+use itertools::*;
 use ndarray::prelude::*;
 use num_complex::*;
 
 #[cfg(test)]
-mod valid {
+mod valid_col_major {
     use super::*;
 
     macro_rules! test_macro {
@@ -69,6 +71,7 @@ mod valid {
                     .uplo(uplo)
                     .trans(trans)
                     .diag(diag)
+                    .layout('C')
                     .run()
                     .unwrap();
                 if let ArrayOut1::ViewMut(_) = x_out {
@@ -107,4 +110,67 @@ mod valid {
     test_macro!(test_021: inline, c64, (4, 8, 3, 1), (8, 1), 'C', 'U', 'C', 'N');
     test_macro!(test_022: inline, c64, (4, 8, 3, 1), (8, 3), 'R', 'L', 'T', 'N');
     test_macro!(test_023: inline, c64, (4, 8, 3, 3), (8, 1), 'R', 'L', 'N', 'U');
+}
+
+#[cfg(test)]
+mod valid_row_major {
+    use super::*;
+
+    #[test]
+    fn test_cblas_row_major() {
+        let cblas_layout = 'R';
+        type F = c32;
+        for (a_layout, uplo, trans, diag) in iproduct!(['R', 'C'], ['U', 'L'], ['N', 'T', 'C'], ['U', 'N']) {
+            println!("a_layout {a_layout:?}, uplo {uplo:?}, trans {trans:?}");
+            let n = 8;
+            let k = 3;
+
+            // slice definition
+            let a_slc = slice(n, k + 1, 3, 3);
+            let x_slc = slice_1d(n, 3);
+
+            // type definition
+            type FFI = <F as BLASFloat>::FFIFloat;
+
+            // data assignment
+            let a_raw = random_matrix(100, 100, cblas_layout.into());
+            let mut x_raw = random_array(1000);
+            let mut x_origin = x_raw.clone();
+
+            // cblas computation
+            let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+            let mut x_naive = x_raw.slice_mut(x_slc).into_owned();
+            let lda = *a_naive.strides().iter().max().unwrap();
+            let incx = 1;
+            unsafe {
+                cblas_ctbmv(
+                    to_cblas_layout(cblas_layout),
+                    to_cblas_uplo(uplo),
+                    to_cblas_trans(trans),
+                    to_cblas_diag(diag),
+                    n.try_into().unwrap(),
+                    k.try_into().unwrap(),
+                    a_naive.as_ptr() as *const FFI,
+                    lda.try_into().unwrap(),
+                    x_naive.as_mut_ptr() as *mut FFI,
+                    incx.try_into().unwrap(),
+                );
+            }
+
+            TBMV::<F>::default()
+                .a(a_raw.slice(a_slc))
+                .x(x_raw.slice_mut(x_slc))
+                .uplo(uplo)
+                .trans(trans)
+                .diag(diag)
+                .layout(cblas_layout)
+                .run()
+                .unwrap();
+
+            check_same(&x_raw.slice(x_slc), &x_naive.view(), 4.0 * F::EPSILON);
+            x_raw.slice_mut(x_slc).fill(F::from(0.0));
+            x_origin.slice_mut(x_slc).fill(F::from(0.0));
+            check_same(&x_raw.view(), &x_origin.view(), 4.0 * F::EPSILON);
+        }
+    }
 }

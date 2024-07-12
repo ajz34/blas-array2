@@ -2,10 +2,10 @@ use crate::util::*;
 use approx::*;
 use blas_array2::blas2::hbmv::HBMV;
 use blas_array2::prelude::*;
-use ndarray::prelude::*;
-use num_complex::*;
 use cblas_sys::*;
 use itertools::*;
+use ndarray::prelude::*;
+use num_complex::*;
 
 #[cfg(test)]
 mod valid_col_major {
@@ -134,7 +134,6 @@ mod valid_row_major {
 
     #[test]
     fn test_cblas_row_major_c32() {
-        
         let cblas_layout = 'R';
         type F = c32;
         for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {
@@ -204,7 +203,6 @@ mod valid_row_major {
 
     #[test]
     fn test_cblas_row_major_f32() {
-        
         let cblas_layout = 'R';
         type F = f32;
         for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {

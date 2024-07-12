@@ -157,10 +157,12 @@ where
         let alpha = self.alpha;
         let beta = self.beta;
         let uplo = self.uplo;
+        let layout = self.layout;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
         assert!(layout_a.is_fpref());
+        assert!(layout == Some(BLASLayout::ColMajor));
 
         // initialize intent(hide)
         let (k_, n) = a.dim();
