@@ -141,6 +141,8 @@ where
     pub beta: F,
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 }
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for HBMV_<'a, 'x, 'y, F>
@@ -218,18 +220,61 @@ where
         let obj = self.build()?;
 
         let layout_a = get_layout_array2(&obj.a);
+        let layout = match obj.layout {
+            Some(layout) => layout,
+            None => match layout_a {
+                BLASLayout::Sequential => BLASColMajor,
+                BLASRowMajor => BLASRowMajor,
+                BLASColMajor => BLASColMajor,
+                _ => blas_raise!("Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
+            }
+        };
 
-        if layout_a.is_fpref() {
-            // F-contiguous: y = alpha op(A) x + beta y
+        if layout == BLASColMajor {
+            // F-contiguous
+            let a_cow = obj.a.reversed_axes();
+            let a_cow = a_cow.as_standard_layout().reversed_axes();
+            let obj = HBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
-            // C-contiguous: transpose to F-contiguous
-            eprintln!("{:}:{:}: Warning message from blas-array2", file!(), line!());
-            eprintln!("Banded storage not suitable for C-contiguous without explicit transposition.");
-            eprintln!("Also see https://github.com/Reference-LAPACK/lapack/issues/1032.");
-            let a_fpref = obj.a.reversed_axes().as_standard_layout().reversed_axes().into_owned();
-            let obj = HBMV_ { a: a_fpref.view(), ..obj };
-            return obj.driver()?.run_blas();
+            // C-contiguous
+            let a_cow = obj.a.as_standard_layout();
+            if F::is_complex() {
+                let x = obj.x.mapv(F::conj);
+                let y = obj.y.map(|mut y| {
+                    y.mapv_inplace(F::conj);
+                    y
+                });
+                let obj = HBMV_ {
+                    a: a_cow.t(),
+                    x: x.view(),
+                    y,
+                    uplo: match obj.uplo {
+                        BLASUpper => BLASLower,
+                        BLASLower => BLASUpper,
+                        _ => blas_invalid!(obj.uplo)?,
+                    },
+                    alpha: F::conj(obj.alpha),
+                    beta: F::conj(obj.beta),
+                    layout: Some(BLASColMajor),
+                    ..obj
+                };
+                let mut y = obj.driver()?.run_blas()?;
+                y.view_mut().mapv_inplace(F::conj);
+                return Ok(y);
+            } else {
+                let obj = HBMV_ {
+                    a: a_cow.t(),
+                    uplo: match obj.uplo {
+                        BLASUpper => BLASLower,
+                        BLASLower => BLASUpper,
+                        _ => blas_invalid!(obj.uplo)?,
+                    },
+                    layout: Some(BLASColMajor),
+                    ..obj
+                };
+                return obj.driver()?.run_blas();
+            }
         }
     }
 }

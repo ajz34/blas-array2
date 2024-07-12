@@ -4,9 +4,11 @@ use blas_array2::blas2::hbmv::HBMV;
 use blas_array2::prelude::*;
 use ndarray::prelude::*;
 use num_complex::*;
+use cblas_sys::*;
+use itertools::*;
 
 #[cfg(test)]
-mod valid {
+mod valid_col_major {
     use super::*;
 
     macro_rules! test_macro {
@@ -74,6 +76,7 @@ mod valid {
                     .uplo(uplo)
                     .alpha(alpha)
                     .beta(beta)
+                    .layout('C')
                     .run()
                     .unwrap();
                 if let ArrayOut1::ViewMut(_) = y_out {
@@ -92,6 +95,7 @@ mod valid {
                     .uplo(uplo)
                     .alpha(alpha)
                     .beta(beta)
+                    .layout('C')
                     .run()
                     .unwrap();
                 if let ArrayOut1::Owned(y_out) = y_out {
@@ -122,4 +126,149 @@ mod valid {
     test_macro!(test_013: inline, c64, (4, 8, 1, 3), (8, 3), (8, 3), 'R', 'L');
     test_macro!(test_014: inline, c64, (4, 8, 3, 1), (8, 1), (8, 1), 'C', 'L');
     test_macro!(test_015: inline, c64, (4, 8, 3, 1), (8, 1), (8, 3), 'R', 'U');
+}
+
+#[cfg(test)]
+mod valid_row_major {
+    use super::*;
+
+    #[test]
+    fn test_cblas_row_major_c32() {
+        
+        let cblas_layout = 'R';
+        type F = c32;
+        for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {
+            println!("a_layout {a_layout:?}, uplo {uplo:?}");
+            let n = 8;
+            let k = 3;
+
+            // slice definition
+            let a_slc = slice(n, k + 1, 3, 3);
+            let x_slc = slice_1d(n, 3);
+            let y_slc = slice_1d(n, 3);
+
+            // type definition
+            type FFI = <F as BLASFloat>::FFIFloat;
+
+            // data assignment
+            let alpha = F::rand();
+            let beta = F::rand();
+            let a_raw = random_matrix::<F>(100, 100, a_layout.into());
+            let x_raw = random_array::<F>(1000);
+            let mut y_raw = random_array::<F>(1000);
+            let mut y_origin = y_raw.clone();
+
+            // cblas computation - mut
+            let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+            let x_naive = x_raw.slice(x_slc).into_owned();
+            let mut y_naive = y_raw.slice_mut(y_slc).into_owned();
+            let lda = *a_naive.strides().iter().max().unwrap();
+            let incx = 1;
+            let incy = 1;
+            unsafe {
+                cblas_chbmv(
+                    to_cblas_layout(cblas_layout),
+                    to_cblas_uplo(uplo),
+                    n.try_into().unwrap(),
+                    k.try_into().unwrap(),
+                    [alpha].as_ptr() as *const FFI,
+                    a_naive.as_ptr() as *const FFI,
+                    lda.try_into().unwrap(),
+                    x_naive.as_ptr() as *const FFI,
+                    incx.try_into().unwrap(),
+                    [beta].as_ptr() as *const FFI,
+                    y_naive.as_mut_ptr() as *mut FFI,
+                    incy.try_into().unwrap(),
+                );
+            }
+
+            let y_out = HBMV::<F>::default()
+                .a(a_raw.slice(a_slc))
+                .x(x_raw.slice(x_slc))
+                .y(y_raw.slice_mut(y_slc))
+                .alpha(alpha)
+                .beta(beta)
+                .uplo(uplo)
+                .layout(cblas_layout)
+                .run()
+                .unwrap()
+                .into_owned();
+
+            check_same(&y_out.view(), &y_naive.view(), 4.0 * F::EPSILON);
+            check_same(&y_raw.slice(y_slc), &y_naive.view(), 4.0 * F::EPSILON);
+            y_raw.slice_mut(y_slc).fill(F::from(0.0));
+            y_origin.slice_mut(y_slc).fill(F::from(0.0));
+            check_same(&y_raw.view(), &y_origin.view(), 4.0 * F::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_cblas_row_major_f32() {
+        
+        let cblas_layout = 'R';
+        type F = f32;
+        for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {
+            println!("a_layout {a_layout:?}, uplo {uplo:?}");
+            let n = 8;
+            let k = 3;
+
+            // slice definition
+            let a_slc = slice(n, k + 1, 3, 3);
+            let x_slc = slice_1d(n, 3);
+            let y_slc = slice_1d(n, 3);
+
+            // type definition
+            type FFI = <F as BLASFloat>::FFIFloat;
+
+            // data assignment
+            let alpha = F::rand();
+            let beta = F::rand();
+            let a_raw = random_matrix::<F>(100, 100, a_layout.into());
+            let x_raw = random_array::<F>(1000);
+            let mut y_raw = random_array::<F>(1000);
+            let mut y_origin = y_raw.clone();
+
+            // cblas computation - mut
+            let a_naive = ndarray_to_layout(a_raw.slice(a_slc).into_owned(), cblas_layout);
+            let x_naive = x_raw.slice(x_slc).into_owned();
+            let mut y_naive = y_raw.slice_mut(y_slc).into_owned();
+            let lda = *a_naive.strides().iter().max().unwrap();
+            let incx = 1;
+            let incy = 1;
+            unsafe {
+                cblas_ssbmv(
+                    to_cblas_layout(cblas_layout),
+                    to_cblas_uplo(uplo),
+                    n.try_into().unwrap(),
+                    k.try_into().unwrap(),
+                    alpha,
+                    a_naive.as_ptr() as *const FFI,
+                    lda.try_into().unwrap(),
+                    x_naive.as_ptr() as *const FFI,
+                    incx.try_into().unwrap(),
+                    beta,
+                    y_naive.as_mut_ptr() as *mut FFI,
+                    incy.try_into().unwrap(),
+                );
+            }
+
+            let y_out = HBMV::<F>::default()
+                .a(a_raw.slice(a_slc))
+                .x(x_raw.slice(x_slc))
+                .y(y_raw.slice_mut(y_slc))
+                .alpha(alpha)
+                .beta(beta)
+                .uplo(uplo)
+                .layout(cblas_layout)
+                .run()
+                .unwrap()
+                .into_owned();
+
+            check_same(&y_out.view(), &y_naive.view(), 4.0 * F::EPSILON);
+            check_same(&y_raw.slice(y_slc), &y_naive.view(), 4.0 * F::EPSILON);
+            y_raw.slice_mut(y_slc).fill(F::from(0.0));
+            y_origin.slice_mut(y_slc).fill(F::from(0.0));
+            check_same(&y_raw.view(), &y_origin.view(), 4.0 * F::EPSILON);
+        }
+    }
 }
