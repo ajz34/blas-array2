@@ -131,10 +131,12 @@ where
         let uplo = self.uplo;
         let trans = self.trans;
         let diag = self.diag;
+        let layout = self.layout;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let incap = ap.stride_of(Axis(0));
         assert!(incap <= 1);
+        assert!(layout.unwrap() == BLASColMajor);
 
         // initialize intent(hide)
         let np = ap.len_of(Axis(0));

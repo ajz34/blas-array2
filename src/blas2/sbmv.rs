@@ -258,7 +258,7 @@ where
         } else {
             // C-contiguous
             let a_cow = obj.a.as_standard_layout();
-            if F::is_complex() {
+            if S::is_hermitian() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.map(|mut y| {
                     y.mapv_inplace(F::conj);
