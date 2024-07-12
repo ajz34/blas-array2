@@ -150,7 +150,6 @@ where
     pub x: ArrayView1<'x, F>,
     pub m: usize,
     pub kl: usize,
-    pub ku: usize,
 
     #[builder(setter(into, strip_option), default = "None")]
     pub y: Option<ArrayViewMut1<'y, F>>,
@@ -175,7 +174,6 @@ where
         let y = self.y;
         let m = self.m;
         let kl = self.kl;
-        let ku = self.ku;
         let alpha = self.alpha;
         let beta = self.beta;
         let trans = self.trans;
@@ -192,8 +190,9 @@ where
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert!(m >= kl + ku + 1, "Incompatible dimensions")?;
-        blas_assert!(k == kl + ku + 1, "Incompatible dimensions")?;
+        blas_assert!(k > kl, "Incompatible dimensions")?;
+        blas_assert!(m >= k, "Incompatible dimensions")?;
+        let ku = k - 1 - kl;
         match trans {
             BLASNoTrans => {
                 blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
@@ -281,29 +280,21 @@ where
         } else {
             // C-contiguous
             let a_cow = obj.a.as_standard_layout();
+            let k = a_cow.len_of(Axis(1));
+            let kl = obj.kl;
+            blas_assert!(k > kl, "length of k should be larger than kl")?;
+            let ku = k - kl - 1;
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T
-                    let obj = GBMV_ {
-                        a: a_cow.t(),
-                        trans: BLASTrans,
-                        ku: obj.kl,
-                        kl: obj.ku,
-                        layout: Some(BLASColMajor),
-                        ..obj
-                    };
+                    let obj =
+                        GBMV_ { a: a_cow.t(), trans: BLASTrans, kl: ku, layout: Some(BLASColMajor), ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASTrans => {
                     // N -> T
-                    let obj = GBMV_ {
-                        a: a_cow.t(),
-                        trans: BLASNoTrans,
-                        ku: obj.kl,
-                        kl: obj.ku,
-                        layout: Some(BLASColMajor),
-                        ..obj
-                    };
+                    let obj =
+                        GBMV_ { a: a_cow.t(), trans: BLASNoTrans, kl: ku, layout: Some(BLASColMajor), ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASConjTrans => {
@@ -318,8 +309,7 @@ where
                         trans: BLASNoTrans,
                         x: x.view(),
                         y,
-                        ku: obj.kl,
-                        kl: obj.ku,
+                        kl: ku,
                         alpha: F::conj(obj.alpha),
                         beta: F::conj(obj.beta),
                         layout: Some(BLASColMajor),
