@@ -91,6 +91,12 @@ where
         };
         let incx = self.incx;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if n == 0 {
+            return Ok(x);
+        }
+
         unsafe {
             BLASFunc::tbsv(&uplo, &trans, &diag, &n, &k, a_ptr, &lda, x_ptr, &incx);
         }

@@ -1,6 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas2::sbmv::{SBMV, HBMV};
+use blas_array2::blas2::sbmv::{HBMV, SBMV};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;

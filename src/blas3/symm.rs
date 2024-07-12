@@ -120,6 +120,12 @@ where
         };
         let ldc = self.ldc;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if m == 0 || n == 0 {
+            return Ok(c.clone_to_view_mut());
+        }
+
         unsafe {
             BLASFunc::symm(&side, &uplo, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }

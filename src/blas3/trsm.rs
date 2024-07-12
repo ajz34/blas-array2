@@ -112,6 +112,12 @@ where
         };
         let ldb = self.ldb;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if m == 0 || n == 0 {
+            return Ok(b.clone_to_view_mut());
+        }
+
         unsafe {
             BLASFunc::trsm(&side, &uplo, &transa, &diag, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb);
         }

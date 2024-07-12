@@ -122,6 +122,19 @@ where
         };
         let ldc = self.ldc;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if m == 0 || n == 0 {
+            return Ok(c.clone_to_view_mut());
+        } else if k == 0 {
+            if beta == F::zero() {
+                c.view_mut().fill(F::zero());
+            } else if beta != F::one() {
+                c.view_mut().mapv_inplace(| v | v * beta);
+            }
+            return Ok(c.clone_to_view_mut());
+        }
+
         unsafe {
             BLASFunc::gemm(
                 &transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc,

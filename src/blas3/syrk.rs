@@ -114,6 +114,12 @@ where
         };
         let ldc = self.ldc;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if n == 0 || k == 0 {
+            return Ok(c.clone_to_view_mut());
+        }
+
         unsafe {
             BLASFunc::syrk(&uplo, &trans, &n, &k, &alpha, a_ptr, &lda, &beta, c_ptr, &ldc);
         }

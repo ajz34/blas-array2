@@ -299,6 +299,10 @@ mod valid_view {
 
     // dimension mismatch (m, n)
     test_macro!(test_100: should_panic, f32, (7, 8, 1, 1), (8, 9, 1, 1), (7, 8, 1, 1), 'R', 'R', 'R', 'N', 'N');
+
+    // zero dimension
+    test_macro!(test_099: inline, f32, (0, 8, 1, 1), (8, 9, 1, 1), (0, 9, 1, 1), 'R', 'R', 'R', 'N', 'N');
+    test_macro!(test_098: inline, f32, (7, 0, 1, 1), (0, 9, 1, 1), (7, 9, 1, 1), 'R', 'R', 'R', 'N', 'N');
 }
 
 #[cfg(test)]

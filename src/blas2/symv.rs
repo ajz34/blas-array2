@@ -114,6 +114,12 @@ where
         };
         let incy = self.incy;
 
+        // assuming dimension checks has been performed
+        // unconditionally return Ok if output does not contain anything
+        if n == 0 {
+            return Ok(y);
+        }
+
         unsafe {
             BLASFunc::hemv(&uplo, &n, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
         }
