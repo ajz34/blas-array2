@@ -7,7 +7,7 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 **This is a package under construction.**
 
 Currently,
-- BLAS3 functions have been implemented. BLAS1/2 functions implementation is on-going.
+- BLAS2/BLAS3 functions have been implemented. BLAS1 functions implementation is on-going.
 - **Optional Parameters**: `scipy.linalg.blas` convention. Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values.
 - **Row-major Layout**: Row-major support to Fortran API only (CBLAS functionality without CBLAS functions).
 - **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc.
