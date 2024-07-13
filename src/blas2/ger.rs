@@ -143,13 +143,18 @@ where
         let n = y.len_of(Axis(0));
 
         // prepare output
-        assert!(a.is_some(), "Currently rank-update does not allow inner driver accept empty output");
-        let a = a.unwrap();
-        // dimension check and assign
-        blas_assert_eq!(a.dim(), (m, n), "Incompatible dimensions")?;
-        let layout_a = get_layout_array2(&a.view());
-        assert!(layout_a.is_fpref(), "This function is designed not to handle C-contiguous array");
-        let a = ArrayOut2::ViewMut(a);
+        let a = match a {
+            Some(a) => {
+                blas_assert_eq!(a.dim(), (m, n), "Incompatible dimensions")?;
+                if get_layout_array2(&a.view()).is_fpref() {
+                    ArrayOut2::ViewMut(a)
+                } else {
+                    let a_buffer = a.t().as_standard_layout().into_owned().reversed_axes();
+                    ArrayOut2::ToBeCloned(a, a_buffer)
+                }
+            },
+            None => ArrayOut2::Owned(Array2::zeros((m, n).f())),
+        };
         let lda = a.view().stride_of(Axis(1));
 
         // finalize
@@ -187,33 +192,15 @@ where
         // initialize
         let obj = self.build()?;
 
-        if let Some(mut a) = obj.a {
-            let layout = get_layout_array2(&a.view());
-            if layout.is_fpref() {
-                // F-contiguous
-                let obj = GER_ { a: Some(a), ..obj };
-                return obj.driver()?.run_blas();
-            } else if layout.is_cpref() {
-                // C-contiguous
-                let obj = GER_ { a: Some(a.reversed_axes()), x: obj.y, y: obj.x, ..obj };
-                let a = obj.driver()?.run_blas()?;
-                return Ok(a.reversed_axes());
-            } else {
-                // other kinds of contiguous: use F-contiguous then assign
-                let mut a_new = a.t().as_standard_layout().into_owned().reversed_axes();
-                let obj = GER_ { a: Some(a_new.view_mut()), ..obj };
-                obj.driver()?.run_blas()?;
-                a.assign(&a_new.view());
-                return Ok(ArrayOut::ViewMut(a));
-            }
+        if obj.a.as_ref().map(|a| get_layout_array2(&a.view()).is_fpref()) == Some(true) {
+            // F-contiguous
+            return obj.driver()?.run_blas();
         } else {
-            // empty output: C-contiguous
-            let m = obj.x.len_of(Axis(0));
-            let n = obj.y.len_of(Axis(0));
-            let mut a = Array2::zeros((n, m).f());
-            let obj = GER_ { a: Some(a.view_mut()), x: obj.y, y: obj.x, ..obj };
-            obj.driver()?.run_blas()?;
-            return Ok(ArrayOut::Owned(a.reversed_axes()));
+            // C-contiguous
+            let a = obj.a.map(|a| a.reversed_axes());
+            let obj = GER_ { a, x: obj.y, y: obj.x, ..obj };
+            let a = obj.driver()?.run_blas()?;
+            return Ok(a.reversed_axes());
         }
     }
 }
