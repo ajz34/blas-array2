@@ -1,5 +1,6 @@
 pub mod gbmv;
 pub mod gemv;
+pub mod ger;
 pub mod sbmv;
 pub mod spmv;
 pub mod symv;

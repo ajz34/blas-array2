@@ -141,7 +141,6 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-
 pub struct GBMV_<'a, 'x, 'y, F>
 where
     F: BLASFloat,
