@@ -98,7 +98,7 @@ where
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
-        if n == 0 || n == 0 {
+        if m == 0 || n == 0 {
             return Ok(a);
         }
 
