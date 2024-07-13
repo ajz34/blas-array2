@@ -164,12 +164,12 @@ where
         // finalize
         let driver = SPR2_Driver {
             uplo: uplo.into(),
-            n: n.try_into().unwrap(),
+            n: n.try_into()?,
             alpha,
             x,
-            incx: incx.try_into().unwrap(),
+            incx: incx.try_into()?,
             y,
-            incy: incy.try_into().unwrap(),
+            incy: incy.try_into()?,
             ap,
         };
         return Ok(driver);

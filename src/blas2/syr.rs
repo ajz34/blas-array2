@@ -164,12 +164,12 @@ where
         // finalize
         let driver = SYR_Driver {
             uplo: uplo.into(),
-            n: n.try_into().unwrap(),
+            n: n.try_into()?,
             alpha,
             x,
-            incx: incx.try_into().unwrap(),
+            incx: incx.try_into()?,
             a,
-            lda: lda.try_into().unwrap(),
+            lda: lda.try_into()?,
             _phantom: std::marker::PhantomData {},
         };
         return Ok(driver);

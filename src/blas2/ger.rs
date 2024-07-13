@@ -159,15 +159,15 @@ where
 
         // finalize
         let driver = GER_Driver {
-            m: m.try_into().unwrap(),
-            n: n.try_into().unwrap(),
+            m: m.try_into()?,
+            n: n.try_into()?,
             alpha,
             x,
-            incx: incx.try_into().unwrap(),
+            incx: incx.try_into()?,
             y,
-            incy: incy.try_into().unwrap(),
+            incy: incy.try_into()?,
             a,
-            lda: lda.try_into().unwrap(),
+            lda: lda.try_into()?,
         };
         return Ok(driver);
     }
