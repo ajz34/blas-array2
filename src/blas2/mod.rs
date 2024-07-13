@@ -4,6 +4,7 @@ pub mod ger;
 pub mod gerc;
 pub mod sbmv;
 pub mod spmv;
+pub mod spr;
 pub mod symv;
 pub mod syr;
 pub mod syr2;
