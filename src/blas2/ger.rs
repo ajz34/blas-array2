@@ -99,13 +99,13 @@ where
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
         if m == 0 || n == 0 {
-            return Ok(a);
+            return Ok(a.clone_to_view_mut());
         }
 
         unsafe {
             BLASFunc::ger(&m, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
         }
-        return Ok(a);
+        return Ok(a.clone_to_view_mut());
     }
 }
 

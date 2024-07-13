@@ -5,6 +5,7 @@ pub mod test_gerc;
 pub mod test_sbmv;
 pub mod test_spmv;
 pub mod test_spr;
+pub mod test_spr2;
 pub mod test_symv;
 pub mod test_syr;
 pub mod test_syr2;
