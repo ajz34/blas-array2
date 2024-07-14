@@ -1,0 +1,21 @@
+name: Rust Publish
+
+on:
+  push:
+    tags:        
+      - '*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Publish crate
+      run: cargo publish --token ${CRATES_TOKEN}
+      env:
+        CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
