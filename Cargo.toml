@@ -3,6 +3,7 @@ name = "blas-array2"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+description = "Implementation of parameter-optional BLAS2 and BLAS3 wrapper by `ndarray::Array` (`Ix1` or `Ix2`)."
 
 [dependencies]
 num-traits = { version = "0.2" }
