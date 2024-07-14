@@ -181,11 +181,12 @@ where
 /* #region BLAS wrapper */
 
 pub type SPR2<'x, 'y, 'a, F> = SPR2_Builder<'x, 'y, 'a, F>;
-pub type HPR2<'x, 'y, 'a, F> = SPR2_Builder<'x, 'y, 'a, F>;
 pub type SSPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, f32>;
 pub type DSPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, f64>;
-pub type CHPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, c32>;
-pub type ZHPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, c64>;
+
+pub type HPR2<'x, 'y, 'a, F> = SPR2_Builder<'x, 'y, 'a, F>;
+pub type CHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c32>;
+pub type ZHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c64>;
 
 impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix1> for SPR2_Builder<'x, 'y, 'a, F>
 where

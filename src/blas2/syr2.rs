@@ -182,11 +182,12 @@ where
 /* #region BLAS wrapper */
 
 pub type SYR2<'x, 'y, 'a, F> = SYR2_Builder<'x, 'y, 'a, F>;
-pub type HER2<'x, 'y, 'a, F> = SYR2_Builder<'x, 'y, 'a, F>;
 pub type SSYR2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, f32>;
 pub type DSYR2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, f64>;
-pub type CHER2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, c32>;
-pub type ZHER2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, c64>;
+
+pub type HER2<'x, 'y, 'a, F> = SYR2_Builder<'x, 'y, 'a, F>;
+pub type CHER2<'x, 'y, 'a> = HER2<'x, 'y, 'a, c32>;
+pub type ZHER2<'x, 'y, 'a> = HER2<'x, 'y, 'a, c64>;
 
 impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix2> for SYR2_Builder<'x, 'y, 'a, F>
 where
