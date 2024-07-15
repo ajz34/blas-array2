@@ -225,6 +225,7 @@ impl From<BLASSide> for c_char {
 }
 
 impl BLASLayout {
+    #[inline]
     pub fn flip(&self) -> Self {
         match self {
             BLASRowMajor => BLASColMajor,
@@ -235,6 +236,7 @@ impl BLASLayout {
 }
 
 impl BLASUpLo {
+    #[inline]
     pub fn flip(&self) -> Self {
         match self {
             BLASUpper => BLASLower,
@@ -245,11 +247,27 @@ impl BLASUpLo {
 }
 
 impl BLASSide {
+    #[inline]
     pub fn flip(&self) -> Self {
         match self {
             BLASLeft => BLASRight,
             BLASRight => BLASLeft,
             _ => panic!("Invalid BLASSide: {:?}", self),
+        }
+    }
+}
+
+impl BLASTranspose {
+    #[inline]
+    pub fn flip(&self, hermi: bool) -> Self {
+        match self {
+            BLASNoTrans => match hermi {
+                false => BLASTrans,
+                true => BLASConjTrans,
+            },
+            BLASTrans => BLASNoTrans,
+            BLASConjTrans => BLASNoTrans,
+            _ => panic!("Invalid BLASTranspose: {:?}", self),
         }
     }
 }

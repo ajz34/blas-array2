@@ -89,8 +89,6 @@ mod valid_owned {
                 tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);
 
                 if let ArrayOut2::Owned(c_out) = c_out {
-                    println!("{:7.3?}", &c_naive);
-                    println!("{:7.3?}", &c_out);
                     let err = (&c_naive - &c_out).mapv(|x| x.abs()).sum();
                     let acc = c_naive.mapv(|x| x.abs()).sum() as RT;
                     let err_div = err / acc;
@@ -281,4 +279,12 @@ mod valid_view {
     test_macro!(test_021: inline, c64, (7, 5, 1, 3), (5, 5, 3, 3), 'R', 'R', 'U', 'C', HERK, 'C', f64);
     test_macro!(test_022: inline, c64, (7, 5, 3, 1), (5, 5, 1, 3), 'C', 'R', 'L', 'C', HERK, 'C', f64);
     test_macro!(test_023: inline, c64, (7, 5, 3, 1), (7, 7, 3, 1), 'R', 'C', 'U', 'N', HERK, 'C', f64);
+
+    // additional tests
+    test_macro!(test_100: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'T', SYRK, 'T', f32);
+    test_macro!(test_101: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'C', 'R', 'L', 'T', SYRK, 'T', f32);
+    test_macro!(test_102: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'C', 'C', 'L', 'T', SYRK, 'T', f32);
+    test_macro!(test_103: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'T', SYRK, 'T', c32);
+    test_macro!(test_104: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'C', HERK, 'C', f32);
+    test_macro!(test_105: inline, c32, (5, 7, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'N', HERK, 'C', f32);
 }

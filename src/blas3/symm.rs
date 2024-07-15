@@ -171,14 +171,7 @@ where
     BLASFunc: SYMMFunc<F, S>,
 {
     fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, AnyError> {
-        let a = self.a;
-        let b = self.b;
-        let c = self.c;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let side = self.side;
-        let uplo = self.uplo;
-        let layout = self.layout;
+        let Self { a, b, c, alpha, beta, side, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));

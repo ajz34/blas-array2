@@ -151,6 +151,8 @@ where
     pub uplo: BLASUpLo,
     #[builder(setter(into), default = "BLASNoTrans")]
     pub trans: BLASTranspose,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 }
 
 impl<'a, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYRK_<'a, 'c, F, S>
@@ -160,14 +162,10 @@ where
     BLASFunc: SYRKFunc<F, S>,
 {
     fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, AnyError> {
-        let a = self.a;
-        let c = self.c;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let uplo = self.uplo;
-        let trans = self.trans;
+        let Self { a, c, alpha, beta, uplo, trans, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
+        assert_eq!(layout, Some(BLASColMajor));
         let layout_a = get_layout_array2(&a);
         assert!(layout_a.is_fpref());
 
@@ -254,52 +252,54 @@ where
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
-        let obj = self.build()?;
+        let SYRK_ { a, c, alpha, beta, uplo, trans, layout } = self.build()?;
+        let at = a.t();
 
-        let layout_a = get_layout_array2(&obj.a);
+        // Note that since we will change `trans` in outer wrapper to utilize mix-contiguous
+        // additional check to this parameter is required
+        match F::is_complex() {
+            false => match trans {
+                // ssyrk, dsyrk: NTC accepted
+                BLASNoTrans | BLASTrans | BLASConjTrans => (),
+                _ => blas_invalid!(trans)?,
+            },
+            true => match S::is_hermitian() {
+                false => match trans {
+                    // csyrk, zsyrk: NT accepted
+                    BLASNoTrans | BLASTrans => (),
+                    _ => blas_invalid!(trans)?,
+                },
+                true => match trans {
+                    // cherk, zherk: NC accepted
+                    BLASNoTrans | BLASConjTrans => (),
+                    _ => blas_invalid!(trans)?,
+                },
+            },
+        };
 
-        if layout_a.is_fpref() {
+        let layout_a = get_layout_array2(&a);
+        let layout_c = c.as_ref().map(|c| get_layout_array2(&c.view()));
+
+        let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a]);
+        if layout == BLASColMajor {
             // F-contiguous: C = A op(A) or C = op(A) A
+            let (trans, a_cow) = flip_trans_fpref(trans, &a, &at, S::is_hermitian())?;
+            let obj = SYRK_ { a: a_cow.t(), c, alpha, beta, uplo, trans, layout: Some(BLASColMajor) };
             return obj.driver()?.run_blas();
-        } else {
-            // C-contiguous: C' = op(A') A' or C' = A' op(A')
-            let a_cow = obj.a.as_standard_layout();
-            let obj = SYRK_::<'_, '_, F, S> {
+        } else if layout == BLASRowMajor {
+            let (trans, a_cow) = flip_trans_cpref(trans, &a, &at, S::is_hermitian())?;
+            let obj = SYRK_ {
                 a: a_cow.t(),
-                c: obj.c.map(|c| c.reversed_axes()),
-                alpha: obj.alpha,
-                beta: obj.beta,
-                uplo: match obj.uplo {
-                    BLASLower => BLASUpper,
-                    BLASUpper => BLASLower,
-                    _ => blas_invalid!(obj.uplo)?,
-                },
-                trans: match F::is_complex() {
-                    false => match obj.trans {
-                        // ssyrk, dsyrk: NTC accepted
-                        BLASNoTrans => BLASTrans,
-                        BLASTrans => BLASNoTrans,
-                        BLASConjTrans => BLASNoTrans,
-                        _ => blas_invalid!(obj.trans)?,
-                    },
-                    true => match S::is_hermitian() {
-                        false => match obj.trans {
-                            // csyrk, zsyrk: NT accepted
-                            BLASNoTrans => BLASTrans,
-                            BLASTrans => BLASNoTrans,
-                            _ => blas_invalid!(obj.trans)?,
-                        },
-                        true => match obj.trans {
-                            // cherk, zherk: NC accepted
-                            BLASNoTrans => BLASConjTrans,
-                            BLASConjTrans => BLASNoTrans,
-                            _ => blas_invalid!(obj.trans)?,
-                        },
-                    },
-                },
+                c: c.map(|c| c.reversed_axes()),
+                alpha,
+                beta,
+                uplo: uplo.flip(),
+                trans: trans.flip(S::is_hermitian()),
+                layout: Some(BLASColMajor),
             };
-            let c = obj.driver()?.run_blas()?.reversed_axes();
-            return Ok(c);
+            return Ok(obj.driver()?.run_blas()?.reversed_axes());
+        } else {
+            panic!("This is designed not to execuate this line.");
         }
     }
 }

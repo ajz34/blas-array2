@@ -177,14 +177,7 @@ where
     BLASFunc: GEMMFunc<F>,
 {
     fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError> {
-        let a = self.a;
-        let b = self.b;
-        let c = self.c;
-        let transa = self.transa;
-        let transb = self.transb;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let layout = self.layout;
+        let Self { a, b, c, alpha, beta, transa, transb, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));
@@ -276,8 +269,8 @@ where
         let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a, layout_b]);
         if layout == BLASColMajor {
             // F-contiguous: C = op(A) op(B)
-            let (transa, a_cow) = flip_trans_fpref(transa, &a, &at)?;
-            let (transb, b_cow) = flip_trans_fpref(transb, &b, &bt)?;
+            let (transa, a_cow) = flip_trans_fpref(transa, &a, &at, false)?;
+            let (transb, b_cow) = flip_trans_fpref(transb, &b, &bt, false)?;
             let obj = GEMM_ {
                 a: a_cow.t(),
                 b: b_cow.t(),
@@ -291,8 +284,8 @@ where
             return obj.driver()?.run_blas();
         } else if layout == BLASRowMajor {
             // C-contiguous: C' = op(B') op(A')
-            let (transa, a_cow) = flip_trans_cpref(transa, &a, &at)?;
-            let (transb, b_cow) = flip_trans_cpref(transb, &b, &bt)?;
+            let (transa, a_cow) = flip_trans_cpref(transa, &a, &at, false)?;
+            let (transb, b_cow) = flip_trans_cpref(transb, &b, &bt, false)?;
             let obj = GEMM_ {
                 a: b_cow.t(),
                 b: a_cow.t(),
