@@ -148,6 +148,8 @@ where
     pub transa: BLASTranspose,
     #[builder(setter(into), default = "BLASNonUnit")]
     pub diag: BLASDiag,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 }
 
 impl<'a, 'b, F> BLASBuilder_<'b, F, Ix2> for TRSM_<'a, 'b, F>
@@ -156,15 +158,10 @@ where
     BLASFunc: TRSMFunc<F>,
 {
     fn driver(self) -> Result<TRSM_Driver<'a, 'b, F>, AnyError> {
-        let a = self.a;
-        let b = self.b;
-        let alpha = self.alpha;
-        let side = self.side;
-        let uplo = self.uplo;
-        let transa = self.transa;
-        let diag = self.diag;
+        let Self { a, b, alpha, side, uplo, transa, diag, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
+        assert_eq!(layout, Some(BLASColMajor));
         let layout_a = get_layout_array2(&a);
         assert!(layout_a.is_fpref());
 
@@ -223,35 +220,43 @@ where
 {
     fn run(self) -> Result<ArrayOut2<'b, F>, AnyError> {
         // initialize
-        let obj = self.build()?;
+        let TRSM_ { a, b, alpha, side, uplo, transa, diag, layout } = self.build()?;
+        let at = a.t();
 
-        let layout_a = get_layout_array2(&obj.a);
+        let layout_a = get_layout_array2(&a);
+        let layout_b = get_layout_array2(&b.view());
 
-        if layout_a.is_fpref() {
+        let layout = get_layout_row_preferred(&[layout, Some(layout_b)], &[layout_a]);
+        if layout == BLASColMajor {
             // F-contiguous: B = op(A) B (if side = L)
+            let (transa_new, a_cow) = flip_trans_fpref(transa, &a, &at, false)?;
+            let uplo = if transa_new != transa { uplo.flip() } else { uplo };
+            let obj = TRSM_ {
+                a: a_cow.t(),
+                b,
+                alpha,
+                side,
+                uplo,
+                transa: transa_new,
+                diag,
+                layout: Some(BLASColMajor),
+            };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous: B' = B' op(A') (if side = L)
-            let a_cow = obj.a.as_standard_layout();
+            let (transa_new, a_cow) = flip_trans_cpref(transa, &a, &at, false)?;
+            let uplo = if transa_new != transa { uplo.flip() } else { uplo };
             let obj = TRSM_ {
                 a: a_cow.t(),
-                b: obj.b.reversed_axes(),
-                alpha: obj.alpha,
-                side: match obj.side {
-                    BLASLeft => BLASRight,
-                    BLASRight => BLASLeft,
-                    _ => blas_invalid!(obj.side)?,
-                },
-                uplo: match obj.uplo {
-                    BLASUpper => BLASLower,
-                    BLASLower => BLASUpper,
-                    _ => blas_invalid!(obj.uplo)?,
-                },
-                transa: obj.transa,
-                diag: obj.diag,
+                b: b.reversed_axes(),
+                alpha,
+                side: side.flip(),
+                uplo: uplo.flip(),
+                transa: transa_new,
+                diag,
+                layout: Some(BLASColMajor),
             };
-            let b = obj.driver()?.run_blas()?.reversed_axes();
-            return Ok(b);
+            return Ok(obj.driver()?.run_blas()?.reversed_axes());
         }
     }
 }

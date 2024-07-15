@@ -307,7 +307,16 @@ where
             // F-contiguous: C = A op(B) + B op(A)
             let a_cow = at.as_standard_layout();
             let b_cow = bt.as_standard_layout();
-            let obj = SYR2K_ { a: a_cow.t(), b: b_cow.t(), c, alpha, beta, uplo, trans, layout: Some(BLASColMajor) };
+            let obj = SYR2K_ {
+                a: a_cow.t(),
+                b: b_cow.t(),
+                c,
+                alpha,
+                beta,
+                uplo,
+                trans,
+                layout: Some(BLASColMajor),
+            };
             return obj.driver()?.run_blas();
         } else if layout == BLASRowMajor {
             // C-contiguous: C' = op(B') A' + op(A') B'
