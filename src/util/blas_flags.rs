@@ -286,10 +286,7 @@ impl BLASLayout {
     }
 }
 
-pub fn get_layout_row_preferred(
-    by_first: &[Option<BLASLayout>],
-    by_all: &[BLASLayout]) -> BLASLayout        
-{
+pub(crate) fn get_layout_row_preferred(by_first: &[Option<BLASLayout>], by_all: &[BLASLayout]) -> BLASLayout {
     for x in by_first {
         if let Some(x) = x {
             if x.is_cpref() {

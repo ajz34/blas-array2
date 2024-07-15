@@ -187,10 +187,10 @@ where
         let layout = self.layout;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
+        assert_eq!(layout, Some(BLASColMajor));
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
         assert!(layout_a.is_fpref() && layout_b.is_fpref());
-        assert_eq!(layout, Some(BLASColMajor));
 
         // initialize intent(hide)
         let (m, k) = match transa {
@@ -265,48 +265,47 @@ where
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
-        let obj = self.build()?;
+        let GEMM_ { a, b, c, alpha, beta, transa, transb, layout } = self.build()?;
+        let at = a.t();
+        let bt = b.t();
 
-        let layout = obj.layout;
-        let layout_a = get_layout_array2(&obj.a);
-        let layout_b = get_layout_array2(&obj.b);
-        let layout_c = obj.c.as_ref().map(|c| get_layout_array2(&c.view()));
+        let layout_a = get_layout_array2(&a);
+        let layout_b = get_layout_array2(&b);
+        let layout_c = c.as_ref().map(|c| get_layout_array2(&c.view()));
 
         let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a, layout_b]);
-
-        let (transa, a, at) = (obj.transa, obj.a, obj.a.t());
-        let (transb, b, bt) = (obj.transb, obj.b, obj.b.t());
-        match layout {
-            BLASColMajor => {
-                let (transa, a_cow) = flip_trans_fpref(transa, &a, &at)?;
-                let (transb, b_cow) = flip_trans_fpref(transb, &b, &bt)?;
-                let obj = GEMM_ {
-                    a: a_cow.t(),
-                    b: b_cow.t(),
-                    c: obj.c,
-                    transa,
-                    transb,
-                    layout: Some(BLASColMajor),
-                    ..obj
-                };
-                return obj.driver()?.run_blas();
-            },
-            BLASRowMajor => {
-                let (transa, a_cow) = flip_trans_cpref(transa, &a, &at)?;
-                let (transb, b_cow) = flip_trans_cpref(transb, &b, &bt)?;
-                let obj = GEMM_ {
-                    a: b_cow.t(),
-                    b: a_cow.t(),
-                    c: obj.c.map(|c| c.reversed_axes()),
-                    transa: transb,
-                    transb: transa,
-                    layout: Some(BLASColMajor),
-                    ..obj
-                };
-                let c = obj.driver()?.run_blas()?.reversed_axes();
-                return Ok(c);
-            },
-            _ => panic!("This is designed not to execuate this line."),
+        if layout == BLASColMajor {
+            // F-contiguous: C = op(A) op(B)
+            let (transa, a_cow) = flip_trans_fpref(transa, &a, &at)?;
+            let (transb, b_cow) = flip_trans_fpref(transb, &b, &bt)?;
+            let obj = GEMM_ {
+                a: a_cow.t(),
+                b: b_cow.t(),
+                c,
+                alpha,
+                beta,
+                transa,
+                transb,
+                layout: Some(BLASColMajor),
+            };
+            return obj.driver()?.run_blas();
+        } else if layout == BLASRowMajor {
+            // C-contiguous: C' = op(B') op(A')
+            let (transa, a_cow) = flip_trans_cpref(transa, &a, &at)?;
+            let (transb, b_cow) = flip_trans_cpref(transb, &b, &bt)?;
+            let obj = GEMM_ {
+                a: b_cow.t(),
+                b: a_cow.t(),
+                c: c.map(|c| c.reversed_axes()),
+                alpha,
+                beta,
+                transa: transb,
+                transb: transa,
+                layout: Some(BLASColMajor),
+            };
+            return Ok(obj.driver()?.run_blas()?.reversed_axes());
+        } else {
+            panic!("This is designed not to execuate this line.");
         }
     }
 }

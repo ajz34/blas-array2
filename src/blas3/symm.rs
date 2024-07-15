@@ -157,6 +157,8 @@ where
     pub side: BLASSide,
     #[builder(setter(into), default = "BLASLower")]
     pub uplo: BLASUpLo,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 
     #[builder(private, default = "std::marker::PhantomData {}")]
     _phantom: std::marker::PhantomData<S>,
@@ -176,8 +178,10 @@ where
         let beta = self.beta;
         let side = self.side;
         let uplo = self.uplo;
+        let layout = self.layout;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
+        assert_eq!(layout, Some(BLASColMajor));
         let layout_a = get_layout_array2(&a);
         let layout_b = get_layout_array2(&b);
         assert!(layout_a.is_fpref() && layout_b.is_fpref());
@@ -252,34 +256,50 @@ where
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
         // initialize
-        let obj = self.build()?;
+        let SYMM_ { a, b, c, alpha, beta, side, uplo, layout, .. } = self.build()?;
+        let at = a.t();
+        let bt = b.t();
 
-        let layout_a = get_layout_array2(&obj.a);
-        let layout_b = get_layout_array2(&obj.b);
+        let layout_a = get_layout_array2(&a);
+        let layout_b = get_layout_array2(&b);
+        let layout_c = c.as_ref().map(|c| get_layout_array2(&c.view()));
 
-        if layout_a.is_fpref() && layout_b.is_fpref() {
+        let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a, layout_b]);
+        if layout == BLASColMajor {
             // F-contiguous: C = op(A) op(B)
+            let (uplo, a_cow) = match layout_a.is_fpref() || S::is_hermitian() {
+                true => (uplo, at.as_standard_layout()),
+                false => (uplo.flip(), a.as_standard_layout()),
+            };
+            let b_cow = bt.as_standard_layout();
+            let obj = SYMM_ {
+                a: a_cow.t(),
+                b: b_cow.t(),
+                c,
+                alpha,
+                beta,
+                side,
+                uplo,
+                layout: Some(BLASColMajor),
+                _phantom: std::marker::PhantomData {},
+            };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous: C' = op(B') op(A')
-            let a_cow = obj.a.as_standard_layout();
-            let b_cow = obj.b.as_standard_layout();
-            let obj = SYMM_::<'_, '_, '_, F, S> {
+            let (uplo, a_cow) = match layout_a.is_cpref() || S::is_hermitian() {
+                true => (uplo, a.as_standard_layout()),
+                false => (uplo.flip(), at.as_standard_layout()),
+            };
+            let b_cow = b.as_standard_layout();
+            let obj = SYMM_ {
                 a: a_cow.t(),
                 b: b_cow.t(),
-                c: obj.c.map(|c| c.reversed_axes()),
-                alpha: obj.alpha,
-                beta: obj.beta,
-                side: match obj.side {
-                    BLASLeft => BLASRight,
-                    BLASRight => BLASLeft,
-                    _ => blas_invalid!(obj.side)?,
-                },
-                uplo: match obj.uplo {
-                    BLASLower => BLASUpper,
-                    BLASUpper => BLASLower,
-                    _ => blas_invalid!(obj.uplo)?,
-                },
+                c: c.map(|c| c.reversed_axes()),
+                alpha,
+                beta,
+                side: side.flip(),
+                uplo: uplo.flip(),
+                layout: Some(BLASColMajor),
                 _phantom: std::marker::PhantomData {},
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();

@@ -123,8 +123,12 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
 
 /* #region flip */
 
-pub(crate) fn flip_trans_fpref<'a, F>(trans: BLASTranspose, view: &'a ArrayView2<F>, view_t: &'a ArrayView2<F>) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
-where 
+pub(crate) fn flip_trans_fpref<'a, F>(
+    trans: BLASTranspose,
+    view: &'a ArrayView2<F>,
+    view_t: &'a ArrayView2<F>,
+) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
+where
     F: BLASFloat,
 {
     match (get_layout_array2(&view).is_fpref(), trans) {
@@ -136,8 +140,12 @@ where
     }
 }
 
-pub(crate) fn flip_trans_cpref<'a, F>(trans: BLASTranspose, view: &'a ArrayView2<F>, view_t: &'a ArrayView2<F>) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
-where 
+pub(crate) fn flip_trans_cpref<'a, F>(
+    trans: BLASTranspose,
+    view: &'a ArrayView2<F>,
+    view_t: &'a ArrayView2<F>,
+) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
+where
     F: BLASFloat,
 {
     match (get_layout_array2(&view).is_cpref(), trans) {
