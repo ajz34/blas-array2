@@ -120,3 +120,33 @@ pub fn get_layout_array2<F>(arr: &ArrayView2<F>) -> BLASLayout {
 }
 
 /* #endregion */
+
+/* #region flip */
+
+pub(crate) fn flip_trans_fpref<'a, F>(trans: BLASTranspose, view: &'a ArrayView2<F>, view_t: &'a ArrayView2<F>) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
+where 
+    F: BLASFloat,
+{
+    match (get_layout_array2(&view).is_fpref(), trans) {
+        (true, _) => Ok((trans, view_t.as_standard_layout())),
+        (false, BLASNoTrans) => Ok((BLASTrans, view.as_standard_layout())),
+        (false, BLASTrans) => Ok((BLASNoTrans, view.as_standard_layout())),
+        (false, BLASConjTrans) => Ok((BLASNoTrans, CowArray::from(view.mapv(F::conj)))),
+        (false, trans) => blas_invalid!(trans),
+    }
+}
+
+pub(crate) fn flip_trans_cpref<'a, F>(trans: BLASTranspose, view: &'a ArrayView2<F>, view_t: &'a ArrayView2<F>) -> Result<(BLASTranspose, CowArray<'a, F, Ix2>), BLASError>
+where 
+    F: BLASFloat,
+{
+    match (get_layout_array2(&view).is_cpref(), trans) {
+        (true, _) => Ok((trans, view.as_standard_layout())),
+        (false, BLASNoTrans) => Ok((BLASTrans, view_t.as_standard_layout())),
+        (false, BLASTrans) => Ok((BLASNoTrans, view_t.as_standard_layout())),
+        (false, BLASConjTrans) => Ok((BLASNoTrans, CowArray::from(view_t.mapv(F::conj)))),
+        (false, trans) => blas_invalid!(trans),
+    }
+}
+
+/* #endregion */

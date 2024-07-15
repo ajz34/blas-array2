@@ -224,6 +224,36 @@ impl From<BLASSide> for c_char {
     }
 }
 
+impl BLASLayout {
+    pub fn flip(&self) -> Self {
+        match self {
+            BLASRowMajor => BLASColMajor,
+            BLASColMajor => BLASRowMajor,
+            _ => panic!("Invalid BLASOrder: {:?}", self),
+        }
+    }
+}
+
+impl BLASUpLo {
+    pub fn flip(&self) -> Self {
+        match self {
+            BLASUpper => BLASLower,
+            BLASLower => BLASUpper,
+            _ => panic!("Invalid BLASUpLo: {:?}", self),
+        }
+    }
+}
+
+impl BLASSide {
+    pub fn flip(&self) -> Self {
+        match self {
+            BLASLeft => BLASRight,
+            BLASRight => BLASLeft,
+            _ => panic!("Invalid BLASSide: {:?}", self),
+        }
+    }
+}
+
 unsafe impl Send for BLASLayout {}
 unsafe impl Send for BLASTranspose {}
 unsafe impl Send for BLASUpLo {}
@@ -253,5 +283,28 @@ impl BLASLayout {
             BLASLayout::Sequential => true,
             _ => false,
         }
+    }
+}
+
+pub fn get_layout_row_preferred(
+    by_first: &[Option<BLASLayout>],
+    by_all: &[BLASLayout]) -> BLASLayout        
+{
+    for x in by_first {
+        if let Some(x) = x {
+            if x.is_cpref() {
+                return BLASRowMajor;
+            } else if x.is_fpref() {
+                return BLASColMajor;
+            }
+        }
+    }
+
+    if by_all.iter().all(|f| f.is_cpref()) {
+        return BLASRowMajor;
+    } else if by_all.iter().all(|f| f.is_fpref()) {
+        return BLASColMajor;
+    } else {
+        return BLASRowMajor;
     }
 }
