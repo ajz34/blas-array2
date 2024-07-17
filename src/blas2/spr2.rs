@@ -110,7 +110,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned", build_fn(error = "BLASError"))]
+#[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct SPR2_<'x, 'y, 'a, F>
 where
     F: BLASFloat,

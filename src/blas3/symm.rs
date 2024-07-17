@@ -138,7 +138,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned", build_fn(error = "BLASError"))]
+#[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct SYMM_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
