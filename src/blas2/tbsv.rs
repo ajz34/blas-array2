@@ -76,7 +76,7 @@ where
     F: BLASFloat,
     BLASFunc: TBSVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let diag = self.diag;
@@ -109,7 +109,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct TBSV_<'a, 'x, F>
 where
@@ -133,7 +133,7 @@ where
     F: BLASFloat,
     BLASFunc: TBSVFunc<F>,
 {
-    fn driver(self) -> Result<TBSV_Driver<'a, 'x, F>, AnyError> {
+    fn driver(self) -> Result<TBSV_Driver<'a, 'x, F>, BLASError> {
         let a = self.a;
         let x = self.x;
         let uplo = self.uplo;
@@ -148,13 +148,13 @@ where
 
         // initialize intent(hide)
         let (k_, n) = a.dim();
-        blas_assert!(k_ > 0, "Rows of input `a` must larger than zero.")?;
+        blas_assert!(k_ > 0, InvalidDim, "Rows of input `a` must larger than zero.")?;
         let k = k_ - 1;
         let lda = a.stride_of(Axis(1));
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
+        blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let x = ArrayOut1::ViewMut(x);
@@ -190,7 +190,7 @@ where
     F: BLASFloat,
     BLASFunc: TBSVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 
@@ -201,7 +201,7 @@ where
                 BLASLayout::Sequential => BLASColMajor,
                 BLASRowMajor => BLASRowMajor,
                 BLASColMajor => BLASColMajor,
-                _ => blas_raise!("Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
+                _ => blas_raise!(InvalidFlag, "Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
             }
         };
 

@@ -70,7 +70,7 @@ where
     F: BLASFloat,
     BLASFunc: TPMVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let diag = self.diag;
@@ -101,7 +101,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct TPMV_<'a, 'x, F>
 where
@@ -125,7 +125,7 @@ where
     F: BLASFloat,
     BLASFunc: TPMVFunc<F>,
 {
-    fn driver(self) -> Result<TPMV_Driver<'a, 'x, F>, AnyError> {
+    fn driver(self) -> Result<TPMV_Driver<'a, 'x, F>, BLASError> {
         let ap = self.ap;
         let x = self.x;
         let uplo = self.uplo;
@@ -144,7 +144,7 @@ where
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(np, n * (n + 1) / 2, "Incompatible dimensions")?;
+        blas_assert_eq!(np, n * (n + 1) / 2, InvalidDim)?;
 
         // prepare output
         let x = ArrayOut1::ViewMut(x);
@@ -178,7 +178,7 @@ where
     F: BLASFloat,
     BLASFunc: TPMVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

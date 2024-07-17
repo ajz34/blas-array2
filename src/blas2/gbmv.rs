@@ -102,7 +102,7 @@ where
     F: BLASFloat,
     BLASFunc: GBMVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let trans = self.trans;
         let m = self.m;
         let n = self.n;
@@ -140,7 +140,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct GBMV_<'a, 'x, 'y, F>
 where
     F: BLASFloat,
@@ -167,7 +167,7 @@ where
     F: BLASFloat,
     BLASFunc: GBMVFunc<F>,
 {
-    fn driver(self) -> Result<GBMV_Driver<'a, 'x, 'y, F>, AnyError> {
+    fn driver(self) -> Result<GBMV_Driver<'a, 'x, 'y, F>, BLASError> {
         let a = self.a;
         let x = self.x;
         let y = self.y;
@@ -189,14 +189,12 @@ where
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert!(k > kl, "Incompatible dimensions")?;
-        blas_assert!(m >= k, "Incompatible dimensions")?;
+        blas_assert!(k > kl, InvalidDim)?;
+        blas_assert!(m >= k, InvalidDim)?;
         let ku = k - 1 - kl;
         match trans {
-            BLASNoTrans => {
-                blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
-            },
-            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?,
+            BLASNoTrans => blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, InvalidDim)?,
             _ => blas_invalid!(trans)?,
         };
 
@@ -204,9 +202,9 @@ where
         let y = match y {
             Some(y) => {
                 match trans {
-                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
+                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, InvalidDim)?,
                     BLASTrans | BLASConjTrans => {
-                        blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?
+                        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?
                     },
                     _ => blas_invalid!(trans)?,
                 };
@@ -255,7 +253,7 @@ where
     F: BLASFloat,
     BLASFunc: GBMVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 
@@ -266,7 +264,7 @@ where
                 BLASLayout::Sequential => BLASColMajor,
                 BLASRowMajor => BLASRowMajor,
                 BLASColMajor => BLASColMajor,
-                _ => blas_raise!("Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
+                _ => blas_raise!(InvalidFlag, "Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
             }
         };
 
@@ -281,7 +279,7 @@ where
             let a_cow = obj.a.as_standard_layout();
             let k = a_cow.len_of(Axis(1));
             let kl = obj.kl;
-            blas_assert!(k > kl, "length of k should be larger than kl")?;
+            blas_assert!(k > kl, InvalidDim)?;
             let ku = k - kl - 1;
             match obj.trans {
                 BLASNoTrans => {

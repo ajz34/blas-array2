@@ -84,7 +84,7 @@ where
     beta: F,
     y: ArrayOut1<'y, F>,
     incy: c_int,
-    _phantom: std::marker::PhantomData<S>,
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SPMV_Driver<'a, 'x, 'y, F, S>
@@ -93,7 +93,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SPMVFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let uplo = self.uplo;
         let n = self.n;
         let alpha = self.alpha;
@@ -127,7 +127,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct SPMV_<'a, 'x, 'y, F, S>
 where
@@ -147,8 +147,8 @@ where
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
 
-    #[builder(private, default = "std::marker::PhantomData {}")]
-    _phantom: std::marker::PhantomData<S>,
+    #[builder(private, default = "core::marker::PhantomData {}")]
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SPMV_<'a, 'x, 'y, F, S>
@@ -157,7 +157,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SPMVFunc<F, S>,
 {
-    fn driver(self) -> Result<SPMV_Driver<'a, 'x, 'y, F, S>, AnyError> {
+    fn driver(self) -> Result<SPMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
         let ap = self.ap;
         let x = self.x;
         let y = self.y;
@@ -177,12 +177,12 @@ where
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(np, n * (n + 1) / 2, "Incompatible dimensions")?;
+        blas_assert_eq!(np, n * (n + 1) / 2, InvalidDim)?;
 
         // prepare output
         let y = match y {
             Some(y) => {
-                blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?;
+                blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
                 ArrayOut1::ViewMut(y)
             },
             None => ArrayOut1::Owned(Array1::zeros(n)),
@@ -200,7 +200,7 @@ where
             beta,
             y,
             incy: incy.try_into()?,
-            _phantom: std::marker::PhantomData {},
+            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -224,7 +224,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SPMVFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

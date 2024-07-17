@@ -73,7 +73,7 @@ where
     F: BLASFloat,
     BLASFunc: TRMVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let diag = self.diag;
@@ -105,7 +105,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct TRMV_<'a, 'x, F>
 where
@@ -127,7 +127,7 @@ where
     F: BLASFloat,
     BLASFunc: TRMVFunc<F>,
 {
-    fn driver(self) -> Result<TRMV_Driver<'a, 'x, F>, AnyError> {
+    fn driver(self) -> Result<TRMV_Driver<'a, 'x, F>, BLASError> {
         let a = self.a;
         let x = self.x;
         let uplo = self.uplo;
@@ -144,8 +144,8 @@ where
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(n, n_, "Incompatible dimensions")?;
-        blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
+        blas_assert_eq!(n, n_, InvalidDim)?;
+        blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let x = ArrayOut1::ViewMut(x);
@@ -180,7 +180,7 @@ where
     F: BLASFloat,
     BLASFunc: TRMVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'x, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

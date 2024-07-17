@@ -102,7 +102,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMMFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let transa = self.transa;
         let transb = self.transb;
         let m = self.m;
@@ -149,7 +149,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct GEMM_<'a, 'b, 'c, F>
 where
     F: BLASFloat,
@@ -176,7 +176,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMMFunc<F>,
 {
-    fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, AnyError> {
+    fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, BLASError> {
         let Self { a, b, c, alpha, beta, transa, transb, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -201,15 +201,15 @@ where
 
         // perform check
         match transb {
-            BLASNoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, "Incompatible dimensions")?,
-            BLASTrans | BLASConjTrans => blas_assert_eq!(b.len_of(Axis(1)), k, "Incompatible dimensions")?,
+            BLASNoTrans => blas_assert_eq!(b.len_of(Axis(0)), k, InvalidDim)?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(b.len_of(Axis(1)), k, InvalidDim)?,
             _ => blas_invalid!(transb)?,
         }
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                blas_assert_eq!(c.dim(), (m, n), "Incompatible dimensions")?;
+                blas_assert_eq!(c.dim(), (m, n), InvalidDim)?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
@@ -256,7 +256,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMMFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
         let GEMM_ { a, b, c, alpha, beta, transa, transb, layout } = self.build()?;
         let at = a.t();

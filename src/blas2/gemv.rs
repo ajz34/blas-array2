@@ -94,7 +94,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMVFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let trans = self.trans;
         let m = self.m;
         let n = self.n;
@@ -130,7 +130,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct GEMV_<'a, 'x, 'y, F>
 where
@@ -154,7 +154,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMVFunc<F>,
 {
-    fn driver(self) -> Result<GEMV_Driver<'a, 'x, 'y, F>, AnyError> {
+    fn driver(self) -> Result<GEMV_Driver<'a, 'x, 'y, F>, BLASError> {
         let a = self.a;
         let x = self.x;
         let y = self.y;
@@ -173,8 +173,8 @@ where
 
         // perform check
         match trans {
-            BLASNoTrans => blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?,
-            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, "Incompatible dimensions")?,
+            BLASNoTrans => blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(x.len_of(Axis(0)), m, InvalidDim)?,
             _ => blas_invalid!(trans)?,
         };
 
@@ -182,9 +182,9 @@ where
         let y = match y {
             Some(y) => {
                 match trans {
-                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, "Incompatible dimensions")?,
+                    BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, InvalidDim)?,
                     BLASTrans | BLASConjTrans => {
-                        blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?
+                        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?
                     },
                     _ => blas_invalid!(trans)?,
                 };
@@ -231,7 +231,7 @@ where
     F: BLASFloat,
     BLASFunc: GEMVFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

@@ -94,7 +94,7 @@ where
     F: BLASFloat,
     BLASFunc: TRSMFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'b, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'b, F>, BLASError> {
         let side = self.side;
         let uplo = self.uplo;
         let transa = self.transa;
@@ -130,7 +130,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct TRSM_<'a, 'b, F>
 where
     F: BLASFloat,
@@ -157,7 +157,7 @@ where
     F: BLASFloat,
     BLASFunc: TRSMFunc<F>,
 {
-    fn driver(self) -> Result<TRSM_Driver<'a, 'b, F>, AnyError> {
+    fn driver(self) -> Result<TRSM_Driver<'a, 'b, F>, BLASError> {
         let Self { a, b, alpha, side, uplo, transa, diag, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -171,8 +171,8 @@ where
 
         // perform check
         match side {
-            BLASLeft => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
-            BLASRight => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
+            BLASLeft => blas_assert_eq!(a.dim(), (m, m), InvalidDim)?,
+            BLASRight => blas_assert_eq!(a.dim(), (n, n), InvalidDim)?,
             _ => blas_invalid!(side)?,
         };
 
@@ -218,7 +218,7 @@ where
     F: BLASFloat,
     BLASFunc: TRSMFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut2<'b, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'b, F>, BLASError> {
         // initialize
         let TRSM_ { a, b, alpha, side, uplo, transa, diag, layout } = self.build()?;
         let at = a.t();

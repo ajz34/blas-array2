@@ -86,7 +86,7 @@ where
     F: BLASFloat,
     BLASFunc: GERFunc<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { m, n, alpha, x, incx, y, incy, mut a, lda } = self;
         let x_ptr = x.as_ptr();
         let y_ptr = y.as_ptr();
@@ -114,7 +114,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct GER_<'x, 'y, 'a, F>
 where
     F: BLASFloat,
@@ -133,7 +133,7 @@ where
     F: BLASFloat,
     BLASFunc: GERFunc<F>,
 {
-    fn driver(self) -> Result<GER_Driver<'x, 'y, 'a, F>, AnyError> {
+    fn driver(self) -> Result<GER_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, a, alpha } = self;
 
         // initialize intent(hide)
@@ -145,7 +145,7 @@ where
         // prepare output
         let a = match a {
             Some(a) => {
-                blas_assert_eq!(a.dim(), (m, n), "Incompatible dimensions")?;
+                blas_assert_eq!(a.dim(), (m, n), InvalidDim)?;
                 if get_layout_array2(&a.view()).is_fpref() {
                     ArrayOut2::ViewMut(a)
                 } else {
@@ -188,7 +188,7 @@ where
     F: BLASFloat,
     BLASFunc: GERFunc<F>,
 {
-    fn run(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

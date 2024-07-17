@@ -78,7 +78,7 @@ where
     a: ArrayOut2<'a, F>,
     lda: c_int,
 
-    _phantom: std::marker::PhantomData<S>,
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'x, 'a, F, S> BLASDriver<'a, F, Ix2> for SYR_Driver<'x, 'a, F, S>
@@ -87,7 +87,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, mut a, lda, .. } = self;
         let x_ptr = x.as_ptr();
         let a_ptr = match &mut a {
@@ -114,7 +114,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SYR_<'x, 'a, F, S>
 where
     F: BLASFloat,
@@ -129,8 +129,8 @@ where
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
 
-    #[builder(private, default = "std::marker::PhantomData {}")]
-    _phantom: std::marker::PhantomData<S>,
+    #[builder(private, default = "core::marker::PhantomData {}")]
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'x, 'a, F, S> BLASBuilder_<'a, F, Ix2> for SYR_<'x, 'a, F, S>
@@ -139,7 +139,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRFunc<F, S>,
 {
-    fn driver(self) -> Result<SYR_Driver<'x, 'a, F, S>, AnyError> {
+    fn driver(self) -> Result<SYR_Driver<'x, 'a, F, S>, BLASError> {
         let Self { x, a, alpha, uplo, .. } = self;
 
         // initialize intent(hide)
@@ -149,7 +149,7 @@ where
         // prepare output
         let a = match a {
             Some(a) => {
-                blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?;
+                blas_assert_eq!(a.dim(), (n, n), InvalidDim)?;
                 if get_layout_array2(&a.view()).is_fpref() {
                     ArrayOut2::ViewMut(a)
                 } else {
@@ -170,7 +170,7 @@ where
             incx: incx.try_into()?,
             a,
             lda: lda.try_into()?,
-            _phantom: std::marker::PhantomData {},
+            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -194,7 +194,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

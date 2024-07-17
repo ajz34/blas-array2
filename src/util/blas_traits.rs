@@ -12,7 +12,7 @@ pub type c64 = Complex<f64>;
 
 /// Trait for defining real part float types
 pub trait BLASFloat:
-    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + std::fmt::Debug + std::fmt::Display
+    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + core::fmt::Debug + core::fmt::Display
 {
     type RealFloat: BLASFloat;
     type FFIFloat;
@@ -106,7 +106,7 @@ pub struct BLASSymm<F>
 where
     F: BLASFloat,
 {
-    _phantom: std::marker::PhantomData<F>,
+    _phantom: core::marker::PhantomData<F>,
 }
 
 impl<F> BLASSymmetric for BLASSymm<F>
@@ -126,7 +126,7 @@ pub struct BLASHermi<F>
 where
     F: BLASFloat,
 {
-    _phantom: std::marker::PhantomData<F>,
+    _phantom: core::marker::PhantomData<F>,
 }
 
 impl<F> BLASSymmetric for BLASHermi<F>
@@ -151,7 +151,7 @@ pub trait BLASDriver<'c, F, D>
 where
     D: Dimension,
 {
-    fn run_blas(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
+    fn run_blas(self) -> Result<ArrayOut<'c, F, D>, BLASError>;
 }
 
 /// Trait for BLAS builder prototypes
@@ -159,12 +159,12 @@ pub trait BLASBuilder_<'c, F, D>
 where
     D: Dimension,
 {
-    fn driver(self) -> Result<impl BLASDriver<'c, F, D>, AnyError>;
+    fn driver(self) -> Result<impl BLASDriver<'c, F, D>, BLASError>;
 }
 
 pub trait BLASBuilder<'c, F, D>
 where
     D: Dimension,
 {
-    fn run(self) -> Result<ArrayOut<'c, F, D>, AnyError>;
+    fn run(self) -> Result<ArrayOut<'c, F, D>, BLASError>;
 }

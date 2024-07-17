@@ -50,7 +50,7 @@ mod valid_col_major {
                 } else {
                     for j in 0..n {
                         let m = - (j as isize);
-                        for i in j..std::cmp::min(n, j + k + 1) {
+                        for i in j..core::cmp::min(n, j + k + 1) {
                             let mi = (m + i as isize) as usize;
                             let i = i as usize;
                             a_naive[[i, j]] = a_raw.slice(a_slc)[[mi, j]];

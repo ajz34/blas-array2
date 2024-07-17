@@ -102,7 +102,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYR2KFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let uplo = self.uplo;
         let trans = self.trans;
         let n = self.n;
@@ -139,7 +139,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SYR2K_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
@@ -169,7 +169,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYR2KFunc<F, S>,
 {
-    fn driver(self) -> Result<SYR2K_Driver<'a, 'b, 'c, F, S>, AnyError> {
+    fn driver(self) -> Result<SYR2K_Driver<'a, 'b, 'c, F, S>, BLASError> {
         let Self { a, b, c, alpha, beta, uplo, trans, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -190,8 +190,8 @@ where
         // perform check
         // dimension of b
         match trans {
-            BLASNoTrans => blas_assert_eq!(b.dim(), (n, k), "Incompatible dimensions")?,
-            BLASTrans | BLASConjTrans => blas_assert_eq!(b.dim(), (k, n), "Incompatible dimensions")?,
+            BLASNoTrans => blas_assert_eq!(b.dim(), (n, k), InvalidDim)?,
+            BLASTrans | BLASConjTrans => blas_assert_eq!(b.dim(), (k, n), InvalidDim)?,
             _ => blas_invalid!(trans)?,
         };
         // trans keyword
@@ -218,7 +218,7 @@ where
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                blas_assert_eq!(c.dim(), (n, n), "Incompatible dimensions")?;
+                blas_assert_eq!(c.dim(), (n, n), InvalidDim)?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
@@ -269,7 +269,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYR2KFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
         let SYR2K_ { a, b, c, alpha, beta, uplo, trans, layout } = self.build()?;
         let at = a.t();

@@ -88,7 +88,7 @@ where
     beta: F,
     y: ArrayOut1<'y, F>,
     incy: c_int,
-    _phantom: std::marker::PhantomData<S>,
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SBMV_Driver<'a, 'x, 'y, F, S>
@@ -97,7 +97,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SBMVFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let uplo = self.uplo;
         let n = self.n;
         let k = self.k;
@@ -133,7 +133,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 
 pub struct SBMV_<'a, 'x, 'y, F, S>
 where
@@ -153,8 +153,8 @@ where
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
 
-    #[builder(private, default = "std::marker::PhantomData {}")]
-    _phantom: std::marker::PhantomData<S>,
+    #[builder(private, default = "core::marker::PhantomData {}")]
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SBMV_<'a, 'x, 'y, F, S>
@@ -163,7 +163,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SBMVFunc<F, S>,
 {
-    fn driver(self) -> Result<SBMV_Driver<'a, 'x, 'y, F, S>, AnyError> {
+    fn driver(self) -> Result<SBMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
         let a = self.a;
         let x = self.x;
         let y = self.y;
@@ -179,18 +179,18 @@ where
 
         // initialize intent(hide)
         let (k_, n) = a.dim();
-        blas_assert!(k_ > 0, "Rows of input `a` must larger than zero.")?;
+        blas_assert!(k_ > 0, InvalidDim, "Rows of input `a` must larger than zero.")?;
         let k = k_ - 1;
         let lda = a.stride_of(Axis(1));
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(x.len_of(Axis(0)), n, "Incompatible dimensions")?;
+        blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let y = match y {
             Some(y) => {
-                blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?;
+                blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
                 ArrayOut1::ViewMut(y)
             },
             None => ArrayOut1::Owned(Array1::zeros(n)),
@@ -210,7 +210,7 @@ where
             beta,
             y,
             incy: incy.try_into()?,
-            _phantom: std::marker::PhantomData {},
+            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -234,7 +234,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SBMVFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut1<'y, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 
@@ -245,7 +245,7 @@ where
                 BLASLayout::Sequential => BLASColMajor,
                 BLASRowMajor => BLASRowMajor,
                 BLASColMajor => BLASColMajor,
-                _ => blas_raise!("Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
+                _ => blas_raise!(InvalidFlag, "Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
             }
         };
 

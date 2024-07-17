@@ -92,7 +92,7 @@ where
     beta: F,
     c: ArrayOut2<'c, F>,
     ldc: c_int,
-    _phantom: std::marker::PhantomData<S>,
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYMM_Driver<'a, 'b, 'c, F, S>
@@ -101,7 +101,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let side = self.side;
         let uplo = self.uplo;
         let m = self.m;
@@ -138,7 +138,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SYMM_<'a, 'b, 'c, F, S>
 where
     F: BLASFloat,
@@ -160,8 +160,8 @@ where
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
 
-    #[builder(private, default = "std::marker::PhantomData {}")]
-    _phantom: std::marker::PhantomData<S>,
+    #[builder(private, default = "core::marker::PhantomData {}")]
+    _phantom: core::marker::PhantomData<S>,
 }
 
 impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYMM_<'a, 'b, 'c, F, S>
@@ -170,7 +170,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
-    fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, AnyError> {
+    fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, BLASError> {
         let Self { a, b, c, alpha, beta, side, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -187,15 +187,15 @@ where
 
         // perform check
         match side {
-            BLASLeft => blas_assert_eq!(a.dim(), (m, m), "Incompatible dimensions")?,
-            BLASRight => blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?,
+            BLASLeft => blas_assert_eq!(a.dim(), (m, m), InvalidDim)?,
+            BLASRight => blas_assert_eq!(a.dim(), (n, n), InvalidDim)?,
             _ => blas_invalid!(side)?,
         }
 
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                blas_assert_eq!(c.dim(), (m, n), "Incompatible dimensions")?;
+                blas_assert_eq!(c.dim(), (m, n), InvalidDim)?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
@@ -221,7 +221,7 @@ where
             beta,
             c,
             ldc: ldc.try_into()?,
-            _phantom: std::marker::PhantomData {},
+            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -247,7 +247,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYMMFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
         let SYMM_ { a, b, c, alpha, beta, side, uplo, layout, .. } = self.build()?;
         let at = a.t();
@@ -274,7 +274,7 @@ where
                 side,
                 uplo,
                 layout: Some(BLASColMajor),
-                _phantom: std::marker::PhantomData {},
+                _phantom: core::marker::PhantomData {},
             };
             return obj.driver()?.run_blas();
         } else {
@@ -293,7 +293,7 @@ where
                 side: side.flip(),
                 uplo: uplo.flip(),
                 layout: Some(BLASColMajor),
-                _phantom: std::marker::PhantomData {},
+                _phantom: core::marker::PhantomData {},
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);

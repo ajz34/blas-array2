@@ -56,7 +56,7 @@ where
     F::RealFloat: Zero,
     BLASFunc: ASUMFunc<F>,
 {
-    pub fn run_blas(self) -> Result<F::RealFloat, AnyError> {
+    pub fn run_blas(self) -> Result<F::RealFloat, BLASError> {
         let Self { n, x, incx } = self;
         let x_ptr = x.as_ptr();
         if n == 0 {
@@ -72,7 +72,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct ASUM_<'x, F>
 where
     F: BLASFloat,
@@ -85,7 +85,7 @@ where
     F: BLASFloat,
     BLASFunc: ASUMFunc<F>,
 {
-    pub fn driver(self) -> Result<ASUM_Driver<'x, F>, AnyError> {
+    pub fn driver(self) -> Result<ASUM_Driver<'x, F>, BLASError> {
         let Self { x } = self;
         let incx = x.stride_of(Axis(0));
         let n = x.len_of(Axis(0));
@@ -107,7 +107,7 @@ where
     F: BLASFloat,
     BLASFunc: ASUMFunc<F>,
 {
-    pub fn run(self) -> Result<F::RealFloat, AnyError> {
+    pub fn run(self) -> Result<F::RealFloat, BLASError> {
         self.build()?.driver()?.run_blas()
     }
 }

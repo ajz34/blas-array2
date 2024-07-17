@@ -50,7 +50,7 @@ where
     F: BLASFloat,
     BLASFunc: IAMAXFunc<F>,
 {
-    pub fn run_blas(self) -> Result<usize, AnyError> {
+    pub fn run_blas(self) -> Result<usize, BLASError> {
         let Self { n, x, incx } = self;
         let x_ptr = x.as_ptr();
         if n == 0 {
@@ -67,7 +67,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct IAMAX_<'x, F>
 where
     F: BLASFloat,
@@ -80,7 +80,7 @@ where
     F: BLASFloat,
     BLASFunc: IAMAXFunc<F>,
 {
-    pub fn driver(self) -> Result<IAMAX_Driver<'x, F>, AnyError> {
+    pub fn driver(self) -> Result<IAMAX_Driver<'x, F>, BLASError> {
         let Self { x } = self;
         let incx = x.stride_of(Axis(0));
         let n = x.len_of(Axis(0));
@@ -102,7 +102,7 @@ where
     F: BLASFloat,
     BLASFunc: IAMAXFunc<F>,
 {
-    pub fn run(self) -> Result<usize, AnyError> {
+    pub fn run(self) -> Result<usize, BLASError> {
         self.build()?.driver()?.run_blas()
     }
 }

@@ -18,7 +18,7 @@ mod valid {
                 .mapv(f64::abs)
                 .iter()
                 .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal))
                 .map(|(idx, _)| idx)
                 .unwrap();
             assert_eq!(out, expected);
@@ -34,7 +34,7 @@ mod valid {
                 .mapv(|v| v.re.abs() + v.im.abs())
                 .iter()
                 .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal))
                 .map(|(idx, _)| idx)
                 .unwrap();
             assert_eq!(out, expected);

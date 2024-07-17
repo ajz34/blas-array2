@@ -32,7 +32,7 @@ mod valid_col_major {
         let mut a_naive = Array2::<f32>::zeros((m, n));
         for j in 0..n {
             let k = ku as isize - j as isize;
-            for i in (if j > ku { j - ku } else { 0 })..std::cmp::min(m, j + kl + 1) {
+            for i in (if j > ku { j - ku } else { 0 })..core::cmp::min(m, j + kl + 1) {
                 a_naive[[i as usize, j]] = a_raw.slice(a_slc)[[(k + i as isize) as usize, j]];
             }
         }
@@ -118,7 +118,7 @@ mod valid_col_major {
                 let mut a_naive = Array2::zeros((m, n));
                 for j in 0..n {
                     let k = ku as isize - j as isize;
-                    for i in (if j > ku { j - ku } else { 0 })..std::cmp::min(m, j + kl + 1) {
+                    for i in (if j > ku { j - ku } else { 0 })..core::cmp::min(m, j + kl + 1) {
                         a_naive[[i as usize, j]] = a_raw.slice(a_slc)[[(k + i as isize) as usize, j]];
                     }
                 }

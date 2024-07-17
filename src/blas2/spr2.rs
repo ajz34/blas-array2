@@ -82,7 +82,7 @@ where
     F: BLASFloat,
     BLASFunc: SPR2Func<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut1<'a, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut1<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, y, incy, mut ap } = self;
         let x_ptr = x.as_ptr();
         let y_ptr = y.as_ptr();
@@ -110,7 +110,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SPR2_<'x, 'y, 'a, F>
 where
     F: BLASFloat,
@@ -133,7 +133,7 @@ where
     F: BLASFloat,
     BLASFunc: SPR2Func<F>,
 {
-    fn driver(self) -> Result<SPR2_Driver<'x, 'y, 'a, F>, AnyError> {
+    fn driver(self) -> Result<SPR2_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, ap, alpha, uplo, layout, .. } = self;
 
         // initialize intent(hide)
@@ -145,12 +145,12 @@ where
         assert_eq!(layout.unwrap(), BLASColMajor);
 
         // check optional
-        blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?;
+        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let ap = match ap {
             Some(ap) => {
-                blas_assert_eq!(ap.len_of(Axis(0)), n * (n + 1) / 2, "Incompatible dimensions")?;
+                blas_assert_eq!(ap.len_of(Axis(0)), n * (n + 1) / 2, InvalidDim)?;
                 if ap.stride_of(Axis(0)) <= 1 {
                     ArrayOut1::ViewMut(ap)
                 } else {
@@ -193,7 +193,7 @@ where
     F: BLASFloat,
     BLASFunc: SPR2Func<F>,
 {
-    fn run(self) -> Result<ArrayOut1<'a, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut1<'a, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 

@@ -94,7 +94,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'c, F>, AnyError>
+    fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError>
     where
         BLASFunc: SYRKFunc<F, S>,
     {
@@ -132,7 +132,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SYRK_<'a, 'c, F, S>
 where
     F: BLASFloat,
@@ -161,7 +161,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
-    fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, AnyError> {
+    fn driver(self) -> Result<SYRK_Driver<'a, 'c, F, S>, BLASError> {
         let Self { a, c, alpha, beta, uplo, trans, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -201,7 +201,7 @@ where
         // optional intent(out)
         let c = match c {
             Some(c) => {
-                blas_assert_eq!(c.dim(), (n, n), "Incompatible dimensions")?;
+                blas_assert_eq!(c.dim(), (n, n), InvalidDim)?;
                 if get_layout_array2(&c.view()).is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
@@ -250,7 +250,7 @@ where
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
-    fn run(self) -> Result<ArrayOut2<'c, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
         let SYRK_ { a, c, alpha, beta, uplo, trans, layout } = self.build()?;
         let at = a.t();

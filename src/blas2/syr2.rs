@@ -86,7 +86,7 @@ where
     F: BLASFloat,
     BLASFunc: SYR2Func<F>,
 {
-    fn run_blas(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, y, incy, mut a, lda } = self;
         let x_ptr = x.as_ptr();
         let y_ptr = y.as_ptr();
@@ -114,7 +114,7 @@ where
 /* #region BLAS builder */
 
 #[derive(Builder)]
-#[builder(pattern = "owned")]
+#[builder(pattern = "owned", build_fn(error = "BLASError"))]
 pub struct SYR2_<'x, 'y, 'a, F>
 where
     F: BLASFloat,
@@ -135,7 +135,7 @@ where
     F: BLASFloat,
     BLASFunc: SYR2Func<F>,
 {
-    fn driver(self) -> Result<SYR2_Driver<'x, 'y, 'a, F>, AnyError> {
+    fn driver(self) -> Result<SYR2_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, a, alpha, uplo, .. } = self;
 
         // initialize intent(hide)
@@ -144,12 +144,12 @@ where
         let n = x.len_of(Axis(0));
 
         // check optional
-        blas_assert_eq!(y.len_of(Axis(0)), n, "Incompatible dimensions")?;
+        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let a = match a {
             Some(a) => {
-                blas_assert_eq!(a.dim(), (n, n), "Incompatible dimensions")?;
+                blas_assert_eq!(a.dim(), (n, n), InvalidDim)?;
                 if get_layout_array2(&a.view()).is_fpref() {
                     ArrayOut2::ViewMut(a)
                 } else {
@@ -194,7 +194,7 @@ where
     F: BLASFloat,
     BLASFunc: SYR2Func<F>,
 {
-    fn run(self) -> Result<ArrayOut2<'a, F>, AnyError> {
+    fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 
