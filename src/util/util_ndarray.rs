@@ -79,6 +79,14 @@ where
             },
         }
     }
+
+    pub fn get_data_mut_ptr(&mut self) -> *mut F {
+        match self {
+            Self::ViewMut(arr) => arr.as_mut_ptr(),
+            Self::Owned(arr) => arr.as_mut_ptr(),
+            Self::ToBeCloned(_, arr) => arr.as_mut_ptr(),
+        }
+    }
 }
 
 pub type ArrayOut1<'a, F> = ArrayOut<'a, F, Ix1>;

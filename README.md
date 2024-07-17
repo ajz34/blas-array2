@@ -3,7 +3,7 @@
 [![codecov](https://codecov.io/gh/ajz34/blas-array2/graph/badge.svg?token=n1ucRtIupr)](https://codecov.io/gh/ajz34/blas-array2)
 [![crates.io](https://img.shields.io/crates/v/blas-array2.svg)](https://crates.io/crates/blas-array2)
 
-Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or `Ix2`).
+Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or `Ix2`) in rust.
 
 ## Features
 
