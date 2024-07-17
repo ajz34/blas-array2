@@ -1,5 +1,7 @@
-use core::num::TryFromIntError;
+#[cfg(feature = "std")]
+extern crate std;
 
+use core::num::TryFromIntError;
 use derive_builder::UninitializedFieldError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,6 +16,7 @@ pub enum BLASError {
 
 /* #region impl BLASError */
 
+#[cfg(feature = "std")]
 impl std::error::Error for BLASError {}
 
 impl From<UninitializedFieldError> for BLASError {
@@ -29,7 +32,7 @@ impl From<TryFromIntError> for BLASError {
 }
 
 impl core::fmt::Display for BLASError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
@@ -105,7 +108,12 @@ macro_rules! blas_raise {
 macro_rules! blas_invalid {
     ($word:expr) => {
         Err(BLASError::InvalidFlag(concat!(
-            file!(), ":", line!(), ": ", "BLASError::InvalidFlag", " :",
+            file!(),
+            ":",
+            line!(),
+            ": ",
+            "BLASError::InvalidFlag",
+            " : ",
             stringify!($word)
         )))
     };

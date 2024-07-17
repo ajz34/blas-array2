@@ -143,7 +143,7 @@ where
         )),
         (false, BLASTrans) => Ok((trans.flip(hermi), view.as_standard_layout())),
         (false, BLASConjTrans) => Ok((trans.flip(hermi), CowArray::from(view.mapv(F::conj)))),
-        (false, trans) => blas_invalid!(trans),
+        (false, _) => blas_invalid!(trans),
     }
 }
 
@@ -167,7 +167,7 @@ where
         )),
         (false, BLASTrans) => Ok((trans.flip(hermi), view_t.as_standard_layout())),
         (false, BLASConjTrans) => Ok((trans.flip(hermi), CowArray::from(view_t.mapv(F::conj)))),
-        (false, trans) => blas_invalid!(trans),
+        (false, _) => blas_invalid!(trans),
     }
 }
 

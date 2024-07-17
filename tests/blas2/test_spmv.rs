@@ -12,14 +12,13 @@ mod valid_row_major {
     fn test_cblas_row_major_c32() {
         type F = c32;
         for (cblas_layout, uplo, stride_x, stride_y) in iproduct!(['R', 'C'], ['U', 'L'], [1, 3], [1, 3]) {
-            println!("test info: {:?}", (cblas_layout, uplo, stride_x, stride_y));
             let n = 8;
             let np = n * (n + 1) / 2;
 
             // slice definition
             let a_slc = slice_1d(np, 3);
-            let x_slc = slice_1d(n, 3);
-            let y_slc = slice_1d(n, 3);
+            let x_slc = slice_1d(n, stride_x);
+            let y_slc = slice_1d(n, stride_y);
 
             // type definition
             type FFI = <F as BLASFloat>::FFIFloat;
@@ -75,14 +74,13 @@ mod valid_row_major {
     fn test_cblas_row_major_f32() {
         type F = f32;
         for (cblas_layout, uplo, stride_x, stride_y) in iproduct!(['R', 'C'], ['U', 'L'], [1, 3], [1, 3]) {
-            println!("test info: {:?}", (cblas_layout, uplo, stride_x, stride_y));
             let n = 8;
             let np = n * (n + 1) / 2;
 
             // slice definition
             let a_slc = slice_1d(np, 3);
-            let x_slc = slice_1d(n, 3);
-            let y_slc = slice_1d(n, 3);
+            let x_slc = slice_1d(n, stride_x);
+            let y_slc = slice_1d(n, stride_y);
 
             // type definition
             type FFI = <F as BLASFloat>::FFIFloat;

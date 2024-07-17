@@ -214,7 +214,6 @@ mod valid_row_major {
         // set parameters of test configuration
         type F = c32;
         for (a_layout, trans) in iproduct!(['R', 'C'], ['N', 'T', 'C']) {
-            println!("a_layout {a_layout:?}, trans {trans:?}");
             let m = 10;
             let n = 8;
             let ku = 3;

@@ -15,7 +15,6 @@ mod valid_cblas {
         type FFI = <F as BLASFloat>::FFIFloat;
 
         for (layout, as0, as1, incx, incy) in iproduct!(['C', 'R'], [1, 2], [1, 2], [1, 2], [1, 2]) {
-            println!("test info: {:?}", (layout, as0, as1, incx, incy));
             let m = 8;
             let n = 9;
 
@@ -71,7 +70,6 @@ mod valid_cblas {
         type FFI = <F as BLASFloat>::FFIFloat;
 
         for (incx, incy) in iproduct!([1, 2], [1, 2]) {
-            println!("test info: {:?}", (incx, incy));
             let m = 8;
             let n = 9;
 

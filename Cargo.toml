@@ -18,3 +18,7 @@ rand = { version = "0.8" }
 itertools = { version = "0.13" }
 approx = { version = "0.5" }
 cblas-sys = { version = "0.1" }
+
+[features]
+default = []
+std = []

@@ -133,7 +133,6 @@ mod valid_row_major {
         let cblas_layout = 'R';
         type F = c32;
         for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {
-            println!("a_layout {a_layout:?}, uplo {uplo:?}");
             let n = 8;
             let k = 3;
 
@@ -202,7 +201,6 @@ mod valid_row_major {
         let cblas_layout = 'R';
         type F = f32;
         for (a_layout, uplo) in iproduct!(['R', 'C'], ['U', 'L']) {
-            println!("a_layout {a_layout:?}, uplo {uplo:?}");
             let n = 8;
             let k = 3;
 

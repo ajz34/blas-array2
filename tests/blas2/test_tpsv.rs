@@ -14,7 +14,6 @@ mod valid_row_major {
         for (cblas_layout, uplo, trans, diag, stride_a, stride_x) in
             iproduct!(['R', 'C'], ['U', 'L'], ['N', 'T', 'C'], ['U', 'N'], [1, 3], [1, 3])
         {
-            println!("test info: {:?}", (cblas_layout, uplo, trans, diag, stride_a, stride_x));
             let n = 8;
             let np = n * (n + 1) / 2;
 

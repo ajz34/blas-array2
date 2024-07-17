@@ -103,7 +103,6 @@ mod valid_row_major {
         for (cblas_layout, uplo, trans, diag) in
             iproduct!(['R', 'C'], ['U', 'L'], ['N', 'T', 'C'], ['U', 'N'])
         {
-            println!("test info: {:?}", (cblas_layout, uplo, trans, diag));
             let n = 8;
             let np = n * (n + 1) / 2;
 

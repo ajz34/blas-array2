@@ -121,7 +121,6 @@ mod valid_row_major {
         let cblas_layout = 'R';
         type F = c32;
         for (a_layout, uplo, trans, diag) in iproduct!(['R', 'C'], ['U', 'L'], ['N', 'T', 'C'], ['U', 'N']) {
-            println!("a_layout {a_layout:?}, uplo {uplo:?}, trans {trans:?}");
             let n = 8;
             let k = 3;
 
@@ -133,7 +132,7 @@ mod valid_row_major {
             type FFI = <F as BLASFloat>::FFIFloat;
 
             // data assignment
-            let a_raw = random_matrix(100, 100, cblas_layout.into());
+            let a_raw = random_matrix(100, 100, a_layout.into());
             let mut x_raw = random_array(1000);
             let mut x_origin = x_raw.clone();
 
