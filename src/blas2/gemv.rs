@@ -131,7 +131,6 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"))]
-
 pub struct GEMV_<'a, 'x, 'y, F>
 where
     F: BLASFloat,
@@ -183,9 +182,7 @@ where
             Some(y) => {
                 match trans {
                     BLASNoTrans => blas_assert_eq!(y.len_of(Axis(0)), m, InvalidDim)?,
-                    BLASTrans | BLASConjTrans => {
-                        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?
-                    },
+                    BLASTrans | BLASConjTrans => blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?,
                     _ => blas_invalid!(trans)?,
                 };
                 ArrayOut1::ViewMut(y)

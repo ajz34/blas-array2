@@ -128,7 +128,6 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"))]
-
 pub struct SPMV_<'a, 'x, 'y, F, S>
 where
     F: BLASFloat,

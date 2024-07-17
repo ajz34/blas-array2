@@ -102,7 +102,6 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"))]
-
 pub struct TPMV_<'a, 'x, F>
 where
     F: BLASFloat,
