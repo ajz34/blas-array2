@@ -86,11 +86,7 @@ where
     fn run_blas(self) -> Result<ArrayOut1<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, mut ap, .. } = self;
         let x_ptr = x.as_ptr();
-        let ap_ptr = match &mut ap {
-            ArrayOut1::Owned(ap) => ap.as_mut_ptr(),
-            ArrayOut1::ViewMut(ap) => ap.as_mut_ptr(),
-            ArrayOut1::ToBeCloned(_, ap) => ap.as_mut_ptr(),
-        };
+        let ap_ptr = ap.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -145,16 +141,16 @@ where
         let n = x.len_of(Axis(0));
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
-        assert_eq!(layout.unwrap(), BLASColMajor);
+        assert_eq!(layout, Some(BLASColMajor));
 
         // prepare output
         let ap = match ap {
             Some(ap) => {
                 blas_assert_eq!(ap.len_of(Axis(0)), n * (n + 1) / 2, InvalidDim)?;
-                if ap.stride_of(Axis(0)) <= 1 {
+                if ap.is_standard_layout() {
                     ArrayOut1::ViewMut(ap)
                 } else {
-                    let ap_buffer = ap.as_standard_layout().into_owned();
+                    let ap_buffer = ap.view().to_seq_layout()?.into_owned();
                     ArrayOut1::ToBeCloned(ap, ap_buffer)
                 }
             },
@@ -202,11 +198,7 @@ where
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let uplo = match obj.uplo {
-                BLASUpper => BLASLower,
-                BLASLower => BLASUpper,
-                _ => blas_invalid!(obj.uplo)?,
-            };
+            let uplo = obj.uplo.flip();
             if S::is_hermitian() {
                 let x = obj.x.mapv(F::conj);
                 let obj = SPR_ { x: x.view(), uplo, layout: Some(BLASColMajor), ..obj };

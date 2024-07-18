@@ -90,11 +90,7 @@ where
         let Self { uplo, n, alpha, x, incx, y, incy, mut a, lda } = self;
         let x_ptr = x.as_ptr();
         let y_ptr = y.as_ptr();
-        let a_ptr = match &mut a {
-            ArrayOut2::Owned(a) => a.as_mut_ptr(),
-            ArrayOut2::ViewMut(a) => a.as_mut_ptr(),
-            ArrayOut2::ToBeCloned(_, a) => a.as_mut_ptr(),
-        };
+        let a_ptr = a.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -150,10 +146,10 @@ where
         let a = match a {
             Some(a) => {
                 blas_assert_eq!(a.dim(), (n, n), InvalidDim)?;
-                if get_layout_array2(&a.view()).is_fpref() {
+                if a.view().is_fpref() {
                     ArrayOut2::ViewMut(a)
                 } else {
-                    let a_buffer = a.t().as_standard_layout().into_owned().reversed_axes();
+                    let a_buffer = a.view().to_col_layout()?.into_owned();
                     ArrayOut2::ToBeCloned(a, a_buffer)
                 }
             },
@@ -198,16 +194,12 @@ where
         // initialize
         let obj = self.build()?;
 
-        if obj.a.as_ref().map(|a| get_layout_array2(&a.view()).is_fpref()) == Some(true) {
+        if obj.a.as_ref().map(|a| a.view().is_fpref()) == Some(true) {
             // F-contiguous
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let uplo = match obj.uplo {
-                BLASUpper => BLASLower,
-                BLASLower => BLASUpper,
-                _ => blas_invalid!(obj.uplo)?,
-            };
+            let uplo = obj.uplo.flip();
             let a = obj.a.map(|a| a.reversed_axes());
             if F::is_complex() {
                 let x = obj.x.mapv(F::conj);

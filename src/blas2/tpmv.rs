@@ -71,17 +71,9 @@ where
     BLASFunc: TPMVFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
-        let n = self.n;
-        let ap_ptr = self.ap.as_ptr();
-        let mut x = self.x;
-        let x_ptr = match &mut x {
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 with triangular A, won't be ToBeCloned or Owned"),
-        };
-        let incx = self.incx;
+        let Self { uplo, trans, diag, n, ap, mut x, incx } = self;
+        let ap_ptr = ap.as_ptr();
+        let x_ptr = x.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -125,17 +117,12 @@ where
     BLASFunc: TPMVFunc<F>,
 {
     fn driver(self) -> Result<TPMV_Driver<'a, 'x, F>, BLASError> {
-        let ap = self.ap;
-        let x = self.x;
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
-        let layout = self.layout;
+        let Self { ap, x, uplo, trans, diag, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let incap = ap.stride_of(Axis(0));
         assert!(incap <= 1);
-        assert!(layout.unwrap() == BLASColMajor);
+        assert_eq!(layout, Some(BLASColMajor));
 
         // initialize intent(hide)
         let np = ap.len_of(Axis(0));
@@ -181,30 +168,23 @@ where
         // initialize
         let obj = self.build()?;
 
-        let layout = match obj.layout {
-            Some(layout) => layout,
-            None => BLASRowMajor,
-        };
+        let layout = obj.layout.unwrap_or(BLASRowMajor);
 
         if layout == BLASColMajor {
             // F-contiguous
-            let ap_cow = obj.ap.as_standard_layout();
+            let ap_cow = obj.ap.to_seq_layout()?;
             let obj = TPMV_ { ap: ap_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let ap_cow = obj.ap.as_standard_layout();
+            let ap_cow = obj.ap.to_seq_layout()?;
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T
                     let obj = TPMV_ {
                         ap: ap_cow.view(),
                         trans: BLASTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -215,11 +195,7 @@ where
                     let obj = TPMV_ {
                         ap: ap_cow.view(),
                         trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -233,11 +209,7 @@ where
                         ap: ap_cow.view(),
                         x,
                         trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };

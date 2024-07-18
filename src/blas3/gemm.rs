@@ -103,24 +103,10 @@ where
     BLASFunc: GEMMFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
-        let transa = self.transa;
-        let transb = self.transb;
-        let m = self.m;
-        let n = self.n;
-        let k = self.k;
-        let alpha = self.alpha;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let b_ptr = self.b.as_ptr();
-        let ldb = self.ldb;
-        let beta = self.beta;
-        let mut c = self.c;
-        let c_ptr = match &mut c {
-            ArrayOut::ViewMut(c) => c.as_mut_ptr(),
-            ArrayOut::Owned(c) => c.as_mut_ptr(),
-            ArrayOut::ToBeCloned(_, c) => c.as_mut_ptr(),
-        };
-        let ldc = self.ldc;
+        let Self { transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, mut c, ldc } = self;
+        let a_ptr = a.as_ptr();
+        let b_ptr = b.as_ptr();
+        let c_ptr = c.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -181,9 +167,7 @@ where
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));
-        let layout_a = get_layout_array2(&a);
-        let layout_b = get_layout_array2(&b);
-        assert!(layout_a.is_fpref() && layout_b.is_fpref());
+        assert!(a.is_fpref() && b.is_fpref());
 
         // initialize intent(hide)
         let (m, k) = match transa {
@@ -210,10 +194,10 @@ where
         let c = match c {
             Some(c) => {
                 blas_assert_eq!(c.dim(), (m, n), InvalidDim)?;
-                if get_layout_array2(&c.view()).is_fpref() {
+                if c.view().is_fpref() {
                     ArrayOut2::ViewMut(c)
                 } else {
-                    let c_buffer = c.t().as_standard_layout().into_owned().reversed_axes();
+                    let c_buffer = c.view().to_col_layout()?.into_owned();
                     ArrayOut2::ToBeCloned(c, c_buffer)
                 }
             },

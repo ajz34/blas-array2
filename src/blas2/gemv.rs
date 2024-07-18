@@ -95,22 +95,10 @@ where
     BLASFunc: GEMVFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
-        let trans = self.trans;
-        let m = self.m;
-        let n = self.n;
-        let alpha = self.alpha;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let x_ptr = self.x.as_ptr();
-        let incx = self.incx;
-        let beta = self.beta;
-        let mut y = self.y;
-        let y_ptr = match &mut y {
-            ArrayOut1::Owned(y) => y.as_mut_ptr(),
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 won't be ToBeCloned"),
-        };
-        let incy = self.incy;
+        let Self { trans, m, n, alpha, a, lda, x, incx, beta, mut y, incy } = self;
+        let a_ptr = a.as_ptr();
+        let x_ptr = x.as_ptr();
+        let y_ptr = y.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -154,12 +142,7 @@ where
     BLASFunc: GEMVFunc<F>,
 {
     fn driver(self) -> Result<GEMV_Driver<'a, 'x, 'y, F>, BLASError> {
-        let a = self.a;
-        let x = self.x;
-        let y = self.y;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let trans = self.trans;
+        let Self { a, x, y, alpha, beta, trans } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -239,7 +222,7 @@ where
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let a_cow = obj.a.as_standard_layout();
+            let a_cow = obj.a.to_row_layout()?;
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T: y = alpha (A')' x + beta y

@@ -94,20 +94,10 @@ where
     BLASFunc: SPMVFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
-        let uplo = self.uplo;
-        let n = self.n;
-        let alpha = self.alpha;
-        let ap_ptr = self.ap.as_ptr();
-        let x_ptr = self.x.as_ptr();
-        let incx = self.incx;
-        let beta = self.beta;
-        let mut y = self.y;
-        let y_ptr = match &mut y {
-            ArrayOut1::Owned(y) => y.as_mut_ptr(),
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 won't be ToBeCloned"),
-        };
-        let incy = self.incy;
+        let Self { uplo, n, alpha, ap, x, incx, beta, mut y, incy, .. } = self;
+        let ap_ptr = ap.as_ptr();
+        let x_ptr = x.as_ptr();
+        let y_ptr = y.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -157,18 +147,12 @@ where
     BLASFunc: SPMVFunc<F, S>,
 {
     fn driver(self) -> Result<SPMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
-        let ap = self.ap;
-        let x = self.x;
-        let y = self.y;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let uplo = self.uplo;
-        let layout = self.layout;
+        let Self { ap, x, y, alpha, beta, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let incap = ap.stride_of(Axis(0));
         assert!(incap <= 1);
-        assert!(layout.unwrap() == BLASColMajor);
+        assert_eq!(layout, Some(BLASColMajor));
 
         // initialize intent(hide)
         let np = ap.len_of(Axis(0));
@@ -227,19 +211,16 @@ where
         // initialize
         let obj = self.build()?;
 
-        let layout = match obj.layout {
-            Some(layout) => layout,
-            None => BLASRowMajor,
-        };
+        let layout = obj.layout.unwrap_or(BLASRowMajor);
 
         if layout == BLASColMajor {
             // F-contiguous
-            let ap_cow = obj.ap.as_standard_layout();
+            let ap_cow = obj.ap.to_seq_layout()?;
             let obj = SPMV_ { ap: ap_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let ap_cow = obj.ap.as_standard_layout();
+            let ap_cow = obj.ap.to_seq_layout()?;
             if S::is_hermitian() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.map(|mut y| {
@@ -250,11 +231,7 @@ where
                     ap: ap_cow.view(),
                     x: x.view(),
                     y,
-                    uplo: match obj.uplo {
-                        BLASUpper => BLASLower,
-                        BLASLower => BLASUpper,
-                        _ => blas_invalid!(obj.uplo)?,
-                    },
+                    uplo: obj.uplo.flip(),
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
                     layout: Some(BLASColMajor),
@@ -264,16 +241,8 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = SPMV_ {
-                    ap: ap_cow.view(),
-                    uplo: match obj.uplo {
-                        BLASUpper => BLASLower,
-                        BLASLower => BLASUpper,
-                        _ => blas_invalid!(obj.uplo)?,
-                    },
-                    layout: Some(BLASColMajor),
-                    ..obj
-                };
+                let obj =
+                    SPMV_ { ap: ap_cow.view(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

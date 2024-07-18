@@ -74,18 +74,9 @@ where
     BLASFunc: TRSVFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
-        let n = self.n;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let mut x = self.x;
-        let x_ptr = match &mut x {
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 with triangular A, won't be ToBeCloned or Owned"),
-        };
-        let incx = self.incx;
+        let Self { uplo, trans, diag, n, a, lda, mut x, incx } = self;
+        let a_ptr = a.as_ptr();
+        let x_ptr = x.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -127,11 +118,7 @@ where
     BLASFunc: TRSVFunc<F>,
 {
     fn driver(self) -> Result<TRSV_Driver<'a, 'x, F>, BLASError> {
-        let a = self.a;
-        let x = self.x;
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
+        let Self { a, x, uplo, trans, diag } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -190,51 +177,23 @@ where
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous:
-            let a_cow = obj.a.as_standard_layout();
+            let a_cow = obj.a.to_row_layout()?;
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T: x = op(A')' x
-                    let obj = TRSV_ {
-                        a: a_cow.t(),
-                        trans: BLASTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
-                        ..obj
-                    };
+                    let obj = TRSV_ { a: a_cow.t(), trans: BLASTrans, uplo: obj.uplo.flip(), ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASTrans => {
                     // T -> N: x = op(A') x
-                    let obj = TRSV_ {
-                        a: a_cow.t(),
-                        trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
-                        ..obj
-                    };
+                    let obj = TRSV_ { a: a_cow.t(), trans: BLASNoTrans, uplo: obj.uplo.flip(), ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASConjTrans => {
                     // C -> T: x* = op(A') x*; x = x*
                     let mut x = obj.x;
                     x.mapv_inplace(F::conj);
-                    let obj = TRSV_ {
-                        a: a_cow.t(),
-                        x,
-                        trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
-                        ..obj
-                    };
+                    let obj = TRSV_ { a: a_cow.t(), x, trans: BLASNoTrans, uplo: obj.uplo.flip(), ..obj };
                     let mut x = obj.driver()?.run_blas()?;
                     x.view_mut().mapv_inplace(F::conj);
                     return Ok(x);

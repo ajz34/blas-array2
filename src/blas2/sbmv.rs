@@ -98,22 +98,10 @@ where
     BLASFunc: SBMVFunc<F, S>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
-        let uplo = self.uplo;
-        let n = self.n;
-        let k = self.k;
-        let alpha = self.alpha;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let x_ptr = self.x.as_ptr();
-        let incx = self.incx;
-        let beta = self.beta;
-        let mut y = self.y;
-        let y_ptr = match &mut y {
-            ArrayOut1::Owned(y) => y.as_mut_ptr(),
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 won't be ToBeCloned"),
-        };
-        let incy = self.incy;
+        let Self { uplo, n, k, alpha, a, lda, x, incx, beta, mut y, incy, .. } = self;
+        let a_ptr = a.as_ptr();
+        let x_ptr = x.as_ptr();
+        let y_ptr = y.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -163,13 +151,7 @@ where
     BLASFunc: SBMVFunc<F, S>,
 {
     fn driver(self) -> Result<SBMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
-        let a = self.a;
-        let x = self.x;
-        let y = self.y;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let uplo = self.uplo;
-        let layout = self.layout;
+        let Self { a, x, y, alpha, beta, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -238,25 +220,16 @@ where
         let obj = self.build()?;
 
         let layout_a = get_layout_array2(&obj.a);
-        let layout = match obj.layout {
-            Some(layout) => layout,
-            None => match layout_a {
-                BLASLayout::Sequential => BLASColMajor,
-                BLASRowMajor => BLASRowMajor,
-                BLASColMajor => BLASColMajor,
-                _ => blas_raise!(InvalidFlag, "Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
-            }
-        };
+        let layout = get_layout_row_preferred(&[obj.layout, Some(layout_a)], &[]);
 
         if layout == BLASColMajor {
             // F-contiguous
-            let a_cow = obj.a.reversed_axes();
-            let a_cow = a_cow.as_standard_layout().reversed_axes();
+            let a_cow = obj.a.to_col_layout()?;
             let obj = SBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let a_cow = obj.a.as_standard_layout();
+            let a_cow = obj.a.to_row_layout()?;
             if S::is_hermitian() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.map(|mut y| {
@@ -267,11 +240,7 @@ where
                     a: a_cow.t(),
                     x: x.view(),
                     y,
-                    uplo: match obj.uplo {
-                        BLASUpper => BLASLower,
-                        BLASLower => BLASUpper,
-                        _ => blas_invalid!(obj.uplo)?,
-                    },
+                    uplo: obj.uplo.flip(),
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
                     layout: Some(BLASColMajor),
@@ -281,16 +250,7 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = SBMV_ {
-                    a: a_cow.t(),
-                    uplo: match obj.uplo {
-                        BLASUpper => BLASLower,
-                        BLASLower => BLASUpper,
-                        _ => blas_invalid!(obj.uplo)?,
-                    },
-                    layout: Some(BLASColMajor),
-                    ..obj
-                };
+                let obj = SBMV_ { a: a_cow.t(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

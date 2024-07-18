@@ -95,22 +95,9 @@ where
     BLASFunc: TRSMFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut2<'b, F>, BLASError> {
-        let side = self.side;
-        let uplo = self.uplo;
-        let transa = self.transa;
-        let diag = self.diag;
-        let m = self.m;
-        let n = self.n;
-        let alpha = self.alpha;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let mut b = self.b;
-        let b_ptr = match &mut b {
-            ArrayOut::ViewMut(b) => b.as_mut_ptr(),
-            ArrayOut::Owned(b) => b.as_mut_ptr(),
-            ArrayOut::ToBeCloned(_, b) => b.as_mut_ptr(),
-        };
-        let ldb = self.ldb;
+        let Self { side, uplo, transa, diag, m, n, alpha, a, lda, mut b, ldb } = self;
+        let a_ptr = a.as_ptr();
+        let b_ptr = b.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -162,8 +149,7 @@ where
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));
-        let layout_a = get_layout_array2(&a);
-        assert!(layout_a.is_fpref());
+        assert!(a.is_fpref());
 
         // initialize intent(hide)
         let (m, n) = b.dim();
@@ -177,10 +163,10 @@ where
         };
 
         // prepare output
-        let b = if get_layout_array2(&b.view()).is_fpref() {
+        let b = if b.view().is_fpref() {
             ArrayOut2::ViewMut(b)
         } else {
-            let b_buffer = b.t().as_standard_layout().into_owned().reversed_axes();
+            let b_buffer = b.view().to_col_layout()?.into_owned();
             ArrayOut2::ToBeCloned(b, b_buffer)
         };
         let ldb = b.view().stride_of(Axis(1));

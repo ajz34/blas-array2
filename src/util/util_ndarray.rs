@@ -152,16 +152,13 @@ where
                         blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
                         CowArray::from(view.mapv(F::conj).reversed_axes())
                     },
-                }
+                },
             )),
             BLASTrans => Ok((trans.flip(hermi), view_t.to_col_layout()?)),
-            BLASConjTrans => Ok((
-                trans.flip(hermi),
-                {
-                    blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
-                    CowArray::from(view.mapv(F::conj).reversed_axes())
-                }
-            )),
+            BLASConjTrans => Ok((trans.flip(hermi), {
+                blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                CowArray::from(view.mapv(F::conj).reversed_axes())
+            })),
             _ => blas_invalid!(trans),
         }
     }
@@ -191,13 +188,10 @@ where
                 },
             )),
             BLASTrans => Ok((trans.flip(hermi), view_t.to_row_layout()?)),
-            BLASConjTrans => Ok((
-                trans.flip(hermi),
-                {
-                    blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
-                    CowArray::from(view_t.mapv(F::conj))
-                }
-            )),
+            BLASConjTrans => Ok((trans.flip(hermi), {
+                blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                CowArray::from(view_t.mapv(F::conj))
+            })),
             _ => blas_invalid!(trans),
         }
     }
@@ -240,7 +234,7 @@ where
             Ok(CowArray::from(self))
         } else {
             blas_warn_layout_clone!(self)?;
-            let owned = self.to_owned();
+            let owned = self.into_owned();
             Ok(CowArray::from(owned))
         }
     }
@@ -250,9 +244,26 @@ where
             Ok(CowArray::from(self))
         } else {
             blas_warn_layout_clone!(self)?;
-            let owned = self.t().to_owned().reversed_axes();
+            let owned = self.t().into_owned().reversed_axes();
             Ok(CowArray::from(owned))
         }
+    }
+}
+
+pub(crate) trait ToLayoutCowArray1<A> {
+    fn to_seq_layout(&self) -> Result<CowArray<'_, A, Ix1>, BLASError>;
+}
+
+impl<A> ToLayoutCowArray1<A> for ArrayView1<'_, A>
+where
+    A: Clone,
+{
+    fn to_seq_layout(&self) -> Result<CowArray<'_, A, Ix1>, BLASError> {
+        let cow = self.as_standard_layout();
+        if cow.is_owned() {
+            blas_warn_layout_clone!(self)?;
+        }
+        Ok(cow)
     }
 }
 

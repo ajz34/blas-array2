@@ -103,24 +103,10 @@ where
     BLASFunc: GBMVFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
-        let trans = self.trans;
-        let m = self.m;
-        let n = self.n;
-        let kl = self.kl;
-        let ku = self.ku;
-        let alpha = self.alpha;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let x_ptr = self.x.as_ptr();
-        let incx = self.incx;
-        let beta = self.beta;
-        let mut y = self.y;
-        let y_ptr = match &mut y {
-            ArrayOut1::Owned(y) => y.as_mut_ptr(),
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 won't be ToBeCloned"),
-        };
-        let incy = self.incy;
+        let Self { trans, m, n, kl, ku, alpha, a, lda, x, incx, beta, mut y, incy } = self;
+        let a_ptr = a.as_ptr();
+        let x_ptr = x.as_ptr();
+        let y_ptr = y.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -168,15 +154,7 @@ where
     BLASFunc: GBMVFunc<F>,
 {
     fn driver(self) -> Result<GBMV_Driver<'a, 'x, 'y, F>, BLASError> {
-        let a = self.a;
-        let x = self.x;
-        let y = self.y;
-        let m = self.m;
-        let kl = self.kl;
-        let alpha = self.alpha;
-        let beta = self.beta;
-        let trans = self.trans;
-        let layout = self.layout;
+        let Self { a, x, m, kl, y, alpha, beta, trans, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -253,10 +231,10 @@ where
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
-        let obj = self.build()?;
+        let GBMV_ { a, x, m, kl, y, alpha, beta, trans, layout } = self.build()?;
 
-        let layout_a = get_layout_array2(&obj.a);
-        let layout = match obj.layout {
+        let layout_a = get_layout_array2(&a);
+        let layout = match layout {
             Some(layout) => layout,
             None => match layout_a {
                 BLASLayout::Sequential => BLASColMajor,
@@ -268,53 +246,69 @@ where
 
         if layout == BLASColMajor {
             // F-contiguous
-            let a_cow = obj.a.reversed_axes();
-            let a_cow = a_cow.as_standard_layout().reversed_axes();
-            let obj = GBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
+            let a_cow = a.to_col_layout()?;
+            let obj = GBMV_ { a: a_cow.view(), x, m, kl, y, alpha, beta, trans, layout: Some(BLASColMajor) };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let a_cow = obj.a.as_standard_layout();
+            let a_cow = a.to_row_layout()?;
             let k = a_cow.len_of(Axis(1));
-            let kl = obj.kl;
             blas_assert!(k > kl, InvalidDim)?;
             let ku = k - kl - 1;
-            match obj.trans {
+            match trans {
                 BLASNoTrans => {
                     // N -> T
-                    let obj =
-                        GBMV_ { a: a_cow.t(), trans: BLASTrans, kl: ku, layout: Some(BLASColMajor), ..obj };
+                    let obj = GBMV_ {
+                        a: a_cow.t(),
+                        x,
+                        m,
+                        kl: ku,
+                        y,
+                        alpha,
+                        beta,
+                        trans: BLASTrans,
+                        layout: Some(BLASColMajor),
+                    };
                     return obj.driver()?.run_blas();
                 },
                 BLASTrans => {
                     // N -> T
-                    let obj =
-                        GBMV_ { a: a_cow.t(), trans: BLASNoTrans, kl: ku, layout: Some(BLASColMajor), ..obj };
+                    let obj = GBMV_ {
+                        a: a_cow.t(),
+                        x,
+                        m,
+                        kl: ku,
+                        y,
+                        alpha,
+                        beta,
+                        trans: BLASNoTrans,
+                        layout: Some(BLASColMajor),
+                    };
                     return obj.driver()?.run_blas();
                 },
                 BLASConjTrans => {
                     // C -> N
-                    let x = obj.x.mapv(F::conj);
-                    let y = obj.y.map(|mut y| {
+                    let x = x.mapv(F::conj);
+                    let y = y.map(|mut y| {
                         y.mapv_inplace(F::conj);
                         y
                     });
                     let obj = GBMV_ {
                         a: a_cow.t(),
-                        trans: BLASNoTrans,
                         x: x.view(),
-                        y,
+                        m,
                         kl: ku,
-                        alpha: F::conj(obj.alpha),
-                        beta: F::conj(obj.beta),
+                        y,
+                        alpha: F::conj(alpha),
+                        beta: F::conj(beta),
+                        trans: BLASNoTrans,
                         layout: Some(BLASColMajor),
-                        ..obj
                     };
                     let mut y = obj.driver()?.run_blas()?;
                     y.view_mut().mapv_inplace(F::conj);
                     return Ok(y);
                 },
-                _ => return blas_invalid!(obj.trans)?,
+                _ => return blas_invalid!(trans)?,
             }
         }
     }

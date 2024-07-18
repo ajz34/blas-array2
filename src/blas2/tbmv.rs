@@ -77,19 +77,9 @@ where
     BLASFunc: TBMVFunc<F>,
 {
     fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
-        let n = self.n;
-        let k = self.k;
-        let a_ptr = self.a.as_ptr();
-        let lda = self.lda;
-        let mut x = self.x;
-        let x_ptr = match &mut x {
-            ArrayOut1::ViewMut(y) => y.as_mut_ptr(),
-            _ => panic!("Ix1 with triangular A, won't be ToBeCloned or Owned"),
-        };
-        let incx = self.incx;
+        let Self { uplo, trans, diag, n, k, a, lda, mut x, incx } = self;
+        let a_ptr = a.as_ptr();
+        let x_ptr = x.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
@@ -133,12 +123,7 @@ where
     BLASFunc: TBMVFunc<F>,
 {
     fn driver(self) -> Result<TBMV_Driver<'a, 'x, F>, BLASError> {
-        let a = self.a;
-        let x = self.x;
-        let uplo = self.uplo;
-        let trans = self.trans;
-        let diag = self.diag;
-        let layout = self.layout;
+        let Self { a, x, uplo, trans, diag, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
@@ -194,36 +179,23 @@ where
         let obj = self.build()?;
 
         let layout_a = get_layout_array2(&obj.a);
-        let layout = match obj.layout {
-            Some(layout) => layout,
-            None => match layout_a {
-                BLASLayout::Sequential => BLASColMajor,
-                BLASRowMajor => BLASRowMajor,
-                BLASColMajor => BLASColMajor,
-                _ => blas_raise!(InvalidFlag, "Without defining layout, this function checks layout of input matrix `a` but it is not contiguous.")?,
-            }
-        };
+        let layout = get_layout_row_preferred(&[obj.layout, Some(layout_a)], &[]);
 
         if layout == BLASColMajor {
             // F-contiguous
-            let a_cow = obj.a.reversed_axes();
-            let a_cow = a_cow.as_standard_layout().reversed_axes();
+            let a_cow = obj.a.to_col_layout()?;
             let obj = TBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let a_cow = obj.a.as_standard_layout();
+            let a_cow = obj.a.to_row_layout()?;
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T
                     let obj = TBMV_ {
                         a: a_cow.t(),
                         trans: BLASTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -234,11 +206,7 @@ where
                     let obj = TBMV_ {
                         a: a_cow.t(),
                         trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -252,11 +220,7 @@ where
                         a: a_cow.t(),
                         x,
                         trans: BLASNoTrans,
-                        uplo: match obj.uplo {
-                            BLASUpper => BLASLower,
-                            BLASLower => BLASUpper,
-                            _ => blas_invalid!(obj.uplo)?,
-                        },
+                        uplo: obj.uplo.flip(),
                         layout: Some(BLASColMajor),
                         ..obj
                     };

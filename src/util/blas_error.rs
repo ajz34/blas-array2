@@ -82,8 +82,17 @@ macro_rules! blas_assert_eq {
             extern crate alloc;
             use alloc::string::String;
             use core::fmt::Write;
-            let mut s = String::from(concat!(file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : "));
-            write!(s, "{:?} = {:?} not equal to {:?} = {:?}", stringify!($a), $a, stringify!($b), $b).unwrap();
+            let mut s = String::from(concat!(
+                file!(),
+                ":",
+                line!(),
+                ": ",
+                "BLASError::",
+                stringify!($errtype),
+                " : "
+            ));
+            write!(s, "{:?} = {:?} not equal to {:?} = {:?}", stringify!($a), $a, stringify!($b), $b)
+                .unwrap();
             Err(BLASError::$errtype(s))
         }
     };
@@ -131,7 +140,11 @@ macro_rules! blas_warn_layout_clone {
         extern crate std;
 
         if cfg!(all(feature = "std", feature = "warn_on_clone")) {
-            std::eprintln!("Warning: Cloning array due to non-standard layout, shape={:?}, strides={:?}", $array.shape(), $array.strides());
+            std::eprintln!(
+                "Warning: Cloning array due to non-standard layout, shape={:?}, strides={:?}",
+                $array.shape(),
+                $array.strides()
+            );
             Result::<(), BLASError>::Ok(())
         } else if cfg!(feature = "error_on_clone") {
             blas_raise!(ExplicitCopy)
