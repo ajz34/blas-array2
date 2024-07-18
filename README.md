@@ -13,7 +13,7 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 - **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc.
 - **View instead of copy if possible**: All input in row-major (or col-major) should not involve unnecessary transpositions with explicit copy (a few exceptions occurs for complex BLAS2 functions). Further more, for some BLAS3 functions (GEMM, SYRK, TRMM, TRSM), if transposition does not involve `BLASConjTrans`, then mixed row-major or col-major also does not involve explicit transposition. Also note that in many cases, sub-matrices (sliced matrix) are also considered as row-major (or col-major), if data is stored contiguously in any dimension.
 - **Arbitary Layout**: Supports strides that `ndarray` allows (for correctness and API convenience only, but may require explicit raw data copy among DRAM if data is not stored contiguously in either dimension).
-- **`no_std`**: This crate is `no_std` by default. Feature `std` will only enhance error handling.
+- **`no_std`**: This crate enables `no_std`. Feature `std` will only enhance error and warning handling. However, currently those `no_std` features will require `alloc::string::String`.
 
 ## Simple example
 For simple illustration to this package, we perform $C = A B$ (`dgemm`):

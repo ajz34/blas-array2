@@ -23,5 +23,7 @@ approx = { version = "0.5" }
 cblas-sys = { version = "0.1" }
 
 [features]
-default = []
+default = ["std"]
 std = []
+warn_on_clone = []
+error_on_clone = []

@@ -1,17 +1,21 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+extern crate alloc;
+
+use alloc::string::String;
 use core::num::TryFromIntError;
 use derive_builder::UninitializedFieldError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BLASError {
-    OverflowDimension(&'static str),
-    InvalidDim(&'static str),
-    InvalidFlag(&'static str),
-    FailedCheck(&'static str),
+    OverflowDimension(String),
+    InvalidDim(String),
+    InvalidFlag(String),
+    FailedCheck(String),
     UninitializedField(&'static str),
-    Miscellaneous(&'static str),
+    NonStandardLayout(String),
+    Miscellaneous(String),
 }
 
 /* #region impl BLASError */
@@ -27,7 +31,7 @@ impl From<UninitializedFieldError> for BLASError {
 
 impl From<TryFromIntError> for BLASError {
     fn from(_: TryFromIntError) -> BLASError {
-        BLASError::OverflowDimension("TryFromIntError")
+        BLASError::OverflowDimension(String::from("TryFromIntError"))
     }
 }
 
@@ -47,76 +51,73 @@ macro_rules! blas_assert {
         if $cond {
             Ok(())
         } else {
-            Err(BLASError::$errtype(concat!(
+            extern crate alloc;
+            use alloc::string::String;
+            Err(BLASError::$errtype(String::from(concat!(
                 file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : ",
                 $($arg),*, ": ", stringify!($cond)
-            )))
+            ))))
         }
     };
     ($cond:expr, $errtype:ident) => {
         if $cond {
             Ok(())
         } else {
-            Err(BLASError::$errtype(concat!(
+            extern crate alloc;
+            use alloc::string::String;
+            Err(BLASError::$errtype(String::from(concat!(
                 file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : ",
                 stringify!($cond)
-            )))
+            ))))
         }
     };
 }
 
 #[macro_export]
 macro_rules! blas_assert_eq {
-    ($a:expr, $b:expr, $errtype:ident, $($arg:tt)*) => {
-        if $a == $b {
-            Ok(())
-        } else {
-            Err(BLASError::$errtype(concat!(
-                file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : ",
-                $($arg),*, ": ", stringify!($a), " = ", stringify!($b)
-            )))
-        }
-    };
     ($a:expr, $b:expr, $errtype:ident) => {
         if $a == $b {
             Ok(())
         } else {
-            Err(BLASError::$errtype(concat!(
-                file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : ",
-                stringify!($a), " = ", stringify!($b)
-            )))
+            extern crate alloc;
+            use alloc::string::String;
+            use core::fmt::Write;
+            let mut s = String::from(concat!(file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : "));
+            write!(s, "{:?} = {:?} not equal to {:?} = {:?}", stringify!($a), $a, stringify!($b), $b).unwrap();
+            Err(BLASError::$errtype(s))
         }
     };
 }
 
 #[macro_export]
 macro_rules! blas_raise {
-    ($errtype:ident) => {
-        Err(BLASError::$errtype(concat!(
+    ($errtype:ident) => {{
+        extern crate alloc;
+        use alloc::string::String;
+        Err(BLASError::$errtype(String::from(concat!(
             file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype)
-        )))
-    };
-    ($errtype:ident, $($arg:tt)*) => {
-        Err(BLASError::$errtype(concat!(
+        ))))
+    }};
+    ($errtype:ident, $($arg:tt)*) => {{
+        extern crate alloc;
+        use alloc::string::String;
+        Err(BLASError::$errtype(String::from(concat!(
             file!(), ":", line!(), ": ", "BLASError::", stringify!($errtype), " : ",
             $($arg),*
-        )))
-    };
+        ))))
+    }};
 }
 
 #[macro_export]
 macro_rules! blas_invalid {
-    ($word:expr) => {
-        Err(BLASError::InvalidFlag(concat!(
-            file!(),
-            ":",
-            line!(),
-            ": ",
-            "BLASError::InvalidFlag",
-            " : ",
-            stringify!($word)
-        )))
-    };
+    ($word:expr) => {{
+        extern crate alloc;
+        use alloc::string::String;
+        use core::fmt::Write;
+        let mut s = String::from(concat!(file!(), ":", line!(), ": ", "BLASError::InvalidFlag", " : "));
+        write!(s, "{:?} = {:?}", stringify!($word), $word).unwrap();
+        Err(BLASError::InvalidFlag(s))
+    }};
 }
 
 /* #endregion */
