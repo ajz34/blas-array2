@@ -14,7 +14,7 @@ pub enum BLASError {
     InvalidFlag(String),
     FailedCheck(String),
     UninitializedField(&'static str),
-    NonStandardLayout(String),
+    ExplicitCopy(String),
     Miscellaneous(String),
 }
 
@@ -117,6 +117,44 @@ macro_rules! blas_invalid {
         let mut s = String::from(concat!(file!(), ":", line!(), ": ", "BLASError::InvalidFlag", " : "));
         write!(s, "{:?} = {:?}", stringify!($word), $word).unwrap();
         Err(BLASError::InvalidFlag(s))
+    }};
+}
+
+/* #endregion */
+
+/* #region macros (warning) */
+
+#[macro_export]
+macro_rules! blas_warn_layout_clone {
+    ($array:expr) => {{
+        #[cfg(feature = "std")]
+        extern crate std;
+
+        #[cfg(all(feature = "std", feature = "warn_on_clone"))]
+        {
+            std::eprintln!("Warning: Cloning array due to non-standard layout, shape={:?}, strides={:?}", $array.shape(), $array.strides());
+            Result::<(), BLASError>::Ok(())
+        }
+
+        #[cfg(feature = "error_on_clone")]
+        {
+            blas_raise!(ExplicitCopy)
+        }
+    }};
+    ($array:expr, $msg:tt) => {{
+        #[cfg(feature = "std")]
+        extern crate std;
+
+        #[cfg(all(feature = "std", feature = "warn_on_clone"))]
+        {
+            std::eprintln!("Warning: {:?}, shape={:?}, strides={:?}", $msg, $array.shape(), $array.strides());
+            Result::<(), BLASError>::Ok(())
+        }
+
+        #[cfg(feature = "error_on_clone")]
+        {
+            blas_raise!(ExplicitCopy)
+        }
     }};
 }
 

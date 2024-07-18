@@ -8,4 +8,4 @@ pub use blas_flags::*;
 pub use blas_traits::*;
 pub use util_ndarray::*;
 
-pub use crate::{blas_assert, blas_assert_eq, blas_invalid, blas_raise};
+pub use crate::{blas_assert, blas_assert_eq, blas_invalid, blas_raise, blas_warn_layout_clone};

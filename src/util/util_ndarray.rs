@@ -180,3 +180,56 @@ where
 }
 
 /* #endregion */
+
+/* #region contiguous preference */
+
+pub(crate) trait LayoutPref {
+    fn is_fpref(&self) -> bool;
+    fn is_cpref(&self) -> bool;
+}
+
+impl<A> LayoutPref for ArrayView2<'_, A> {
+    fn is_fpref(&self) -> bool {
+        get_layout_array2(self).is_fpref()
+    }
+
+    fn is_cpref(&self) -> bool {
+        get_layout_array2(self).is_cpref()
+    }
+}
+
+/* #endregion */
+
+/* #region warn on clone */
+
+pub(crate) trait ToLayoutCowArray2<A> {
+    fn to_row_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError>;
+    fn to_col_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError>;
+}
+
+impl<A> ToLayoutCowArray2<A> for ArrayView2<'_, A>
+where
+    A: Clone,
+{
+    fn to_row_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError> {
+        if self.is_cpref() {
+            Ok(CowArray::from(self))
+        } else {
+            blas_warn_layout_clone!(self)?;
+            let owned = self.to_owned();
+            Ok(CowArray::from(owned))
+        }
+    }
+
+    fn to_col_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError> {
+        if self.is_fpref() {
+            Ok(CowArray::from(self))
+        } else {
+            blas_warn_layout_clone!(self)?;
+            let owned = self.t().to_owned().reversed_axes();
+            Ok(CowArray::from(owned))
+        }
+    }
+}
+
+/* #endregion */

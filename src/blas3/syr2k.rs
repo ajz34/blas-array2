@@ -272,8 +272,6 @@ where
     fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
         let SYR2K_ { a, b, c, alpha, beta, uplo, trans, layout } = self.build()?;
-        let at = a.t();
-        let bt = b.t();
 
         // Note that since we will change `trans` in outer wrapper to utilize mix-contiguous
         // additional check to this parameter is required
@@ -305,11 +303,11 @@ where
         let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a, layout_b]);
         if layout == BLASColMajor {
             // F-contiguous: C = A op(B) + B op(A)
-            let a_cow = at.as_standard_layout();
-            let b_cow = bt.as_standard_layout();
+            let a_cow = a.to_col_layout()?;
+            let b_cow = b.to_col_layout()?;
             let obj = SYR2K_ {
-                a: a_cow.t(),
-                b: b_cow.t(),
+                a: a_cow.view(),
+                b: b_cow.view(),
                 c,
                 alpha,
                 beta,
@@ -320,8 +318,8 @@ where
             return obj.driver()?.run_blas();
         } else if layout == BLASRowMajor {
             // C-contiguous: C' = op(B') A' + op(A') B'
-            let a_cow = a.as_standard_layout();
-            let b_cow = b.as_standard_layout();
+            let a_cow = a.to_row_layout()?;
+            let b_cow = b.to_row_layout()?;
             let obj = SYR2K_ {
                 a: b_cow.t(),
                 b: a_cow.t(),
