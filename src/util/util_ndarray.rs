@@ -140,18 +140,30 @@ pub(crate) fn flip_trans_fpref<'a, F>(
 where
     F: BLASFloat,
 {
-    match (get_layout_array2(&view).is_fpref(), trans) {
-        (true, _) => Ok((trans, view_t.as_standard_layout())),
-        (false, BLASNoTrans) => Ok((
-            trans.flip(hermi),
-            match hermi {
-                false => view.as_standard_layout(),
-                true => CowArray::from(view.mapv(F::conj)),
-            },
-        )),
-        (false, BLASTrans) => Ok((trans.flip(hermi), view.as_standard_layout())),
-        (false, BLASConjTrans) => Ok((trans.flip(hermi), CowArray::from(view.mapv(F::conj)))),
-        (false, _) => blas_invalid!(trans),
+    if view.is_fpref() {
+        return Ok((trans, view.to_col_layout()?));
+    } else {
+        match trans {
+            BLASNoTrans => Ok((
+                trans.flip(hermi),
+                match hermi {
+                    false => view_t.to_col_layout()?,
+                    true => {
+                        blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                        CowArray::from(view.mapv(F::conj).reversed_axes())
+                    },
+                }
+            )),
+            BLASTrans => Ok((trans.flip(hermi), view_t.to_col_layout()?)),
+            BLASConjTrans => Ok((
+                trans.flip(hermi),
+                {
+                    blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                    CowArray::from(view.mapv(F::conj).reversed_axes())
+                }
+            )),
+            _ => blas_invalid!(trans),
+        }
     }
 }
 
@@ -164,18 +176,30 @@ pub(crate) fn flip_trans_cpref<'a, F>(
 where
     F: BLASFloat,
 {
-    match (get_layout_array2(&view).is_cpref(), trans) {
-        (true, _) => Ok((trans, view.as_standard_layout())),
-        (false, BLASNoTrans) => Ok((
-            trans.flip(hermi),
-            match hermi {
-                false => view_t.as_standard_layout(),
-                true => CowArray::from(view_t.mapv(F::conj)),
-            },
-        )),
-        (false, BLASTrans) => Ok((trans.flip(hermi), view_t.as_standard_layout())),
-        (false, BLASConjTrans) => Ok((trans.flip(hermi), CowArray::from(view_t.mapv(F::conj)))),
-        (false, _) => blas_invalid!(trans),
+    if view.is_cpref() {
+        return Ok((trans, view.to_row_layout()?));
+    } else {
+        match trans {
+            BLASNoTrans => Ok((
+                trans.flip(hermi),
+                match hermi {
+                    false => view_t.to_row_layout()?,
+                    true => {
+                        blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                        CowArray::from(view_t.mapv(F::conj))
+                    },
+                },
+            )),
+            BLASTrans => Ok((trans.flip(hermi), view_t.to_row_layout()?)),
+            BLASConjTrans => Ok((
+                trans.flip(hermi),
+                {
+                    blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
+                    CowArray::from(view_t.mapv(F::conj))
+                }
+            )),
+            _ => blas_invalid!(trans),
+        }
     }
 }
 

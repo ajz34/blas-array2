@@ -130,30 +130,26 @@ macro_rules! blas_warn_layout_clone {
         #[cfg(feature = "std")]
         extern crate std;
 
-        #[cfg(all(feature = "std", feature = "warn_on_clone"))]
-        {
+        if cfg!(all(feature = "std", feature = "warn_on_clone")) {
             std::eprintln!("Warning: Cloning array due to non-standard layout, shape={:?}, strides={:?}", $array.shape(), $array.strides());
             Result::<(), BLASError>::Ok(())
-        }
-
-        #[cfg(feature = "error_on_clone")]
-        {
+        } else if cfg!(feature = "error_on_clone") {
             blas_raise!(ExplicitCopy)
+        } else {
+            Result::<(), BLASError>::Ok(())
         }
     }};
     ($array:expr, $msg:tt) => {{
         #[cfg(feature = "std")]
         extern crate std;
 
-        #[cfg(all(feature = "std", feature = "warn_on_clone"))]
-        {
+        if cfg!(all(feature = "std", feature = "warn_on_clone")) {
             std::eprintln!("Warning: {:?}, shape={:?}, strides={:?}", $msg, $array.shape(), $array.strides());
             Result::<(), BLASError>::Ok(())
-        }
-
-        #[cfg(feature = "error_on_clone")]
-        {
+        } else if cfg!(feature = "error_on_clone") {
             blas_raise!(ExplicitCopy)
+        } else {
+            Result::<(), BLASError>::Ok(())
         }
     }};
 }

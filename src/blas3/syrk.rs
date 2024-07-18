@@ -284,7 +284,7 @@ where
         if layout == BLASColMajor {
             // F-contiguous: C = A op(A) or C = op(A) A
             let (trans, a_cow) = flip_trans_fpref(trans, &a, &at, S::is_hermitian())?;
-            let obj = SYRK_ { a: a_cow.t(), c, alpha, beta, uplo, trans, layout: Some(BLASColMajor) };
+            let obj = SYRK_ { a: a_cow.view(), c, alpha, beta, uplo, trans, layout: Some(BLASColMajor) };
             return obj.driver()?.run_blas();
         } else if layout == BLASRowMajor {
             let (trans, a_cow) = flip_trans_cpref(trans, &a, &at, S::is_hermitian())?;

@@ -232,7 +232,7 @@ where
             let (transa_new, a_cow) = flip_trans_fpref(transa, &a, &at, false)?;
             let uplo = if transa_new != transa { uplo.flip() } else { uplo };
             let obj = TRSM_ {
-                a: a_cow.t(),
+                a: a_cow.view(),
                 b,
                 alpha,
                 side,

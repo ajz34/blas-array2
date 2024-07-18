@@ -272,8 +272,8 @@ where
             let (transa, a_cow) = flip_trans_fpref(transa, &a, &at, false)?;
             let (transb, b_cow) = flip_trans_fpref(transb, &b, &bt, false)?;
             let obj = GEMM_ {
-                a: a_cow.t(),
-                b: b_cow.t(),
+                a: a_cow.view(),
+                b: b_cow.view(),
                 c,
                 alpha,
                 beta,
