@@ -38,7 +38,7 @@ jobs:
     - name: Coverage
       env:
         LD_LIBRARY_PATH: $HOME/OpenBLAS:$LD_LIBRARY_PATH
-        RUSTFLAGS: -C link-arg=-fuse-ld=lld -C link-arg=-lopenblas -L$HOME/OpenBLAS/lib
+        RUSTFLAGS: -lopenblas -L$HOME/OpenBLAS/lib
       run: |
         cargo tarpaulin --out xml
     - name: Upload to codecov.io
