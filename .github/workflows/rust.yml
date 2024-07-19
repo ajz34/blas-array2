@@ -16,7 +16,7 @@ jobs:
     - name: System dependencies
       run: |
         sudo apt update
-        sudo apt install -y libopenblas-dev gfortran cmake
+        sudo apt install -y gfortran cmake
     - name: Download OpenBLAS
       run: |
         wget https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.27/OpenBLAS-0.3.27.tar.gz
@@ -28,7 +28,7 @@ jobs:
         cd OpenBLAS-0.3.27
         mkdir build; cd build
         CC=gcc FC=gfortran cmake .. \
-          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 \
+          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 -DBUILD_BFLOAT16=1 \
           -DCMAKE_INSTALL_PREFIX=$HOME/OpenBLAS
         make -j4
         make install
@@ -37,7 +37,8 @@ jobs:
         cargo binstall --no-confirm cargo-tarpaulin
     - name: Coverage
       env:
-        RUSTFLAGS: -lopenblas -L$HOME/OpenBLAS/lib
+        LD_LIBRARY_PATH: $HOME/OpenBLAS:$LD_LIBRARY_PATH
+        RUSTFLAGS: link-arg=-fuse-ld=lld link-arg=-lopenblas -L$HOME/OpenBLAS/lib
       run: |
         cargo tarpaulin --out xml
     - name: Upload to codecov.io
