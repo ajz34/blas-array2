@@ -17,9 +17,13 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y libopenblas-dev gfortran cmake
-    - name: Build OpenBLAS
+    - name: Download OpenBLAS
       run: |
         wget https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.27/OpenBLAS-0.3.27.tar.gz -o OpenBLAS-0.3.27.tar.gz
+        ls -l
+        pwd
+    - name: Build OpenBLAS
+      run: |
         tar -xf OpenBLAS-0.3.27.tar.gz
         cd OpenBLAS-0.3.27
         mkdir build; cd build
