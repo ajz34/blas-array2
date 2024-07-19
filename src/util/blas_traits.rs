@@ -1,6 +1,4 @@
 use crate::util::*;
-use blas_sys::{c_double_complex, c_float_complex};
-use libc::{c_double, c_float};
 use ndarray::Dimension;
 use num_complex::*;
 use num_traits::*;
@@ -9,6 +7,14 @@ use num_traits::*;
 pub type c32 = Complex<f32>;
 #[allow(non_camel_case_types)]
 pub type c64 = Complex<f64>;
+
+// for legacy compatibility
+// use blas_sys::{c_double_complex, c_float_complex};
+
+#[allow(bad_style)]
+pub type c_double_complex = [f64; 2];
+#[allow(bad_style)]
+pub type c_float_complex = [f32; 2];
 
 /// Trait for defining real part float types
 pub trait BLASFloat:
@@ -24,7 +30,7 @@ pub trait BLASFloat:
 
 impl BLASFloat for f32 {
     type RealFloat = f32;
-    type FFIFloat = c_float;
+    type FFIFloat = f32;
     const EPSILON: Self::RealFloat = f32::EPSILON;
     #[inline]
     fn is_complex() -> bool {
@@ -42,7 +48,7 @@ impl BLASFloat for f32 {
 
 impl BLASFloat for f64 {
     type RealFloat = f64;
-    type FFIFloat = c_double;
+    type FFIFloat = f64;
     const EPSILON: Self::RealFloat = f64::EPSILON;
     #[inline]
     fn is_complex() -> bool {

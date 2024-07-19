@@ -1,4 +1,4 @@
-use libc::c_char;
+use crate::ffi::c_char;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BLASLayout {

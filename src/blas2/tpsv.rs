@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -14,10 +13,10 @@ where
         uplo: *const c_char,
         trans: *const c_char,
         diag: *const c_char,
-        n: *const c_int,
+        n: *const blas_int,
         ap: *const F,
         x: *mut F,
-        incx: *const c_int,
+        incx: *const blas_int,
     );
 }
 
@@ -31,13 +30,12 @@ macro_rules! impl_func {
                 uplo: *const c_char,
                 trans: *const c_char,
                 diag: *const c_char,
-                n: *const c_int,
+                n: *const blas_int,
                 ap: *const $type,
                 x: *mut $type,
-                incx: *const c_int,
+                incx: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(uplo, trans, diag, n, ap as *const FFIFloat, x as *mut FFIFloat, incx);
+                ffi::$func(uplo, trans, diag, n, ap, x, incx);
             }
         }
     };
@@ -59,10 +57,10 @@ where
     uplo: c_char,
     trans: c_char,
     diag: c_char,
-    n: c_int,
+    n: blas_int,
     ap: ArrayView1<'a, F>,
     x: ArrayOut1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
 }
 
 impl<'a, 'x, F> BLASDriver<'x, F, Ix1> for TPSV_Driver<'a, 'x, F>

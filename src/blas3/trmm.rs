@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -15,13 +14,13 @@ where
         uplo: *const c_char,
         transa: *const c_char,
         diag: *const c_char,
-        m: *const c_int,
-        n: *const c_int,
+        m: *const blas_int,
+        n: *const blas_int,
         alpha: *const F,
         a: *const F,
-        lda: *const c_int,
+        lda: *const blas_int,
         b: *mut F,
-        ldb: *const c_int,
+        ldb: *const blas_int,
     );
 }
 
@@ -36,28 +35,15 @@ macro_rules! impl_func {
                 uplo: *const c_char,
                 transa: *const c_char,
                 diag: *const c_char,
-                m: *const c_int,
-                n: *const c_int,
+                m: *const blas_int,
+                n: *const blas_int,
                 alpha: *const $type,
                 a: *const $type,
-                lda: *const c_int,
+                lda: *const blas_int,
                 b: *mut $type,
-                ldb: *const c_int,
+                ldb: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    side,
-                    uplo,
-                    transa,
-                    diag,
-                    m,
-                    n,
-                    alpha as *const FFIFloat,
-                    a as *const FFIFloat,
-                    lda,
-                    b as *mut FFIFloat,
-                    ldb,
-                );
+                ffi::$func(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb);
             }
         }
     };
@@ -80,13 +66,13 @@ where
     uplo: c_char,
     transa: c_char,
     diag: c_char,
-    m: c_int,
-    n: c_int,
+    m: blas_int,
+    n: blas_int,
     alpha: F,
     a: ArrayView2<'a, F>,
-    lda: c_int,
+    lda: blas_int,
     b: ArrayOut2<'b, F>,
-    ldb: c_int,
+    ldb: blas_int,
 }
 
 impl<'a, 'b, F> BLASDriver<'b, F, Ix2> for TRMM_Driver<'a, 'b, F>

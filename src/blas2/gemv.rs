@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -12,16 +11,16 @@ where
 {
     unsafe fn gemv(
         trans: *const c_char,
-        m: *const c_int,
-        n: *const c_int,
+        m: *const blas_int,
+        n: *const blas_int,
         alpha: *const F,
         a: *const F,
-        lda: *const c_int,
+        lda: *const blas_int,
         x: *const F,
-        incx: *const c_int,
+        incx: *const blas_int,
         beta: *const F,
         y: *mut F,
-        incy: *const c_int,
+        incy: *const blas_int,
     );
 }
 
@@ -33,31 +32,18 @@ macro_rules! impl_func {
         {
             unsafe fn gemv(
                 trans: *const c_char,
-                m: *const c_int,
-                n: *const c_int,
+                m: *const blas_int,
+                n: *const blas_int,
                 alpha: *const $type,
                 a: *const $type,
-                lda: *const c_int,
+                lda: *const blas_int,
                 x: *const $type,
-                incx: *const c_int,
+                incx: *const blas_int,
                 beta: *const $type,
                 y: *mut $type,
-                incy: *const c_int,
+                incy: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    trans,
-                    m,
-                    n,
-                    alpha as *const FFIFloat,
-                    a as *const FFIFloat,
-                    lda,
-                    x as *const FFIFloat,
-                    incx,
-                    beta as *const FFIFloat,
-                    y as *mut FFIFloat,
-                    incy,
-                );
+                ffi::$func(trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
             }
         }
     };
@@ -77,16 +63,16 @@ where
     F: BLASFloat,
 {
     trans: c_char,
-    m: c_int,
-    n: c_int,
+    m: blas_int,
+    n: blas_int,
     alpha: F,
     a: ArrayView2<'a, F>,
-    lda: c_int,
+    lda: blas_int,
     x: ArrayView1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
     beta: F,
     y: ArrayOut1<'y, F>,
-    incy: c_int,
+    incy: blas_int,
 }
 
 impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for GEMV_Driver<'a, 'x, 'y, F>

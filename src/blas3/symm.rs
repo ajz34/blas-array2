@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -14,16 +13,16 @@ where
     unsafe fn symm(
         side: *const c_char,
         uplo: *const c_char,
-        m: *const c_int,
-        n: *const c_int,
+        m: *const blas_int,
+        n: *const blas_int,
         alpha: *const F,
         a: *const F,
-        lda: *const c_int,
+        lda: *const blas_int,
         b: *const F,
-        ldb: *const c_int,
+        ldb: *const blas_int,
         beta: *const F,
         c: *mut F,
-        ldc: *const c_int,
+        ldc: *const blas_int,
     );
 }
 
@@ -33,32 +32,18 @@ macro_rules! impl_func {
             unsafe fn symm(
                 side: *const c_char,
                 uplo: *const c_char,
-                m: *const c_int,
-                n: *const c_int,
+                m: *const blas_int,
+                n: *const blas_int,
                 alpha: *const $type,
                 a: *const $type,
-                lda: *const c_int,
+                lda: *const blas_int,
                 b: *const $type,
-                ldb: *const c_int,
+                ldb: *const blas_int,
                 beta: *const $type,
                 c: *mut $type,
-                ldc: *const c_int,
+                ldc: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    side,
-                    uplo,
-                    m,
-                    n,
-                    alpha as *const FFIFloat,
-                    a as *const FFIFloat,
-                    lda,
-                    b as *const FFIFloat,
-                    ldb,
-                    beta as *const FFIFloat,
-                    c as *mut FFIFloat,
-                    ldc,
-                );
+                ffi::$func(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc);
             }
         }
     };
@@ -82,16 +67,16 @@ where
 {
     side: c_char,
     uplo: c_char,
-    m: c_int,
-    n: c_int,
+    m: blas_int,
+    n: blas_int,
     alpha: F,
     a: ArrayView2<'a, F>,
-    lda: c_int,
+    lda: blas_int,
     b: ArrayView2<'b, F>,
-    ldb: c_int,
+    ldb: blas_int,
     beta: F,
     c: ArrayOut2<'c, F>,
-    ldc: c_int,
+    ldc: blas_int,
     _phantom: core::marker::PhantomData<S>,
 }
 

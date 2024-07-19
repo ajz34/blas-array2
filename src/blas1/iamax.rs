@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::c_int;
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -10,7 +9,7 @@ pub trait IAMAXFunc<F>
 where
     F: BLASFloat,
 {
-    unsafe fn iamax(n: *const c_int, x: *const F, incx: *const c_int) -> c_int;
+    unsafe fn iamax(n: *const blas_int, x: *const F, incx: *const blas_int) -> blas_int;
 }
 
 macro_rules! impl_func {
@@ -19,9 +18,8 @@ macro_rules! impl_func {
         where
             $type: BLASFloat,
         {
-            unsafe fn iamax(n: *const c_int, x: *const $type, incx: *const c_int) -> c_int {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(n, x as *const FFIFloat, incx)
+            unsafe fn iamax(n: *const blas_int, x: *const $type, incx: *const blas_int) -> blas_int {
+                ffi::$func(n, x, incx)
             }
         }
     };
@@ -40,9 +38,9 @@ pub struct IAMAX_Driver<'x, F>
 where
     F: BLASFloat,
 {
-    n: c_int,
+    n: blas_int,
     x: ArrayView1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
 }
 
 impl<'x, F> IAMAX_Driver<'x, F>

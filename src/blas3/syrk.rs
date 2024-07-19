@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 use num_traits::{One, Zero};
 
@@ -15,14 +14,14 @@ where
     unsafe fn syrk(
         uplo: *const c_char,
         trans: *const c_char,
-        n: *const c_int,
-        k: *const c_int,
+        n: *const blas_int,
+        k: *const blas_int,
         alpha: *const S::HermitianFloat,
         a: *const F,
-        lda: *const c_int,
+        lda: *const blas_int,
         beta: *const S::HermitianFloat,
         c: *mut F,
-        ldc: *const c_int,
+        ldc: *const blas_int,
     );
 }
 
@@ -32,27 +31,26 @@ macro_rules! impl_syrk {
             unsafe fn syrk(
                 uplo: *const c_char,
                 trans: *const c_char,
-                n: *const c_int,
-                k: *const c_int,
+                n: *const blas_int,
+                k: *const blas_int,
                 alpha: *const <$symm as BLASSymmetric>::HermitianFloat,
                 a: *const $type,
-                lda: *const c_int,
+                lda: *const blas_int,
                 beta: *const <$symm as BLASSymmetric>::HermitianFloat,
                 c: *mut $type,
-                ldc: *const c_int,
+                ldc: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                type FFIHermitialFloat = <<$symm as BLASSymmetric>::HermitianFloat as BLASFloat>::FFIFloat;
-                blas_sys::$func(
+                type HermitialFloat = <$symm as BLASSymmetric>::HermitianFloat;
+                ffi::$func(
                     uplo,
                     trans,
                     n,
                     k,
-                    alpha as *const FFIHermitialFloat,
-                    a as *const FFIFloat,
+                    alpha as *const HermitialFloat,
+                    a,
                     lda,
-                    beta as *const FFIHermitialFloat,
-                    c as *mut FFIFloat,
+                    beta as *const HermitialFloat,
+                    c,
                     ldc,
                 );
             }
@@ -78,14 +76,14 @@ where
 {
     uplo: c_char,
     trans: c_char,
-    n: c_int,
-    k: c_int,
+    n: blas_int,
+    k: blas_int,
     alpha: S::HermitianFloat,
     a: ArrayView2<'a, F>,
-    lda: c_int,
+    lda: blas_int,
     beta: S::HermitianFloat,
     c: ArrayOut2<'c, F>,
-    ldc: c_int,
+    ldc: blas_int,
 }
 
 impl<'a, 'c, F, S> BLASDriver<'c, F, Ix2> for SYRK_Driver<'a, 'c, F, S>

@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -13,14 +12,14 @@ where
 {
     unsafe fn spmv(
         uplo: *const c_char,
-        n: *const c_int,
+        n: *const blas_int,
         alpha: *const F,
         ap: *const F,
         x: *const F,
-        incx: *const c_int,
+        incx: *const blas_int,
         beta: *const F,
         y: *mut F,
-        incy: *const c_int,
+        incy: *const blas_int,
     );
 }
 
@@ -32,27 +31,16 @@ macro_rules! impl_func {
         {
             unsafe fn spmv(
                 uplo: *const c_char,
-                n: *const c_int,
+                n: *const blas_int,
                 alpha: *const $type,
                 ap: *const $type,
                 x: *const $type,
-                incx: *const c_int,
+                incx: *const blas_int,
                 beta: *const $type,
                 y: *mut $type,
-                incy: *const c_int,
+                incy: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    uplo,
-                    n,
-                    alpha as *const FFIFloat,
-                    ap as *const FFIFloat,
-                    x as *const FFIFloat,
-                    incx,
-                    beta as *const FFIFloat,
-                    y as *mut FFIFloat,
-                    incy,
-                );
+                ffi::$func(uplo, n, alpha, ap, x, incx, beta, y, incy);
             }
         }
     };
@@ -76,14 +64,14 @@ where
     S: BLASSymmetric,
 {
     uplo: c_char,
-    n: c_int,
+    n: blas_int,
     alpha: F,
     ap: ArrayView1<'a, F>,
     x: ArrayView1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
     beta: F,
     y: ArrayOut1<'y, F>,
-    incy: c_int,
+    incy: blas_int,
     _phantom: core::marker::PhantomData<S>,
 }
 

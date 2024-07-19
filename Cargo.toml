@@ -10,12 +10,10 @@ categories = ["data-structures", "science"]
 
 [dependencies]
 num-traits = { version = "0.2" }
-derive_builder = { version = "0.20" }
-libc = { version = "0.2" }
-blas-sys = { version = "0.7" }
-ndarray = { version = "0.15" }
 num-complex = { version = "0.4" }
-half = { version = "2.4" }
+# half = { version = "2.4" }
+derive_builder = { version = "0.20" }
+ndarray = { version = "0.15" }
 
 [dev-dependencies]
 rand = { version = "0.8" }

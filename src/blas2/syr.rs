@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -13,12 +12,12 @@ where
 {
     unsafe fn syr(
         uplo: *const c_char,
-        n: *const c_int,
+        n: *const blas_int,
         alpha: *const F,
         x: *const F,
-        incx: *const c_int,
+        incx: *const blas_int,
         a: *mut F,
-        lda: *const c_int,
+        lda: *const blas_int,
     );
 }
 
@@ -30,24 +29,15 @@ macro_rules! impl_func {
         {
             unsafe fn syr(
                 uplo: *const c_char,
-                n: *const c_int,
+                n: *const blas_int,
                 alpha: *const $type,
                 x: *const $type,
-                incx: *const c_int,
+                incx: *const blas_int,
                 a: *mut $type,
-                lda: *const c_int,
+                lda: *const blas_int,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                type FFIHermitialFloat = <<$symm as BLASSymmetric>::HermitianFloat as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    uplo,
-                    n,
-                    alpha as *const FFIHermitialFloat,
-                    x as *const FFIFloat,
-                    incx,
-                    a as *mut FFIFloat,
-                    lda,
-                );
+                type HermitialFloat = <$symm as BLASSymmetric>::HermitianFloat;
+                ffi::$func(uplo, n, alpha as *const HermitialFloat, x, incx, a, lda);
             }
         }
     };
@@ -71,12 +61,12 @@ where
     S: BLASSymmetric,
 {
     uplo: c_char,
-    n: c_int,
+    n: blas_int,
     alpha: F,
     x: ArrayView1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
     a: ArrayOut2<'a, F>,
-    lda: c_int,
+    lda: blas_int,
 
     _phantom: core::marker::PhantomData<S>,
 }

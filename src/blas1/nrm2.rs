@@ -1,7 +1,6 @@
+use crate::ffi::{self, blas_int};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::c_int;
 use ndarray::prelude::*;
 use num_traits::Zero;
 
@@ -11,7 +10,7 @@ pub trait NRM2Func<F>
 where
     F: BLASFloat,
 {
-    unsafe fn nrm2(n: *const c_int, x: *const F, incx: *const c_int) -> F::RealFloat;
+    unsafe fn nrm2(n: *const blas_int, x: *const F, incx: *const blas_int) -> F::RealFloat;
 }
 
 macro_rules! impl_func {
@@ -21,12 +20,11 @@ macro_rules! impl_func {
             $type: BLASFloat,
         {
             unsafe fn nrm2(
-                n: *const c_int,
+                n: *const blas_int,
                 x: *const $type,
-                incx: *const c_int,
+                incx: *const blas_int,
             ) -> <$type as BLASFloat>::RealFloat {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(n, x as *const FFIFloat, incx)
+                ffi::$func(n, x, incx)
             }
         }
     };
@@ -45,9 +43,9 @@ pub struct NRM2_Driver<'x, F>
 where
     F: BLASFloat,
 {
-    n: c_int,
+    n: blas_int,
     x: ArrayView1<'x, F>,
-    incx: c_int,
+    incx: blas_int,
 }
 
 impl<'x, F> NRM2_Driver<'x, F>
