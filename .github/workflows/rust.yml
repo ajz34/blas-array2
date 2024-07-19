@@ -28,7 +28,7 @@ jobs:
         cd OpenBLAS-0.3.27
         mkdir build; cd build
         CC=gcc FC=gfortran cmake .. \
-          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 -DBUILD_BFLOAT16=1
+          -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 -DBUILD_BFLOAT16=1
         make -j4
         sudo make install
     - name: Install tarpaulin
