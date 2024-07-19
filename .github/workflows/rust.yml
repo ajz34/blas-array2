@@ -28,18 +28,15 @@ jobs:
         cd OpenBLAS-0.3.27
         mkdir build; cd build
         CC=gcc FC=gfortran cmake .. \
-          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 -DBUILD_BFLOAT16=1 \
-          -DCMAKE_INSTALL_PREFIX=~/OpenBLAS
+          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 -DBUILD_BFLOAT16=1
         make -j4
-        make install
-        ls -l ~/OpenBLAS/lib
+        sudo make install
     - name: Install tarpaulin
       run: |
         cargo binstall --no-confirm cargo-tarpaulin
     - name: Coverage
       env:
-        LD_LIBRARY_PATH: ~/OpenBLAS/lib:$LD_LIBRARY_PATH
-        RUSTFLAGS: -lopenblas -L~/OpenBLAS/lib
+        RUSTFLAGS: -lopenblas -L/usr/local/lib
       run: |
         cargo tarpaulin --out xml
     - name: Upload to codecov.io
