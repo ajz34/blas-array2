@@ -16,13 +16,30 @@ jobs:
     - name: System dependencies
       run: |
         sudo apt update
-        sudo apt install -y libopenblas-dev
+        sudo apt install -y libopenblas-dev gfortran cmake
+    - name: Build OpenBLAS
+      env:
+        VER: 0.3.27
+        OPENBLAS_DIR: $HOME/OpenBLAS
+        PATH: /usr/bin:$PATH
+      run: |
+        wget https://github.com/OpenMathLib/OpenBLAS/releases/download/v$VER/OpenBLAS-$VER.tar.gz OpenBLAS-$VER.tar.gz
+        rm -r OpenBLAS-$VER
+        tar -xf OpenBLAS-$VER.tar.gz
+        cd OpenBLAS-$VER
+        mkdir build; cd build
+        CC=gcc FC=gfortran cmake .. \
+          -DBUILD_WITHOUT_CBLAS=1 -DBUILD_WITHOUT_LAPACK=1 -DBUILD_SHARED_LIBS=1 \
+          -DCMAKE_INSTALL_PREFIX=$OPENBLAS_DIR
+        make -j4
+        make install
     - name: Install tarpaulin
       run: |
         cargo binstall --no-confirm cargo-tarpaulin
     - name: Coverage
       env:
-        RUSTFLAGS: -lopenblas
+        OPENBLAS_DIR: $HOME/OpenBLAS
+        RUSTFLAGS: -lopenblas -L$OPENBLAS_DIR/lib
       run: |
         cargo tarpaulin --out xml
     - name: Upload to codecov.io

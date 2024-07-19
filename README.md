@@ -51,7 +51,7 @@ Important points are
 - **`no_std`**: Disable crate feature `std` will be compatible to `#![no_std]`. However, currently those `no_std` features will require `alloc`.
 - **`ilp64`**: By default, FFI binding is LP64 (32-bit integer). Crate feature `ilp64` will enable ILP64 (64-bit integer).
 - **BLAS Extension**: Some crate features will enable extension of BLAS.
-    - **`gemmt`**: function GEMMTR (triangular output matrix multiplication)
+    - **`gemmt`**: GEMMTR (triangular output matrix multiplication). For OpenBLAS, version 0.3.27 is required (0.3.26 will fail some tests).
 - **`warn_on_copy`**: If input matrix layout is not consistent, and explicit memory copy / transposition / complex conjugate is required, then a warning message will be printed on stderr.
 - **`error_on_copy`**: Similar to `warn_on_copy`, but will directly raise `BLASError`.
 
