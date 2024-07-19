@@ -23,7 +23,7 @@ jobs:
         OPENBLAS_DIR: $HOME/OpenBLAS
         PATH: /usr/bin:$PATH
       run: |
-        wget https://github.com/OpenMathLib/OpenBLAS/releases/download/v$VER/OpenBLAS-$VER.tar.gz OpenBLAS-$VER.tar.gz
+        wget https://github.com/OpenMathLib/OpenBLAS/releases/download/v$VER/OpenBLAS-$VER.tar.gz -o OpenBLAS-$VER.tar.gz
         rm -r OpenBLAS-$VER
         tar -xf OpenBLAS-$VER.tar.gz
         cd OpenBLAS-$VER
