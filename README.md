@@ -5,15 +5,11 @@
 
 Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or `Ix2`) in rust.
 
-## Features
-
-- **BLAS2/BLAS3 Functionality**: All (legacy) BLAS2/BLAS3 functions have been implemented.
-- **Optional Parameters**: `scipy.linalg.blas` convention. Shape of matrix, and information of leading dimension will be checked properly. These values are automatically parsed in program, so users do not need to give these values.
-- **Row-major Layout**: Row-major support to Fortran77 API (CBLAS functionality without CBLAS functions). You can safely use the default `libopenblas.so` shipped by debian with `blas-sys`, where CBLAS is not automatically integrated, for example.
-- **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc.
-- **View instead of copy if possible**: All input in row-major (or col-major) should not involve unnecessary transpositions with explicit copy (a few exceptions occurs for complex BLAS2 functions). Further more, for some BLAS3 functions (GEMM, SYRK, TRMM, TRSM), if transposition does not involve `BLASConjTrans`, then mixed row-major or col-major also does not involve explicit transposition. Also note that in many cases, sub-matrices (sliced matrix) are also considered as row-major (or col-major), if data is stored contiguously in any dimension.
-- **Arbitary Layout**: Supports strides that `ndarray` allows (for correctness and API convenience only, but may require explicit raw data copy among DRAM if data is not stored contiguously in either dimension).
-- **`no_std`**: This crate enables `no_std`. Feature `std` will only enhance error and warning handling. However, currently those `no_std` features will require `alloc::string::String`.
+> And now the wind blows against my **stride** (leading dimension)
+>
+> And I'm losing ground to enmies on all **sides** (`'L'` / `'R'`)
+>
+> --- *Dark Sun...*, OP2 of *PERSONA5 the Animation*
 
 ## Simple example
 For simple illustration to this package, we perform $C = A B$ (`dgemm`):
@@ -22,7 +18,11 @@ use blas_array2::prelude::*;
 use ndarray::prelude::*;
 let a = array![[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]];
 let b = array![[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]];
-let c_out = DGEMM::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
+let c_out = DGEMM::default()
+    .a(a.view())
+    .b(b.view())
+    .run().unwrap()
+    .into_owned();
 println!("{:7.3?}", c_out);
 ```
 Important points are
@@ -30,6 +30,30 @@ Important points are
 - `.a`, `.b` are setter functions;
 - `.run().unwrap()` will perform computation;
 - `.into_owned()` will return result matrix as `Array2<f64>`.
+
+## Functionality
+
+### Core Functionality
+
+- **BLAS2/BLAS3 Functionality**: All (legacy) BLAS2/BLAS3 functions have been implemented.
+- **Optional Parameters**: Convention similar to [BLAST Fortran 95 binding](https://netlib.org/blas/blast-forum/chapter2.pdf) or `scipy.linalg.blas`. Shape of matrix, and information of leading dimension will be checked and parsed properly, so users do not need to give these values.
+- **Row-major Layout**: Row-major support to Fortran 77 API (CBLAS functionality without CBLAS functions). You can safely use the default `libopenblas.so` shipped by debian with `blas-sys`, where CBLAS is not automatically integrated, for example.
+- **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc. Original names such as `DGEMM`, `ZSYR2K` are also available.
+- **Avoid explicit copy if possible**: All input in row-major (or col-major) should not involve unnecessary transpositions with explicit copy. Further more, for some BLAS3 functions (GEMM, SYRK, TRMM, TRSM), if transposition does not involve `BLASConjTrans`, then mixed row-major or col-major also does not involve explicit transposition. Also note that in many cases, sub-matrices (sliced matrix) are also considered as row-major (or col-major), if data is stored contiguously in any dimension.
+
+### Other Functionality
+
+- **Arbitary Layout**: Supports any stride that `ndarray` allows.
+- **FFI**: Currently, this crate uses its custom FFI binding in `blas_array2::ffi::blas`. With BLAS extensions and ILP64 support (by cargo features), this crate can also serve as BLAS binding, similar to [blas-sys](https://github.com/blas-lapack-rs/blas-sys).
+
+### Cargo Features
+
+- **`no_std`**: Disable crate feature `std` will be compatible to `#![no_std]`. However, currently those `no_std` features will require `alloc`.
+- **`ilp64`**: By default, FFI binding is LP64 (32-bit integer). Crate feature `ilp64` will enable ILP64 (64-bit integer).
+- **BLAS Extension**: Some crate features will enable extension of BLAS.
+    - **`gemmt`**: function GEMMTR (triangular output matrix multiplication)
+- **`warn_on_copy`**: If input matrix layout is not consistent, and explicit memory copy / transposition / complex conjugate is required, then a warning message will be printed on stderr.
+- **`error_on_copy`**: Similar to `warn_on_copy`, but will directly raise `BLASError`.
 
 ## Complicated example
 
@@ -93,11 +117,13 @@ Output of `c` is
 
 This crate is available on crates.io.
 
-Currently, this crate depends on `blas-sys`. If there's any difficulties encountered in installation, then please check if `blas-sys` installed and linked properly. May be resolved by declaring
+If there's any difficulties encountered in compilation, then please check if BLAS library is linked properly. May be resolved by declaring
 ```
 RUSTFLAGS="-lopenblas"
 ```
 if using OpenBLAS as backend.
+
+Some features (such as `ilp64`, `gemmt`) requires BLAS to be compiled with 64-bit integer, or certain BLAS extensions.
 
 ## Limitation of this crate
 
@@ -116,8 +142,7 @@ For the features that will not support with,
 For the features that can be added, but currently haven't been added (probably I'm not interested in for the moment I'm writing this crate) and may be implemented in a later time, or may be implemented after someone giving feature requests in issues/PRs.
 - **BLAS1 functions**. I think that in many cases, functionality of BLAS1 can be simply covered by iterators, or features in matrix libraries such as `ndarray`. Efficiency of BLAS1 can be achieved by compiler optimization (especially for serial/single-thread usage), using BLAS may not significantly improve efficiency if your code is mostly computation-bounded instead of memory-bounded.
 - **Other kinds of floats**. With development of machine learning nowadays, demands of low-precision BLAS is increasing; MKL and OpenBLAS has already implemented some `BF16` features.
-- **BLAS extensions**. There are some important BLAS extensions, such as `omatcopy`, `imatcopy`, `gemmt`, `gemm3m`, that has already been implemented in both OpenBLAS, MKL and BLIS. These can be implemented by features with cargo, and may be one of the first things to be implemented.
-- **ILP64**. Currently, this crate uses `blas-sys` for FFI to BLAS, which FFI integer is `libc::c_int`. In most cases it is LP64; so currently ILP64 is not supported. I'm not sure if there exist some tasks that LP64 is not enough. This problem also relates to blas-sys.
+- **BLAS extensions**. There are some important BLAS extensions, such as `omatcopy`, `imatcopy`, `gemmt`, `gemm3m`, that has already been implemented in both OpenBLAS, MKL and BLIS. Currently, `gemmt` has been implemented. Others are on-going work.
 - **Documents**. I hope that this crate is clear and simple to use by itself, especially to programmers from C/C++/F77. This crate want to be `scipy.linalg.blas` replacement in rust. So documentation may not be of that important (<https://netlib.org/lapack/explore-html/> is farely well documented), but probably it's still required to newcommers.
 - **Tests**. It works, but it is messy. Boundary conditions have not been fully checked.
 

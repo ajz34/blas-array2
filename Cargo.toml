@@ -1,6 +1,6 @@
 [package]
 name = "blas-array2"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Implementation of parameter-optional BLAS2 and BLAS3 wrapper by ndarray::Array (Ix1 or Ix2)."
@@ -25,7 +25,7 @@ cblas-sys = { version = "0.1" }
 default = ["std"]
 ilp64 = []
 std = []
-warn_on_clone = []
-error_on_clone = []
+warn_on_copy = []
+error_on_copy = []
 
 gemmt = []
