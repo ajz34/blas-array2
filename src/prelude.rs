@@ -1,3 +1,4 @@
+pub use crate::ffi::blasint;
 pub use crate::util::*;
 
 pub use crate::blas1::asum::{ASUM, DASUM, DZASUM, SASUM, SCASUM};

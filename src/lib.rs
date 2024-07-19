@@ -7,5 +7,6 @@
 pub mod blas1;
 pub mod blas2;
 pub mod blas3;
+pub mod ffi;
 pub mod prelude;
 pub mod util;

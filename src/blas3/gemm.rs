@@ -1,7 +1,6 @@
+use crate::ffi::{self, blasint, c_char};
 use crate::util::*;
-use blas_sys;
 use derive_builder::Builder;
-use libc::{c_char, c_int};
 use ndarray::prelude::*;
 
 /* #region BLAS func */
@@ -13,17 +12,17 @@ where
     unsafe fn gemm(
         transa: *const c_char,
         transb: *const c_char,
-        m: *const c_int,
-        n: *const c_int,
-        k: *const c_int,
+        m: *const blasint,
+        n: *const blasint,
+        k: *const blasint,
         alpha: *const F,
         a: *const F,
-        lda: *const c_int,
+        lda: *const blasint,
         b: *const F,
-        ldb: *const c_int,
+        ldb: *const blasint,
         beta: *const F,
         c: *mut F,
-        ldc: *const c_int,
+        ldc: *const blasint,
     );
 }
 
@@ -36,34 +35,19 @@ macro_rules! impl_func {
             unsafe fn gemm(
                 transa: *const c_char,
                 transb: *const c_char,
-                m: *const c_int,
-                n: *const c_int,
-                k: *const c_int,
+                m: *const blasint,
+                n: *const blasint,
+                k: *const blasint,
                 alpha: *const $type,
                 a: *const $type,
-                lda: *const c_int,
+                lda: *const blasint,
                 b: *const $type,
-                ldb: *const c_int,
+                ldb: *const blasint,
                 beta: *const $type,
                 c: *mut $type,
-                ldc: *const c_int,
+                ldc: *const blasint,
             ) {
-                type FFIFloat = <$type as BLASFloat>::FFIFloat;
-                blas_sys::$func(
-                    transa,
-                    transb,
-                    m,
-                    n,
-                    k,
-                    alpha as *const FFIFloat,
-                    a as *const FFIFloat,
-                    lda,
-                    b as *const FFIFloat,
-                    ldb,
-                    beta as *const FFIFloat,
-                    c as *mut FFIFloat,
-                    ldc,
-                );
+                ffi::$func(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
             }
         }
     };
@@ -84,17 +68,17 @@ where
 {
     transa: c_char,
     transb: c_char,
-    m: c_int,
-    n: c_int,
-    k: c_int,
+    m: blasint,
+    n: blasint,
+    k: blasint,
     alpha: F,
     a: ArrayView2<'a, F>,
-    lda: c_int,
+    lda: blasint,
     b: ArrayView2<'b, F>,
-    ldb: c_int,
+    ldb: blasint,
     beta: F,
     c: ArrayOut2<'c, F>,
-    ldc: c_int,
+    ldc: blasint,
 }
 
 impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for GEMM_Driver<'a, 'b, 'c, F>
