@@ -291,3 +291,13 @@ void strsm_(const char *side, const char *uplo, const char *transa, const char *
 void ztrsm_(const char *side, const char *uplo, const char *transa, const char *diag, const BLAS_INT *m, const BLAS_INT *n, const BLAS_Complex16 *alpha, const BLAS_Complex16 *a, const BLAS_INT *lda, BLAS_Complex16 *b, const BLAS_INT *ldb);
 
 #pragma endregion
+
+#pragma region Level3 BLAS gemmt
+
+void sgemmt_(const char *uplo, const char *transa, const char *transb, const BLAS_INT *n, const BLAS_INT *k, const float *alpha, const float *a, const BLAS_INT *lda, const float *b, const BLAS_INT *ldb, const float *beta, float *c, const BLAS_INT *ldc);
+void cgemmt_(const char *uplo, const char *transa, const char *transb, const BLAS_INT *n, const BLAS_INT *k, const BLAS_Complex8 *alpha, const BLAS_Complex8 *a, const BLAS_INT *lda, const BLAS_Complex8 *b, const BLAS_INT *ldb, const BLAS_Complex8 *beta, BLAS_Complex8 *c, const BLAS_INT *ldc);
+void dgemmt_(const char *uplo, const char *transa, const char *transb, const BLAS_INT *n, const BLAS_INT *k, const double *alpha, const double *a, const BLAS_INT *lda, const double *b, const BLAS_INT *ldb, const double *beta, double *c, const BLAS_INT *ldc);
+void zgemmt_(const char *uplo, const char *transa, const char *transb, const BLAS_INT *n, const BLAS_INT *k, const BLAS_Complex16 *alpha, const BLAS_Complex16 *a, const BLAS_INT *lda, const BLAS_Complex16 *b, const BLAS_INT *ldb, const BLAS_Complex16 *beta, BLAS_Complex16 *c, const BLAS_INT *ldc);
+
+#pragma endregion
+

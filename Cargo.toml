@@ -23,6 +23,9 @@ cblas-sys = { version = "0.1" }
 
 [features]
 default = ["std"]
+ilp64 = []
 std = []
 warn_on_clone = []
 error_on_clone = []
+
+gemmt = []

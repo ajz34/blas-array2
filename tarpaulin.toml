@@ -1,0 +1,5 @@
+[openblas-std]
+features = "std gemmt warn_on_clone"
+
+[report]
+out = ["Html", "Lcov"]

@@ -185,6 +185,7 @@ mod valid_owned {
     test_macro!(test_103: should_panic, f32, (7, 5, 1, 1), (9, 8, 1, 3), 'R', 'R', 'N', 'T');
 }
 
+#[cfg(test)]
 mod valid_view {
     use super::*;
 

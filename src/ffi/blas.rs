@@ -1630,3 +1630,71 @@ extern "C" {
         ldb: *const blas_int,
     );
 }
+extern "C" {
+    pub fn sgemmt_(
+        uplo: *const c_char,
+        transa: *const c_char,
+        transb: *const c_char,
+        n: *const blas_int,
+        k: *const blas_int,
+        alpha: *const f32,
+        a: *const f32,
+        lda: *const blas_int,
+        b: *const f32,
+        ldb: *const blas_int,
+        beta: *const f32,
+        c: *mut f32,
+        ldc: *const blas_int,
+    );
+}
+extern "C" {
+    pub fn cgemmt_(
+        uplo: *const c_char,
+        transa: *const c_char,
+        transb: *const c_char,
+        n: *const blas_int,
+        k: *const blas_int,
+        alpha: *const c32,
+        a: *const c32,
+        lda: *const blas_int,
+        b: *const c32,
+        ldb: *const blas_int,
+        beta: *const c32,
+        c: *mut c32,
+        ldc: *const blas_int,
+    );
+}
+extern "C" {
+    pub fn dgemmt_(
+        uplo: *const c_char,
+        transa: *const c_char,
+        transb: *const c_char,
+        n: *const blas_int,
+        k: *const blas_int,
+        alpha: *const f64,
+        a: *const f64,
+        lda: *const blas_int,
+        b: *const f64,
+        ldb: *const blas_int,
+        beta: *const f64,
+        c: *mut f64,
+        ldc: *const blas_int,
+    );
+}
+extern "C" {
+    pub fn zgemmt_(
+        uplo: *const c_char,
+        transa: *const c_char,
+        transb: *const c_char,
+        n: *const blas_int,
+        k: *const blas_int,
+        alpha: *const c64,
+        a: *const c64,
+        lda: *const blas_int,
+        b: *const c64,
+        ldb: *const blas_int,
+        beta: *const c64,
+        c: *mut c64,
+        ldc: *const blas_int,
+    );
+}
