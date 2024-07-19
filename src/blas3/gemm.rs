@@ -1,4 +1,4 @@
-use crate::ffi::{self, blasint, c_char};
+use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
 use derive_builder::Builder;
 use ndarray::prelude::*;
@@ -12,17 +12,17 @@ where
     unsafe fn gemm(
         transa: *const c_char,
         transb: *const c_char,
-        m: *const blasint,
-        n: *const blasint,
-        k: *const blasint,
+        m: *const blas_int,
+        n: *const blas_int,
+        k: *const blas_int,
         alpha: *const F,
         a: *const F,
-        lda: *const blasint,
+        lda: *const blas_int,
         b: *const F,
-        ldb: *const blasint,
+        ldb: *const blas_int,
         beta: *const F,
         c: *mut F,
-        ldc: *const blasint,
+        ldc: *const blas_int,
     );
 }
 
@@ -35,17 +35,17 @@ macro_rules! impl_func {
             unsafe fn gemm(
                 transa: *const c_char,
                 transb: *const c_char,
-                m: *const blasint,
-                n: *const blasint,
-                k: *const blasint,
+                m: *const blas_int,
+                n: *const blas_int,
+                k: *const blas_int,
                 alpha: *const $type,
                 a: *const $type,
-                lda: *const blasint,
+                lda: *const blas_int,
                 b: *const $type,
-                ldb: *const blasint,
+                ldb: *const blas_int,
                 beta: *const $type,
                 c: *mut $type,
-                ldc: *const blasint,
+                ldc: *const blas_int,
             ) {
                 ffi::$func(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
             }
@@ -68,17 +68,17 @@ where
 {
     transa: c_char,
     transb: c_char,
-    m: blasint,
-    n: blasint,
-    k: blasint,
+    m: blas_int,
+    n: blas_int,
+    k: blas_int,
     alpha: F,
     a: ArrayView2<'a, F>,
-    lda: blasint,
+    lda: blas_int,
     b: ArrayView2<'b, F>,
-    ldb: blasint,
+    ldb: blas_int,
     beta: F,
     c: ArrayOut2<'c, F>,
-    ldc: blasint,
+    ldc: blas_int,
 }
 
 impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for GEMM_Driver<'a, 'b, 'c, F>
