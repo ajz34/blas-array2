@@ -287,4 +287,8 @@ mod valid_view {
     test_macro!(test_103: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'T', SYRK, 'T', c32);
     test_macro!(test_104: inline, c32, (7, 5, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'C', HERK, 'C', f32);
     test_macro!(test_105: inline, c32, (5, 7, 1, 1), (5, 5, 1, 1), 'R', 'C', 'L', 'N', HERK, 'C', f32);
+
+    // zero dimension
+    test_macro!(test_106: inline, f32, (0, 5, 1, 1), (5, 5, 1, 1), 'R', 'R', 'L', 'T', SYRK, 'T', f32);
+    test_macro!(test_107: inline, f32, (5, 0, 1, 1), (5, 5, 1, 1), 'R', 'R', 'L', 'N', SYRK, 'T', f32);
 }

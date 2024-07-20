@@ -96,7 +96,20 @@ where
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
-        if n == 0 || k == 0 {
+        if n == 0 {
+            return Ok(c.clone_to_view_mut());
+        } else if k == 0 {
+            if uplo == BLASLower.into() {
+                for i in 0..n {
+                    c.view_mut().slice_mut(s![i.., i]).mapv_inplace(|v| v * beta);
+                }
+            } else if uplo == BLASUpper.into() {
+                for i in 0..n {
+                    c.view_mut().slice_mut(s![..=i, i]).mapv_inplace(|v| v * beta);
+                }
+            } else {
+                blas_invalid!(uplo)?
+            }
             return Ok(c.clone_to_view_mut());
         }
 

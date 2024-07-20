@@ -89,6 +89,7 @@ where
 impl<'a, 'c, F, S> BLASDriver<'c, F, Ix2> for SYRK_Driver<'a, 'c, F, S>
 where
     F: BLASFloat,
+    F: From<<S as BLASSymmetric>::HermitianFloat>,
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
@@ -102,7 +103,21 @@ where
 
         // assuming dimension checks has been performed
         // unconditionally return Ok if output does not contain anything
-        if n == 0 || k == 0 {
+        if n == 0 {
+            return Ok(c.clone_to_view_mut());
+        } else if k == 0 {
+            let beta_f = F::from(beta);
+            if uplo == BLASLower.into() {
+                for i in 0..n {
+                    c.view_mut().slice_mut(s![i.., i]).mapv_inplace(|v| v * beta_f);
+                }
+            } else if uplo == BLASUpper.into() {
+                for i in 0..n {
+                    c.view_mut().slice_mut(s![..=i, i]).mapv_inplace(|v| v * beta_f);
+                }
+            } else {
+                blas_invalid!(uplo)?
+            }
             return Ok(c.clone_to_view_mut());
         }
 
@@ -144,6 +159,7 @@ where
 impl<'a, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYRK_<'a, 'c, F, S>
 where
     F: BLASFloat,
+    F: From<<S as BLASSymmetric>::HermitianFloat>,
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
@@ -232,6 +248,7 @@ pub type ZHERK<'a, 'c> = HERK<'a, 'c, c64>;
 impl<'a, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYRK_Builder<'a, 'c, F, S>
 where
     F: BLASFloat,
+    F: From<<S as BLASSymmetric>::HermitianFloat>,
     S: BLASSymmetric,
     BLASFunc: SYRKFunc<F, S>,
 {
