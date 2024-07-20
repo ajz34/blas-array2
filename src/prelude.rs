@@ -29,3 +29,40 @@ pub use crate::blas3::syr2k::{CHER2K, CSYR2K, DSYR2K, HER2K, SSYR2K, SYR2K, ZHER
 pub use crate::blas3::syrk::{CHERK, CSYRK, DSYRK, HERK, SSYRK, SYRK, ZHERK, ZSYRK};
 pub use crate::blas3::trmm::{CTRMM, DTRMM, STRMM, TRMM, ZTRMM};
 pub use crate::blas3::trsm::{CTRSM, DTRSM, STRSM, TRSM, ZTRSM};
+
+#[cfg(feature = "gemmt")]
+pub use crate::blas3::gemmt::{CGEMMT, DGEMMT, GEMMT, SGEMMT, ZGEMMT};
+
+pub mod generic {
+    pub use crate::blas1::asum::ASUM_;
+    pub use crate::blas1::iamax::IAMAX_;
+    pub use crate::blas1::nrm2::NRM2_;
+    
+    pub use crate::blas2::gbmv::GBMV_;
+    pub use crate::blas2::gemv::GEMV_;
+    pub use crate::blas2::ger::GER_;
+    pub use crate::blas2::gerc::GERC_;
+    pub use crate::blas2::sbmv::SBMV_;
+    pub use crate::blas2::spmv::SPMV_;
+    pub use crate::blas2::spr::SPR_;
+    pub use crate::blas2::spr2::SPR2_;
+    pub use crate::blas2::symv::SYMV_;
+    pub use crate::blas2::syr::SYR_;
+    pub use crate::blas2::syr2::SYR2_;
+    pub use crate::blas2::tbmv::TBMV_;
+    pub use crate::blas2::tbsv::TBSV_;
+    pub use crate::blas2::tpmv::TPMV_;
+    pub use crate::blas2::tpsv::TPSV_;
+    pub use crate::blas2::trmv::TRMV_;
+    pub use crate::blas2::trsv::TRSV_;
+    
+    pub use crate::blas3::gemm::GEMM_;
+    pub use crate::blas3::symm::SYMM_;
+    pub use crate::blas3::syr2k::SYR2K_;
+    pub use crate::blas3::syrk::SYRK_;
+    pub use crate::blas3::trmm::TRMM_;
+    pub use crate::blas3::trsm::TRSM_;
+    
+    #[cfg(feature = "gemmt")]
+    pub use crate::blas3::gemmt::GEMMT_;
+}

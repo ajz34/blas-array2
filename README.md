@@ -11,8 +11,12 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 >
 > --- *Dark Sun...*, OP2 of *PERSONA5 the Animation*
 
+Additional documents:
+- Document for develop (link at [github](docs-markdown/dev.md), link at [docs.rs](`document_dev`))
+- List of BLAS wrapper structs (link at [docs.rs](`document_func`))
+
 ## Simple example
-For simple illustration to this package, we perform $C = A B$ (`dgemm`):
+For simple illustration to this package, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}$ (`dgemm`):
 ```rust
 use blas_array2::prelude::*;
 use ndarray::prelude::*;
@@ -44,7 +48,7 @@ Important points are
 ### Other Functionality
 
 - **Arbitary Layout**: Supports any stride that `ndarray` allows.
-- **FFI**: Currently, this crate uses its custom FFI binding in `blas_array2::ffi::blas`. With BLAS extensions and ILP64 support (by cargo features), this crate can also serve as BLAS binding, similar to [blas-sys](https://github.com/blas-lapack-rs/blas-sys).
+- **FFI**: Currently, this crate uses its custom FFI binding in `blas_array2::ffi::blas` as BLAS binding, similar to [blas-sys](https://github.com/blas-lapack-rs/blas-sys). Additionally, this crate plans to (or already) support some BLAS extensions and ILP64 (by cargo features).
 
 ### Cargo Features
 
@@ -57,7 +61,7 @@ Important points are
 
 ## Complicated example
 
-For complicated situation, we perform $C = A B^\dagger$ by `SGEMM = GEMM<f32>`:
+For complicated situation, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}^\mathrm{T}$ by `SGEMM = GEMM<f32>`:
 ```rust
 use blas_array2::prelude::*;
 use ndarray::prelude::*;
