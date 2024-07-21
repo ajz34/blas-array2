@@ -18,8 +18,8 @@ pub mod document_dev {
 pub mod document_func {
     #![doc = include_str!("../docs-markdown/func.md")]
     #![allow(unused_imports)]
-    use crate::prelude::*;
     use crate::prelude::generic::*;
+    use crate::prelude::*;
 }
 
 pub mod demo_efficiency {

@@ -37,7 +37,7 @@ pub mod generic {
     pub use crate::blas1::asum::ASUM_;
     pub use crate::blas1::iamax::IAMAX_;
     pub use crate::blas1::nrm2::NRM2_;
-    
+
     pub use crate::blas2::gbmv::GBMV_;
     pub use crate::blas2::gemv::GEMV_;
     pub use crate::blas2::ger::GER_;
@@ -55,14 +55,14 @@ pub mod generic {
     pub use crate::blas2::tpsv::TPSV_;
     pub use crate::blas2::trmv::TRMV_;
     pub use crate::blas2::trsv::TRSV_;
-    
+
     pub use crate::blas3::gemm::GEMM_;
     pub use crate::blas3::symm::SYMM_;
     pub use crate::blas3::syr2k::SYR2K_;
     pub use crate::blas3::syrk::SYRK_;
     pub use crate::blas3::trmm::TRMM_;
     pub use crate::blas3::trsm::TRSM_;
-    
+
     #[cfg(feature = "gemmt")]
     pub use crate::blas3::gemmt::GEMMT_;
 }

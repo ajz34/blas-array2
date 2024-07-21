@@ -176,12 +176,9 @@ mod valid_view {
         let (bd0, bd1) = if transb == 'N' { (5, 3) } else { (3, 5) };
         let (cd0, cd1) = if transa == 'N' { (3, 3) } else { (5, 5) };
 
-        let a_shape =
-            if layout_a == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
-        let b_shape =
-            if layout_b == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
-        let c_shape =
-            if layout_c == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
+        let a_shape = if layout_a == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
+        let b_shape = if layout_b == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
+        let c_shape = if layout_c == 'C' { (20, 20).strides((1, 20)) } else { (20, 20).strides((20, 1)) };
 
         let a_raw = ArrayView2::from_shape(a_shape, &a_buffer).unwrap();
         let b_raw = ArrayView2::from_shape(b_shape, &b_buffer).unwrap();
