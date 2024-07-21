@@ -31,4 +31,4 @@ error_on_copy = []
 gemmt = []
 
 [package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", "katex-header.html", "--all-features"]
+rustdoc-args = ["--html-in-header", "katex-header.html"]

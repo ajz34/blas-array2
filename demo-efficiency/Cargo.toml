@@ -1,0 +1,14 @@
+[package]
+name = "demo-efficiency"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+blas-array2 = { path = "..", features = ["warn_on_copy"] }
+ndarray = { version = "0.15", features = ["blas"] }
+faer = { version = "0.19" }
+faer-ext = { version = "0.2", features = ["ndarray"] }
+rand = { version = "0.8" }
+
+[profile.dev]
+opt-level = 3

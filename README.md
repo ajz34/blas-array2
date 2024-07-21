@@ -13,7 +13,8 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 
 Additional documents:
 - Document for develop (link at [github](docs-markdown/dev.md), link at [docs.rs](`document_dev`))
-- List of BLAS wrapper structs (link at [docs.rs](`document_func`))
+- List of BLAS wrapper structs (link at [github](docs-markdown/func.md), link at [docs.rs](`document_func`))
+- Efficiency demonstration (link at [github](docs-markdown/demo_efficiency.md), link at [docs.rs](`demo_efficiency`))
 
 ## Simple example
 For simple illustration to this package, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}$ (`dgemm`):
@@ -133,11 +134,8 @@ Some features (such as `ilp64`, `gemmt`) requires BLAS to be compiled with 64-bi
 
 Though I believe this crate provides many functionalities that interests audiences in scientific computation, there are also some points that this crate is lack of, or is not going to support with by design.
 
-Known problems and will be fixed is
-- **Layout**. Layout rules has been implemented in all BLAS3 functions, but not all BLAS2 functions. Implementation details to layout is slightly different to CBLAS, and this will be documented in detail in future.
-
 For the features that will not support with,
-- **Supports to other types of matrices**. Currently crates such as `ndarray`, `nalgebra`, `matrix`, `faer-rs`, `rulinalg`, `rest_tensors` represent typical matrix implementations in rust. Though some crates are extremely fast (comparable to MKL or OpenBLAS) in linalgs, it seems that `ndarray` could better support features in high-dimension tensors and sub-matrices, as well as advanced slicing/view. This is also related to concept of "leading dimension" in BLAS. So `ndarray` is choosen to represent matrix in this crate. Matrices defined in other crates should be able to easily casted to `ndarray`, without explicit memory copy (by rust's moving or by tensor view of slice from raw-data), and thus not providing BLAS to other types of matrices.
+- **Supports to other types of matrices**. Currently crates such as `ndarray`, `nalgebra`, `matrix`, `faer-rs`, `rulinalg`, `rest_tensors` represent typical matrix implementations in rust. Though some crates are extremely fast (comparable to MKL or OpenBLAS, especially `faer-rs`) in linalgs, it seems that `ndarray` could better support features in high-dimension tensors and sub-matrices, as well as advanced slicing/view. This is also related to concept of "leading dimension" in BLAS. So `ndarray` is choosen to represent matrix in this crate. Matrices defined in other crates should be able to easily casted to `ndarray`, without explicit memory copy (by rust's moving or by tensor view of slice from raw-data), and thus not providing BLAS to other types of matrices.
 - **Other targets (GPU)**. This may well require a new data structure (such as numpy v.s. torch/jax). Though machine learning frameworks (such as `candle`, `burn`, etc.) seem to be promising, an API-stable tensor structure that accepts various targets, with advanced slicing/stride support has probably yet existed in rust.
 - **Arbitary data types**. Currently, this crate supports f32/f64/c32/c64, which should be supported by legacy BLAS standard. However, this crate will not implement something like int8/rug. To address this issue, a BLAS reference implementation to any types is required, and is out of scope for this crate, which is only a high-level wrapper to BLAS (or BLAS-like) functions.
 - **Fn instead of struct**. A common sense for using BLAS functions with matrices, is function with optional parameters. However, this is not possible in rust, syntactically. So we choose to use struct (with `derive_build`) to pass optional parameters. In this way, there is at least one additional drawback: no IDE-time/compile-time check to non-optional parameters, so errors may occur in runtime; this require programmers to use this crate with caution.

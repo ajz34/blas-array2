@@ -21,3 +21,7 @@ pub mod document_func {
     use crate::prelude::*;
     use crate::prelude::generic::*;
 }
+
+pub mod demo_efficiency {
+    #![doc = include_str!("../docs-markdown/demo_efficiency.md")]
+}

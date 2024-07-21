@@ -1,0 +1,38 @@
+>>> bench_dgemm <<<
+AMD 7945HX estimated efficiency: 1126.4 GFLOPS
+random initialize finished
+== bench_blas_array2_inplace ==
+time for all tests: 3.541 sec, 947.6 GFLOPS
+time for one test : 354.116 ± 0.749 msec
+c_sum: 41944505568.067749
+== bench_blas_array2_outplace ==
+time for all tests: 5.232 sec, 641.3 GFLOPS
+time for one test : 523.236 ± 2.456 msec
+c_sum: 41944505568.067749
+== bench_ndarray ==
+time for all tests: 5.271 sec, 636.5 GFLOPS
+time for one test : 527.130 ± 1.862 msec
+c_sum: 41944505568.067749
+== bench_faer ==
+time for all tests: 4.006 sec, 837.7 GFLOPS
+time for one test : 400.566 ± 6.161 msec
+c_sum: 41944505568.067749
+>>> bench_dsyrk <<<
+AMD 7945HX estimated efficiency: 1126.4 GFLOPS
+random initialize finished
+== bench_blas_array2_inplace ==
+time for all tests: 2.508 sec, 669.2 GFLOPS
+time for one test : 250.810 ± 0.311 msec
+c_sum: 41958511056.857498
+== bench_blas_array2_outplace ==
+time for all tests: 3.680 sec, 456.0 GFLOPS
+time for one test : 368.026 ± 0.399 msec
+c_sum: 41958511056.857498
+== bench_ndarray ==
+time for all tests: 5.166 sec, 324.9 GFLOPS
+time for one test : 516.609 ± 1.336 msec
+c_sum: 41958511056.857498
+== bench_faer ==
+time for all tests: 2.549 sec, 658.4 GFLOPS
+time for one test : 254.935 ± 1.845 msec
+c_sum: 41958511056.857498
