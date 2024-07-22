@@ -5,10 +5,7 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait TRMMFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait TRMMNum: BLASFloat {
     unsafe fn trmm(
         side: *const c_char,
         uplo: *const c_char,
@@ -16,17 +13,17 @@ where
         diag: *const c_char,
         m: *const blas_int,
         n: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        b: *mut F,
+        b: *mut Self,
         ldb: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl TRMMFunc<$type> for BLASFunc
+        impl TRMMNum for $type
         where
             $type: BLASFloat,
         {
@@ -37,10 +34,10 @@ macro_rules! impl_func {
                 diag: *const c_char,
                 m: *const blas_int,
                 n: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                b: *mut $type,
+                b: *mut Self,
                 ldb: *const blas_int,
             ) {
                 ffi::$func(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb);
@@ -77,8 +74,7 @@ where
 
 impl<'a, 'b, F> BLASDriver<'b, F, Ix2> for TRMM_Driver<'a, 'b, F>
 where
-    F: BLASFloat,
-    BLASFunc: TRMMFunc<F>,
+    F: TRMMNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'b, F>, BLASError> {
         let Self { side, uplo, transa, diag, m, n, alpha, a, lda, mut b, ldb } = self;
@@ -92,7 +88,7 @@ where
         }
 
         unsafe {
-            BLASFunc::trmm(&side, &uplo, &transa, &diag, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb);
+            F::trmm(&side, &uplo, &transa, &diag, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb);
         }
         return Ok(b.clone_to_view_mut());
     }
@@ -106,7 +102,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct TRMM_<'a, 'b, F>
 where
-    F: BLASFloat,
+    F: TRMMNum,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayViewMut2<'b, F>,
@@ -127,8 +123,7 @@ where
 
 impl<'a, 'b, F> BLASBuilder_<'b, F, Ix2> for TRMM_<'a, 'b, F>
 where
-    F: BLASFloat,
-    BLASFunc: TRMMFunc<F>,
+    F: TRMMNum,
 {
     fn driver(self) -> Result<TRMM_Driver<'a, 'b, F>, BLASError> {
         let Self { a, b, alpha, side, uplo, transa, diag, layout } = self;
@@ -187,8 +182,7 @@ pub type ZTRMM<'a, 'b> = TRMM<'a, 'b, c64>;
 
 impl<'a, 'b, F> BLASBuilder<'b, F, Ix2> for TRMM_Builder<'a, 'b, F>
 where
-    F: BLASFloat,
-    BLASFunc: TRMMFunc<F>,
+    F: TRMMNum,
 {
     fn run(self) -> Result<ArrayOut2<'b, F>, BLASError> {
         // initialize

@@ -5,42 +5,38 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait SYMMFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
+pub trait SYMMNum: BLASFloat {
     unsafe fn symm(
         side: *const c_char,
         uplo: *const c_char,
         m: *const blas_int,
         n: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        b: *const F,
+        b: *const Self,
         ldb: *const blas_int,
-        beta: *const F,
-        c: *mut F,
+        beta: *const Self,
+        c: *mut Self,
         ldc: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SYMMFunc<$type, $symm> for BLASFunc {
+    ($type: ty, $func: ident) => {
+        impl SYMMNum for $type {
             unsafe fn symm(
                 side: *const c_char,
                 uplo: *const c_char,
                 m: *const blas_int,
                 n: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                b: *const $type,
+                b: *const Self,
                 ldb: *const blas_int,
-                beta: *const $type,
-                c: *mut $type,
+                beta: *const Self,
+                c: *mut Self,
                 ldc: *const blas_int,
             ) {
                 ffi::$func(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc);
@@ -49,21 +45,18 @@ macro_rules! impl_func {
     };
 }
 
-impl_func!(f32, BLASSymm<f32>, ssymm_);
-impl_func!(f64, BLASSymm<f64>, dsymm_);
-impl_func!(c32, BLASSymm<c32>, csymm_);
-impl_func!(c64, BLASSymm<c64>, zsymm_);
-impl_func!(c32, BLASHermi<c32>, chemm_);
-impl_func!(c64, BLASHermi<c64>, zhemm_);
+impl_func!(f32, ssymm_);
+impl_func!(f64, dsymm_);
+impl_func!(c32, csymm_);
+impl_func!(c64, zsymm_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SYMM_Driver<'a, 'b, 'c, F, S>
+pub struct SYMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: SYMMNum,
 {
     side: c_char,
     uplo: c_char,
@@ -77,14 +70,11 @@ where
     beta: F,
     c: ArrayOut2<'c, F>,
     ldc: blas_int,
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYMM_Driver<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for SYMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMMFunc<F, S>,
+    F: SYMMNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let Self { side, uplo, m, n, alpha, a, lda, b, ldb, beta, mut c, ldc, .. } = self;
@@ -99,7 +89,7 @@ where
         }
 
         unsafe {
-            BLASFunc::symm(&side, &uplo, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
+            F::symm(&side, &uplo, &m, &n, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }
         return Ok(c.clone_to_view_mut());
     }
@@ -111,10 +101,9 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SYMM_<'a, 'b, 'c, F, S>
+pub struct SYMM_<'a, 'b, 'c, F>
 where
     F: BLASFloat,
-    S: BLASSymmetric,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayView2<'b, F>,
@@ -131,18 +120,13 @@ where
     pub uplo: BLASUpLo,
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
-
-    #[builder(private, default = "core::marker::PhantomData {}")]
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYMM_<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASBuilder_<'c, F, Ix2> for SYMM_<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMMFunc<F, S>,
+    F: SYMMNum,
 {
-    fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F, S>, BLASError> {
+    fn driver(self) -> Result<SYMM_Driver<'a, 'b, 'c, F>, BLASError> {
         let Self { a, b, c, alpha, beta, side, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -178,7 +162,7 @@ where
         let ldc = c.view().stride_of(Axis(1));
 
         // finalize
-        let driver = SYMM_Driver::<'a, 'b, 'c, F, S> {
+        let driver = SYMM_Driver::<'a, 'b, 'c, F> {
             side: side.into(),
             uplo: uplo.into(),
             m: m.try_into()?,
@@ -191,7 +175,6 @@ where
             beta,
             c,
             ldc: ldc.try_into()?,
-            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -201,21 +184,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASSymm<F>>;
+pub type SYMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F>;
 pub type SSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f32>;
 pub type DSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, f64>;
 pub type CSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c32>;
 pub type ZSYMM<'a, 'b, 'c> = SYMM<'a, 'b, 'c, c64>;
 
-pub type HEMM<'a, 'b, 'c, F> = SYMM_Builder<'a, 'b, 'c, F, BLASHermi<F>>;
-pub type CHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c32>;
-pub type ZHEMM<'a, 'b, 'c> = HEMM<'a, 'b, 'c, c64>;
-
-impl<'a, 'b, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYMM_Builder<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASBuilder<'c, F, Ix2> for SYMM_Builder<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMMFunc<F, S>,
+    F: SYMMNum,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
@@ -229,7 +206,7 @@ where
         let layout = get_layout_row_preferred(&[layout, layout_c], &[layout_a, layout_b]);
         if layout == BLASColMajor {
             // F-contiguous: C = op(A) op(B)
-            let (uplo, a_cow) = match layout_a.is_fpref() || S::is_hermitian() {
+            let (uplo, a_cow) = match layout_a.is_fpref() {
                 true => (uplo, a.to_col_layout()?),
                 false => (uplo.flip(), at.to_col_layout()?),
             };
@@ -243,12 +220,11 @@ where
                 side,
                 uplo,
                 layout: Some(BLASColMajor),
-                _phantom: core::marker::PhantomData {},
             };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous: C' = op(B') op(A')
-            let (uplo, a_cow) = match layout_a.is_cpref() || S::is_hermitian() {
+            let (uplo, a_cow) = match layout_a.is_cpref() {
                 true => (uplo, a.to_row_layout()?),
                 false => (uplo.flip(), at.to_row_layout()?),
             };
@@ -262,7 +238,6 @@ where
                 side: side.flip(),
                 uplo: uplo.flip(),
                 layout: Some(BLASColMajor),
-                _phantom: core::marker::PhantomData {},
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();
             return Ok(c);

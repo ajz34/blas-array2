@@ -1,7 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas3::symm::{HEMM, SYMM};
-use blas_array2::util::*;
+use blas_array2::prelude::*;
 use num_complex::*;
 
 #[cfg(test)]

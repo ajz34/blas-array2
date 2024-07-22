@@ -26,6 +26,7 @@ pub trait BLASFloat:
     fn is_complex() -> bool;
     fn conj(x: Self) -> Self;
     fn abs(x: Self) -> Self::RealFloat;
+    fn from_real(x: Self::RealFloat) -> Self;
 }
 
 impl BLASFloat for f32 {
@@ -43,6 +44,10 @@ impl BLASFloat for f32 {
     #[inline]
     fn abs(x: Self) -> Self::RealFloat {
         x.abs()
+    }
+    #[inline]
+    fn from_real(x: Self::RealFloat) -> Self {
+        x
     }
 }
 
@@ -62,6 +67,10 @@ impl BLASFloat for f64 {
     fn abs(x: Self) -> Self::RealFloat {
         x.abs()
     }
+    #[inline]
+    fn from_real(x: Self::RealFloat) -> Self {
+        x
+    }
 }
 
 impl BLASFloat for c32 {
@@ -80,6 +89,10 @@ impl BLASFloat for c32 {
     fn abs(x: Self) -> Self::RealFloat {
         x.abs()
     }
+    #[inline]
+    fn from_real(x: Self::RealFloat) -> Self {
+        c32::new(x, 0.0)
+    }
 }
 
 impl BLASFloat for c64 {
@@ -97,6 +110,10 @@ impl BLASFloat for c64 {
     #[inline]
     fn abs(x: Self) -> Self::RealFloat {
         x.abs()
+    }
+    #[inline]
+    fn from_real(x: Self::RealFloat) -> Self {
+        c64::new(x, 0.0)
     }
 }
 

@@ -2,70 +2,61 @@ use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
 use derive_builder::Builder;
 use ndarray::prelude::*;
-use num_traits::{One, Zero};
 
 /* #region BLAS func */
 
-pub trait SYR2KFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
+pub trait SYR2KNum: BLASFloat {
     unsafe fn syr2k(
         uplo: *const c_char,
         trans: *const c_char,
         n: *const blas_int,
         k: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        b: *const F,
+        b: *const Self,
         ldb: *const blas_int,
-        beta: *const S::HermitianFloat,
-        c: *mut F,
+        beta: *const Self,
+        c: *mut Self,
         ldc: *const blas_int,
     );
 }
 
 macro_rules! impl_syr2k {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SYR2KFunc<$type, $symm> for BLASFunc {
+    ($type: ty, $func: ident) => {
+        impl SYR2KNum for $type {
             unsafe fn syr2k(
                 uplo: *const c_char,
                 trans: *const c_char,
                 n: *const blas_int,
                 k: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                b: *const $type,
+                b: *const Self,
                 ldb: *const blas_int,
-                beta: *const <$symm as BLASSymmetric>::HermitianFloat,
-                c: *mut $type,
+                beta: *const Self,
+                c: *mut Self,
                 ldc: *const blas_int,
             ) {
-                type HermitialFloat = <$symm as BLASSymmetric>::HermitianFloat;
-                ffi::$func(uplo, trans, n, k, alpha, a, lda, b, ldb, beta as *const HermitialFloat, c, ldc);
+                ffi::$func(uplo, trans, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
             }
         }
     };
 }
 
-impl_syr2k!(f32, BLASSymm<f32>, ssyr2k_);
-impl_syr2k!(f64, BLASSymm<f64>, dsyr2k_);
-impl_syr2k!(c32, BLASSymm<c32>, csyr2k_);
-impl_syr2k!(c64, BLASSymm<c64>, zsyr2k_);
-impl_syr2k!(c32, BLASHermi<c32>, cher2k_);
-impl_syr2k!(c64, BLASHermi<c64>, zher2k_);
+impl_syr2k!(f32, ssyr2k_);
+impl_syr2k!(f64, dsyr2k_);
+impl_syr2k!(c32, csyr2k_);
+impl_syr2k!(c64, zsyr2k_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SYR2K_Driver<'a, 'b, 'c, F, S>
+pub struct SYR2K_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: SYR2KNum,
 {
     uplo: c_char,
     trans: c_char,
@@ -76,17 +67,14 @@ where
     lda: blas_int,
     b: ArrayView2<'b, F>,
     ldb: blas_int,
-    beta: S::HermitianFloat,
+    beta: F,
     c: ArrayOut2<'c, F>,
     ldc: blas_int,
 }
 
-impl<'a, 'b, 'c, F, S> BLASDriver<'c, F, Ix2> for SYR2K_Driver<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for SYR2K_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    F: From<<S as BLASSymmetric>::HermitianFloat>,
-    S: BLASSymmetric,
-    BLASFunc: SYR2KFunc<F, S>,
+    F: SYR2KNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let Self { uplo, trans, n, k, alpha, a, lda, b, ldb, beta, mut c, ldc } = self;
@@ -115,7 +103,7 @@ where
         }
 
         unsafe {
-            BLASFunc::syr2k(&uplo, &trans, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
+            F::syr2k(&uplo, &trans, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }
         return Ok(c.clone_to_view_mut());
     }
@@ -127,11 +115,9 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SYR2K_<'a, 'b, 'c, F, S>
+pub struct SYR2K_<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    S::HermitianFloat: Zero + One,
+    F: SYR2KNum,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayView2<'b, F>,
@@ -140,8 +126,8 @@ where
     pub c: Option<ArrayViewMut2<'c, F>>,
     #[builder(setter(into), default = "F::one()")]
     pub alpha: F,
-    #[builder(setter(into), default = "S::HermitianFloat::zero()")]
-    pub beta: S::HermitianFloat,
+    #[builder(setter(into), default = "F::zero()")]
+    pub beta: F,
     #[builder(setter(into), default = "BLASLower")]
     pub uplo: BLASUpLo,
     #[builder(setter(into), default = "BLASNoTrans")]
@@ -150,14 +136,11 @@ where
     pub layout: Option<BLASLayout>,
 }
 
-impl<'a, 'b, 'c, F, S> BLASBuilder_<'c, F, Ix2> for SYR2K_<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASBuilder_<'c, F, Ix2> for SYR2K_<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    F: From<<S as BLASSymmetric>::HermitianFloat>,
-    S: BLASSymmetric,
-    BLASFunc: SYR2KFunc<F, S>,
+    F: SYR2KNum,
 {
-    fn driver(self) -> Result<SYR2K_Driver<'a, 'b, 'c, F, S>, BLASError> {
+    fn driver(self) -> Result<SYR2K_Driver<'a, 'b, 'c, F>, BLASError> {
         let Self { a, b, c, alpha, beta, uplo, trans, layout } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -187,17 +170,10 @@ where
                 BLASNoTrans | BLASTrans | BLASConjTrans => (),
                 _ => blas_invalid!(trans)?,
             },
-            true => match S::is_hermitian() {
-                false => match trans {
-                    // csyrk, zsyrk: NT accepted
-                    BLASNoTrans | BLASTrans => (),
-                    _ => blas_invalid!(trans)?,
-                },
-                true => match trans {
-                    // cherk, zherk: NC accepted
-                    BLASNoTrans | BLASConjTrans => (),
-                    _ => blas_invalid!(trans)?,
-                },
+            true => match trans {
+                // csyrk, zsyrk: NT accepted
+                BLASNoTrans | BLASTrans => (),
+                _ => blas_invalid!(trans)?,
             },
         };
 
@@ -239,22 +215,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYR2K<'a, 'b, 'c, F> = SYR2K_Builder<'a, 'b, 'c, F, BLASSymm<F>>;
+pub type SYR2K<'a, 'b, 'c, F> = SYR2K_Builder<'a, 'b, 'c, F>;
 pub type SSYR2K<'a, 'b, 'c> = SYR2K<'a, 'b, 'c, f32>;
 pub type DSYR2K<'a, 'b, 'c> = SYR2K<'a, 'b, 'c, f64>;
 pub type CSYR2K<'a, 'b, 'c> = SYR2K<'a, 'b, 'c, c32>;
 pub type ZSYR2K<'a, 'b, 'c> = SYR2K<'a, 'b, 'c, c64>;
 
-pub type HER2K<'a, 'b, 'c, F> = SYR2K_Builder<'a, 'b, 'c, F, BLASHermi<F>>;
-pub type CHER2K<'a, 'b, 'c> = HER2K<'a, 'b, 'c, c32>;
-pub type ZHER2K<'a, 'b, 'c> = HER2K<'a, 'b, 'c, c64>;
-
-impl<'a, 'b, 'c, F, S> BLASBuilder<'c, F, Ix2> for SYR2K_Builder<'a, 'b, 'c, F, S>
+impl<'a, 'b, 'c, F> BLASBuilder<'c, F, Ix2> for SYR2K_Builder<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    F: From<<S as BLASSymmetric>::HermitianFloat>,
-    S: BLASSymmetric,
-    BLASFunc: SYR2KFunc<F, S>,
+    F: SYR2KNum,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize
@@ -268,17 +237,10 @@ where
                 BLASNoTrans | BLASTrans | BLASConjTrans => (),
                 _ => blas_invalid!(trans)?,
             },
-            true => match S::is_hermitian() {
-                false => match trans {
-                    // csyrk, zsyrk: NT accepted
-                    BLASNoTrans | BLASTrans => (),
-                    _ => blas_invalid!(trans)?,
-                },
-                true => match trans {
-                    // cherk, zherk: NC accepted
-                    BLASNoTrans | BLASConjTrans => (),
-                    _ => blas_invalid!(trans)?,
-                },
+            true => match trans {
+                // csyrk, zsyrk: NT accepted
+                BLASNoTrans | BLASTrans => (),
+                _ => blas_invalid!(trans)?,
             },
         };
 
@@ -314,7 +276,7 @@ where
                 alpha,
                 beta,
                 uplo: uplo.flip(),
-                trans: trans.flip(S::is_hermitian()),
+                trans: trans.flip(false),
                 layout: Some(BLASColMajor),
             };
             return Ok(obj.driver()?.run_blas()?.reversed_axes());

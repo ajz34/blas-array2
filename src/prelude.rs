@@ -23,15 +23,18 @@ pub use crate::blas2::tpsv::{CTPSV, DTPSV, STPSV, TPSV, ZTPSV};
 pub use crate::blas2::trmv::{CTRMV, DTRMV, STRMV, TRMV, ZTRMV};
 pub use crate::blas2::trsv::{CTRSV, DTRSV, STRSV, TRSV, ZTRSV};
 
-pub use crate::blas3::gemm::{CGEMM, DGEMM, GEMM, SGEMM, ZGEMM};
-pub use crate::blas3::symm::{CHEMM, CSYMM, DSYMM, HEMM, SSYMM, SYMM, ZHEMM, ZSYMM};
-pub use crate::blas3::syr2k::{CHER2K, CSYR2K, DSYR2K, HER2K, SSYR2K, SYR2K, ZHER2K, ZSYR2K};
-pub use crate::blas3::syrk::{CHERK, CSYRK, DSYRK, HERK, SSYRK, SYRK, ZHERK, ZSYRK};
-pub use crate::blas3::trmm::{CTRMM, DTRMM, STRMM, TRMM, ZTRMM};
-pub use crate::blas3::trsm::{CTRSM, DTRSM, STRSM, TRSM, ZTRSM};
+pub use crate::blas3::gemm::{GEMMNum, CGEMM, DGEMM, GEMM, SGEMM, ZGEMM};
+pub use crate::blas3::hemm::{HEMMNum, CHEMM, HEMM, ZHEMM};
+pub use crate::blas3::her2k::{HER2KNum, CHER2K, HER2K, ZHER2K};
+pub use crate::blas3::herk::{HERKNum, CHERK, HERK, ZHERK};
+pub use crate::blas3::symm::{SYMMNum, CSYMM, DSYMM, SSYMM, SYMM, ZSYMM};
+pub use crate::blas3::syr2k::{SYR2KNum, CSYR2K, DSYR2K, SSYR2K, SYR2K, ZSYR2K};
+pub use crate::blas3::syrk::{SYRKNum, CSYRK, DSYRK, SSYRK, SYRK, ZSYRK};
+pub use crate::blas3::trmm::{TRMMNum, CTRMM, DTRMM, STRMM, TRMM, ZTRMM};
+pub use crate::blas3::trsm::{TRSMNum, CTRSM, DTRSM, STRSM, TRSM, ZTRSM};
 
 #[cfg(feature = "gemmt")]
-pub use crate::blas3::gemmt::{CGEMMT, DGEMMT, GEMMT, SGEMMT, ZGEMMT};
+pub use crate::blas3::gemmt::{GEMMTNum, CGEMMT, DGEMMT, GEMMT, SGEMMT, ZGEMMT};
 
 pub mod generic {
     pub use crate::blas1::asum::ASUM_;

@@ -5,46 +5,40 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait GEMMFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait GEMMNum: BLASFloat {
     unsafe fn gemm(
         transa: *const c_char,
         transb: *const c_char,
         m: *const blas_int,
         n: *const blas_int,
         k: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        b: *const F,
+        b: *const Self,
         ldb: *const blas_int,
-        beta: *const F,
-        c: *mut F,
+        beta: *const Self,
+        c: *mut Self,
         ldc: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl GEMMFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl GEMMNum for $type {
             unsafe fn gemm(
                 transa: *const c_char,
                 transb: *const c_char,
                 m: *const blas_int,
                 n: *const blas_int,
                 k: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                b: *const $type,
+                b: *const Self,
                 ldb: *const blas_int,
-                beta: *const $type,
-                c: *mut $type,
+                beta: *const Self,
+                c: *mut Self,
                 ldc: *const blas_int,
             ) {
                 ffi::$func(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
@@ -64,7 +58,7 @@ impl_func!(c64, zgemm_);
 
 pub struct GEMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
+    F: GEMMNum,
 {
     transa: c_char,
     transb: c_char,
@@ -83,8 +77,7 @@ where
 
 impl<'a, 'b, 'c, F> BLASDriver<'c, F, Ix2> for GEMM_Driver<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMMFunc<F>,
+    F: GEMMNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         let Self { transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, mut c, ldc } = self;
@@ -106,9 +99,7 @@ where
         }
 
         unsafe {
-            BLASFunc::gemm(
-                &transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc,
-            );
+            F::gemm(&transa, &transb, &m, &n, &k, &alpha, a_ptr, &lda, b_ptr, &ldb, &beta, c_ptr, &ldc);
         }
         return Ok(c.clone_to_view_mut());
     }
@@ -122,7 +113,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct GEMM_<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
+    F: GEMMNum,
 {
     pub a: ArrayView2<'a, F>,
     pub b: ArrayView2<'b, F>,
@@ -143,8 +134,7 @@ where
 
 impl<'a, 'b, 'c, F> BLASBuilder_<'c, F, Ix2> for GEMM_<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMMFunc<F>,
+    F: GEMMNum,
 {
     fn driver(self) -> Result<GEMM_Driver<'a, 'b, 'c, F>, BLASError> {
         let Self { a, b, c, alpha, beta, transa, transb, layout } = self;
@@ -221,8 +211,7 @@ pub type ZGEMM<'a, 'b, 'c> = GEMM<'a, 'b, 'c, c64>;
 
 impl<'a, 'b, 'c, F> BLASBuilder<'c, F, Ix2> for GEMM_Builder<'a, 'b, 'c, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMMFunc<F>,
+    F: GEMMNum,
 {
     fn run(self) -> Result<ArrayOut2<'c, F>, BLASError> {
         // initialize

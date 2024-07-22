@@ -1,7 +1,6 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas3::syrk::{HERK, SYRK};
-use blas_array2::util::*;
+use blas_array2::prelude::*;
 use ndarray::prelude::*;
 use num_complex::*;
 
