@@ -16,6 +16,9 @@ Additional documents:
 - List of BLAS wrapper structs (link at [github](docs-markdown/func.md), link at [docs.rs](`document_func`))
 - Efficiency demonstration (link at [github](docs-markdown/demo_efficiency.md), link at [docs.rs](`demo_efficiency`))
 
+After v0.2, this crate have implemented most planned functionalities. This crate is considered to be almost finished, and may not be actively maintained or updated.
+However, we also welcome issues and PRs to further increase new features or bug fixes.
+
 ## Simple example
 For simple illustration to this package, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}$ (`dgemm`):
 ```rust
