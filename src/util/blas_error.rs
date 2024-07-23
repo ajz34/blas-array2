@@ -169,3 +169,88 @@ macro_rules! blas_warn_layout_clone {
 }
 
 /* #endregion */
+
+// Following test is assisted by DeepSeek
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_uninitialized_field_error() {
+        let error = UninitializedFieldError::new("field_name");
+        let blas_error: BLASError = error.into();
+        assert_eq!(blas_error, BLASError::UninitializedField("field_name"));
+    }
+
+    #[test]
+    fn test_from_try_from_int_error() {
+        let error: Result<i32, _> = (1000000000000 as usize).try_into();
+        let blas_error: BLASError = error.unwrap_err().into();
+        assert_eq!(blas_error, BLASError::OverflowDimension("TryFromIntError".to_string()));
+    }
+
+    #[test]
+    fn test_blas_assert_macro_with_args() {
+        let result = blas_assert!(false, InvalidFlag, "test_condition");
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+            assert!(msg.contains("test_condition"));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+
+    #[test]
+    fn test_blas_assert_macro_without_args() {
+        let result = blas_assert!(false, InvalidFlag);
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+
+    #[test]
+    fn test_blas_assert_eq_macro() {
+        let result = blas_assert_eq!(1, 2, InvalidFlag);
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+            assert!(msg.contains(r#""1" = 1 not equal to "2" = 2"#));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+
+    #[test]
+    fn test_blas_raise_macro_without_args() {
+        let result: Result<(), BLASError> = blas_raise!(InvalidFlag);
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+
+    #[test]
+    fn test_blas_raise_macro_with_args() {
+        let result: Result<(), BLASError> = blas_raise!(InvalidFlag, "test_message");
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+            assert!(msg.contains("test_message"));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+
+    #[test]
+    fn test_blas_invalid_macro() {
+        let word = 1;
+        let result: Result<(), BLASError> = blas_invalid!(word);
+        if let Err(BLASError::InvalidFlag(msg)) = result {
+            assert!(msg.contains("BLASError::InvalidFlag"));
+            assert!(msg.contains(r#""word" = 1"#));
+        } else {
+            panic!("Expected BLASError::InvalidFlag");
+        }
+    }
+}

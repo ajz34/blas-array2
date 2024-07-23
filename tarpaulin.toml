@@ -1,6 +1,6 @@
 [openblas-std]
 features = "std gemmt warn_on_copy"
-exclude-files = ["demo-efficiency", "tmp"]
+exclude-files = ["demo-efficiency/*", "tmp/*"]
 
 [report]
 out = ["Html", "Lcov"]

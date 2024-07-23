@@ -8,9 +8,6 @@ pub type c32 = Complex<f32>;
 #[allow(non_camel_case_types)]
 pub type c64 = Complex<f64>;
 
-// for legacy compatibility
-// use blas_sys::{c_double_complex, c_float_complex};
-
 #[allow(bad_style)]
 pub type c_double_complex = [f64; 2];
 #[allow(bad_style)]
@@ -117,53 +114,6 @@ impl BLASFloat for c64 {
     }
 }
 
-/// Trait marker for complex symmetry (whether it is symmetric or hermitian)
-pub trait BLASSymmetric {
-    type Float: BLASFloat;
-    type HermitianFloat: BLASFloat;
-    fn is_hermitian() -> bool;
-}
-
-/// Struct marker for symmetric matrix
-pub struct BLASSymm<F>
-where
-    F: BLASFloat,
-{
-    _phantom: core::marker::PhantomData<F>,
-}
-
-impl<F> BLASSymmetric for BLASSymm<F>
-where
-    F: BLASFloat,
-{
-    type Float = F;
-    type HermitianFloat = F;
-    #[inline]
-    fn is_hermitian() -> bool {
-        false
-    }
-}
-
-/// Struct marker for hermitian matrix
-pub struct BLASHermi<F>
-where
-    F: BLASFloat,
-{
-    _phantom: core::marker::PhantomData<F>,
-}
-
-impl<F> BLASSymmetric for BLASHermi<F>
-where
-    F: BLASFloat,
-{
-    type Float = F;
-    type HermitianFloat = <F as BLASFloat>::RealFloat;
-    #[inline]
-    fn is_hermitian() -> bool {
-        true
-    }
-}
-
 /// Marker struct of BLAS functions.
 ///
 /// This struct will be implemented in modules of each function.
@@ -190,4 +140,50 @@ where
     D: Dimension,
 {
     fn run(self) -> Result<ArrayOut<'c, F, D>, BLASError>;
+}
+
+// Following test is assisted by DeepSeek
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_f32_blasfloat() {
+        let x = 3.0_f32;
+        assert_eq!(<f32 as BLASFloat>::is_complex(), false);
+        assert_eq!(<f32 as BLASFloat>::conj(x), x);
+        assert_eq!(<f32 as BLASFloat>::abs(x), x);
+        assert_eq!(<f32 as BLASFloat>::from_real(x), x);
+        assert_eq!(<f32 as BLASFloat>::EPSILON, f32::EPSILON);
+    }
+
+    #[test]
+    fn test_f64_blasfloat() {
+        let x = 3.0_f64;
+        assert_eq!(<f64 as BLASFloat>::is_complex(), false);
+        assert_eq!(<f64 as BLASFloat>::conj(x), x);
+        assert_eq!(<f64 as BLASFloat>::abs(x), x);
+        assert_eq!(<f64 as BLASFloat>::from_real(x), x);
+        assert_eq!(<f64 as BLASFloat>::EPSILON, f64::EPSILON);
+    }
+
+    #[test]
+    fn test_c32_blasfloat() {
+        let x = Complex::new(3.0_f32, 4.0_f32);
+        assert_eq!(<c32 as BLASFloat>::is_complex(), true);
+        assert_eq!(<c32 as BLASFloat>::conj(x), x.conj());
+        assert_eq!(<c32 as BLASFloat>::abs(x), x.abs());
+        assert_eq!(<c32 as BLASFloat>::from_real(3.0_f32), Complex::new(3.0_f32, 0.0_f32));
+        assert_eq!(<c32 as BLASFloat>::EPSILON, f32::EPSILON);
+    }
+
+    #[test]
+    fn test_c64_blasfloat() {
+        let x = Complex::new(3.0_f64, 4.0_f64);
+        assert_eq!(<c64 as BLASFloat>::is_complex(), true);
+        assert_eq!(<c64 as BLASFloat>::conj(x), x.conj());
+        assert_eq!(<c64 as BLASFloat>::abs(x), x.abs());
+        assert_eq!(<c64 as BLASFloat>::from_real(3.0_f64), Complex::new(3.0_f64, 0.0_f64));
+        assert_eq!(<c64 as BLASFloat>::EPSILON, f64::EPSILON);
+    }
 }
