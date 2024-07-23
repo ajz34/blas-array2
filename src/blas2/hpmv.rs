@@ -143,7 +143,7 @@ where
 
         // finalize
         let driver = HPMV_Driver {
-            uplo: uplo.into(),
+            uplo: uplo.try_into()?,
             n: n.try_into()?,
             alpha,
             ap,
@@ -195,7 +195,7 @@ where
                     ap: ap_cow.view(),
                     x: x.view(),
                     y,
-                    uplo: obj.uplo.flip(),
+                    uplo: obj.uplo.flip()?,
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
                     layout: Some(BLASColMajor),
@@ -206,7 +206,7 @@ where
                 return Ok(y);
             } else {
                 let obj =
-                    HPMV_ { ap: ap_cow.view(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
+                    HPMV_ { ap: ap_cow.view(), uplo: obj.uplo.flip()?, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

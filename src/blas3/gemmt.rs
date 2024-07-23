@@ -95,11 +95,11 @@ where
         if n == 0 {
             return Ok(c.clone_to_view_mut());
         } else if k == 0 {
-            if uplo == BLASLower.into() {
+            if uplo == BLASLower.try_into()? {
                 for i in 0..n {
                     c.view_mut().slice_mut(s![i.., i]).mapv_inplace(|v| v * beta);
                 }
-            } else if uplo == BLASUpper.into() {
+            } else if uplo == BLASUpper.try_into()? {
                 for i in 0..n {
                     c.view_mut().slice_mut(s![..=i, i]).mapv_inplace(|v| v * beta);
                 }
@@ -189,9 +189,9 @@ where
 
         // finalize
         let driver = GEMMT_Driver {
-            uplo: uplo.into(),
-            transa: transa.into(),
-            transb: transb.into(),
+            uplo: uplo.try_into()?,
+            transa: transa.try_into()?,
+            transb: transb.try_into()?,
             n: n.try_into()?,
             k: k.try_into()?,
             alpha,
@@ -256,14 +256,14 @@ where
                 c: c.map(|c| c.reversed_axes()),
                 alpha,
                 beta,
-                uplo: uplo.flip(),
+                uplo: uplo.flip()?,
                 transa: transb,
                 transb: transa,
                 layout: Some(BLASColMajor),
             };
             return Ok(obj.driver()?.run_blas()?.reversed_axes());
         } else {
-            panic!("This is designed not to execuate this line.");
+            return blas_raise!(RuntimeError, "This is designed not to execuate this line.");
         }
     }
 }

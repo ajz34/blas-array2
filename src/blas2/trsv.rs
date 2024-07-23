@@ -128,9 +128,9 @@ where
 
         // finalize
         let driver = TRSV_Driver {
-            uplo: uplo.into(),
-            trans: trans.into(),
-            diag: diag.into(),
+            uplo: uplo.try_into()?,
+            trans: trans.try_into()?,
+            diag: diag.try_into()?,
             n: n.try_into()?,
             a,
             lda: lda.try_into()?,
@@ -170,19 +170,19 @@ where
             match obj.trans {
                 BLASNoTrans => {
                     // N -> T: x = op(A')' x
-                    let obj = TRSV_ { a: a_cow.t(), trans: BLASTrans, uplo: obj.uplo.flip(), ..obj };
+                    let obj = TRSV_ { a: a_cow.t(), trans: BLASTrans, uplo: obj.uplo.flip()?, ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASTrans => {
                     // T -> N: x = op(A') x
-                    let obj = TRSV_ { a: a_cow.t(), trans: BLASNoTrans, uplo: obj.uplo.flip(), ..obj };
+                    let obj = TRSV_ { a: a_cow.t(), trans: BLASNoTrans, uplo: obj.uplo.flip()?, ..obj };
                     return obj.driver()?.run_blas();
                 },
                 BLASConjTrans => {
                     // C -> T: x* = op(A') x*; x = x*
                     let mut x = obj.x;
                     x.mapv_inplace(F::conj);
-                    let obj = TRSV_ { a: a_cow.t(), x, trans: BLASNoTrans, uplo: obj.uplo.flip(), ..obj };
+                    let obj = TRSV_ { a: a_cow.t(), x, trans: BLASNoTrans, uplo: obj.uplo.flip()?, ..obj };
                     let mut x = obj.driver()?.run_blas()?;
                     x.view_mut().mapv_inplace(F::conj);
                     return Ok(x);

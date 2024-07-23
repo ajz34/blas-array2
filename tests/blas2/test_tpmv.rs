@@ -40,7 +40,7 @@ mod valid_col_major {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
-                let a_naive = transpose(&a_naive.view(), trans.into());
+                let a_naive = transpose(&a_naive.view(), trans.try_into().unwrap());
                 let x_assign = gemv(&a_naive.view(), &x_raw.slice(x_slc));
                 let mut x_naive = x_raw.clone();
                 x_naive.slice_mut(x_slc).assign(&x_assign);

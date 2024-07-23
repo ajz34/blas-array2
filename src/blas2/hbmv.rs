@@ -151,7 +151,7 @@ where
 
         // finalize
         let driver = HBMV_Driver {
-            uplo: uplo.into(),
+            uplo: uplo.try_into()?,
             n: n.try_into()?,
             k: k.try_into()?,
             alpha,
@@ -206,7 +206,7 @@ where
                     a: a_cow.t(),
                     x: x.view(),
                     y,
-                    uplo: obj.uplo.flip(),
+                    uplo: obj.uplo.flip()?,
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
                     layout: Some(BLASColMajor),
@@ -216,7 +216,7 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = HBMV_ { a: a_cow.t(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
+                let obj = HBMV_ { a: a_cow.t(), uplo: obj.uplo.flip()?, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

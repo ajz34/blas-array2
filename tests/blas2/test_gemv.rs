@@ -30,7 +30,7 @@ mod valid {
                 let x_slc = slice_1d($($x_slc),+);
                 let y_slc = slice_1d($($y_slc),+);
 
-                let a_naive = transpose(&a_raw.slice(a_slc), $trans.into());
+                let a_naive = transpose(&a_raw.slice(a_slc), $trans.try_into().unwrap());
                 let x_naive = x_raw.slice(x_slc).into_owned();
                 let mut y_naive = y_raw.clone();
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());

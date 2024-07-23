@@ -139,7 +139,7 @@ where
 
         // finalize
         let driver = HER2_Driver {
-            uplo: uplo.into(),
+            uplo: uplo.try_into()?,
             n: n.try_into()?,
             alpha,
             x,
@@ -178,7 +178,7 @@ where
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let uplo = obj.uplo.flip();
+            let uplo = obj.uplo.flip()?;
             let a = obj.a.map(|a| a.reversed_axes());
             if F::is_complex() {
                 let x = obj.x.mapv(F::conj);

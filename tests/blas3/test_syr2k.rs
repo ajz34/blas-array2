@@ -43,16 +43,16 @@ mod valid_owned {
 
                 let a_naive = a_raw.slice(a_slc).to_owned();
                 let b_naive = b_raw.slice(b_slc).to_owned();
-                let c_assign = match trans.into() {
+                let c_assign = match trans.try_into().unwrap() {
                     BLASNoTrans => (
-                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.into()).view())
+                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.try_into().unwrap()).view())
                     ),
                     BLASTrans | BLASConjTrans => (
-                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &b_naive.view())
+                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view(), &b_naive.view())
                     ),
                     _ => panic!("Invalid"),
                 };
-                let c_assign = &c_assign + &transpose(&c_assign.view(), $blas_trans.into());
+                let c_assign = &c_assign + &transpose(&c_assign.view(), $blas_trans.try_into().unwrap());
                 let mut c_naive = Array2::zeros(c_assign.dim());
                 tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);
 
@@ -151,16 +151,16 @@ mod valid_view {
                         c_assign_0[[i, i]] = <$F>::from(0.5) * (c_assign_0[[i, i]] + c_assign_0[[i, i]].conj());
                     }
                 }
-                let c_assign_1 = match trans.into() {
+                let c_assign_1 = match trans.try_into().unwrap() {
                     BLASNoTrans => {
-                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.into()).view())
+                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&b_naive.view(), $blas_trans.try_into().unwrap()).view())
                     },
                     BLASTrans | BLASConjTrans => {
-                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &b_naive.view())
+                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view(), &b_naive.view())
                     },
                     _ => panic!("Invalid"),
                 };
-                let c_assign = &c_assign_0 + &c_assign_1 + &transpose(&c_assign_1.view(), $blas_trans.into()).view();
+                let c_assign = &c_assign_0 + &c_assign_1 + &transpose(&c_assign_1.view(), $blas_trans.try_into().unwrap()).view();
                 tril_assign(&mut c_naive.slice_mut(c_slc), &c_assign.view(), uplo);
 
                 if let ArrayOut2::ViewMut(_) = c_out {

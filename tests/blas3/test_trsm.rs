@@ -30,7 +30,7 @@ mod valid {
                 a_naive[[i, i]] = 1.0;
             }
         }
-        match uplo.into() {
+        match uplo.try_into().unwrap() {
             BLASLower => {
                 for i in 0..a_naive.len_of(Axis(0)) {
                     for j in i + 1..a_naive.len_of(Axis(1)) {
@@ -47,7 +47,7 @@ mod valid {
             },
             _ => panic!(),
         }
-        let a_naive = transpose(&a_naive.view(), transa.into());
+        let a_naive = transpose(&a_naive.view(), transa.try_into().unwrap());
 
         let b_out = TRSM::default()
             .a(a_raw.slice(a_slc))
@@ -60,7 +60,7 @@ mod valid {
             .run()
             .unwrap();
         let b_out = b_out.into_owned();
-        let b_out = match side.into() {
+        let b_out = match side.try_into().unwrap() {
             BLASLeft => gemm(&a_naive.view(), &b_out.view()),
             BLASRight => gemm(&b_out.view(), &a_naive.view()),
             _ => panic!(),
@@ -99,7 +99,7 @@ mod valid {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
-                match $uplo.into() {
+                match $uplo.try_into().unwrap() {
                     BLASLower => {
                         for i in 0..a_naive.len_of(Axis(0)) {
                             for j in i+1..a_naive.len_of(Axis(1)) {
@@ -116,7 +116,7 @@ mod valid {
                     },
                     _ => panic!(),
                 }
-                let a_naive = transpose(&a_naive.view(), $transa.into());
+                let a_naive = transpose(&a_naive.view(), $transa.try_into().unwrap());
 
                 let b_out = TRSM::default()
                     .a(a_raw.slice(a_slc))
@@ -129,7 +129,7 @@ mod valid {
                     .run()
                     .unwrap();
                 let b_out = b_out.into_owned();
-                let b_out = match $side.into() {
+                let b_out = match $side.try_into().unwrap() {
                     BLASLeft => gemm(&a_naive.view(), &b_out.view()),
                     BLASRight => gemm(&b_out.view(), &a_naive.view()),
                     _ => panic!(),

@@ -61,12 +61,12 @@ pub mod generic {
     pub use crate::blas2::trsv::TRSV_;
 
     pub use crate::blas3::gemm::GEMM_;
-    pub use crate::blas3::symm::SYMM_;
     pub use crate::blas3::hemm::HEMM_;
-    pub use crate::blas3::syr2k::SYR2K_;
     pub use crate::blas3::her2k::HER2K_;
-    pub use crate::blas3::syrk::SYRK_;
     pub use crate::blas3::herk::HERK_;
+    pub use crate::blas3::symm::SYMM_;
+    pub use crate::blas3::syr2k::SYR2K_;
+    pub use crate::blas3::syrk::SYRK_;
     pub use crate::blas3::trmm::TRMM_;
     pub use crate::blas3::trsm::TRSM_;
 

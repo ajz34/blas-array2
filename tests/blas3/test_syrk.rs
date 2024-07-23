@@ -28,10 +28,12 @@ mod valid_owned {
             .unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
-        let c_assign = match trans.into() {
-            BLASNoTrans => alpha * gemm(&a_naive.view(), &transpose(&a_naive.view(), trans.into()).view()),
+        let c_assign = match trans.try_into().unwrap() {
+            BLASNoTrans => {
+                alpha * gemm(&a_naive.view(), &transpose(&a_naive.view(), trans.try_into().unwrap()).view())
+            },
             BLASTrans | BLASConjTrans => {
-                alpha * gemm(&transpose(&a_naive.view(), trans.into()).view(), &a_naive.view())
+                alpha * gemm(&transpose(&a_naive.view(), trans.try_into().unwrap()).view(), &a_naive.view())
             },
             _ => panic!("Invalid"),
         };
@@ -79,9 +81,9 @@ mod valid_owned {
                     .unwrap();
 
                 let a_naive = a_raw.slice(a_slc).to_owned();
-                let c_assign = match trans.into() {
-                    BLASNoTrans => <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&a_naive.view(), $blas_trans.into()).view()),
-                    BLASTrans | BLASConjTrans => <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &a_naive.view()),
+                let c_assign = match trans.try_into().unwrap() {
+                    BLASNoTrans => <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view()),
+                    BLASTrans | BLASConjTrans => <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view(), &a_naive.view()),
                     _ => panic!("Invalid"),
                 };
                 let mut c_naive = Array2::zeros(c_assign.dim());
@@ -163,15 +165,21 @@ mod valid_view {
             .unwrap();
 
         let a_naive = a_raw.slice(a_slc).to_owned();
-        let c_assign = match trans.into() {
+        let c_assign = match trans.try_into().unwrap() {
             BLASNoTrans => {
                 <c32>::from(alpha)
-                    * gemm(&a_naive.view(), &transpose(&a_naive.view(), blas_trans.into()).view())
+                    * gemm(
+                        &a_naive.view(),
+                        &transpose(&a_naive.view(), blas_trans.try_into().unwrap()).view(),
+                    )
                     + beta * &c_naive.slice(c_slc)
             },
             BLASTrans | BLASConjTrans => {
                 <c32>::from(alpha)
-                    * gemm(&transpose(&a_naive.view(), blas_trans.into()).view(), &a_naive.view())
+                    * gemm(
+                        &transpose(&a_naive.view(), blas_trans.try_into().unwrap()).view(),
+                        &a_naive.view(),
+                    )
                     + beta * &c_naive.slice(c_slc)
             },
             _ => panic!("Invalid"),
@@ -230,12 +238,12 @@ mod valid_view {
                         c_assign[[i, i]] = <$F>::from(0.5) * (c_assign[[i, i]] + c_assign[[i, i]].conj());
                     }
                 }
-                c_assign += &(match trans.into() {
+                c_assign += &(match trans.try_into().unwrap() {
                     BLASNoTrans => {
-                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&a_naive.view(), $blas_trans.into()).view())
+                        <$F>::from(alpha) * gemm(&a_naive.view(), &transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view())
                     },
                     BLASTrans | BLASConjTrans => {
-                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.into()).view(), &a_naive.view())
+                        <$F>::from(alpha) * gemm(&transpose(&a_naive.view(), $blas_trans.try_into().unwrap()).view(), &a_naive.view())
                     },
                     _ => panic!("Invalid"),
                 });

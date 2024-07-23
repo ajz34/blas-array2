@@ -30,8 +30,8 @@ mod valid {
                 a_naive[[i, i]] = 1.0;
             }
         }
-        let mut a_naive = transpose(&a_naive.view(), transa.into());
-        match uplo.into() {
+        let mut a_naive = transpose(&a_naive.view(), transa.try_into().unwrap());
+        match uplo.try_into().unwrap() {
             BLASLower => {
                 for i in 0..a_naive.len_of(Axis(0)) {
                     for j in i + 1..a_naive.len_of(Axis(1)) {
@@ -50,7 +50,7 @@ mod valid {
         }
 
         let b_assign = b_raw.slice(b_slc).into_owned();
-        let b_assign = match side.into() {
+        let b_assign = match side.try_into().unwrap() {
             BLASLeft => alpha * gemm(&a_naive.view(), &b_assign.view()),
             BLASRight => alpha * gemm(&b_naive.view(), &b_assign.view()),
             _ => panic!(),
@@ -104,7 +104,7 @@ mod valid {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
-                match $uplo.into() {
+                match $uplo.try_into().unwrap() {
                     BLASLower => {
                         for i in 0..a_naive.len_of(Axis(0)) {
                             for j in i+1..a_naive.len_of(Axis(1)) {
@@ -121,10 +121,10 @@ mod valid {
                     },
                     _ => panic!(),
                 }
-                let a_naive = transpose(&a_naive.view(), $transa.into());
+                let a_naive = transpose(&a_naive.view(), $transa.try_into().unwrap());
 
                 let b_assign = b_raw.slice(b_slc).into_owned();
-                let b_assign = match $side.into() {
+                let b_assign = match $side.try_into().unwrap() {
                     BLASLeft => alpha * gemm(&a_naive.view(), &b_assign.view()),
                     BLASRight => alpha * gemm(&b_assign.view(), &a_naive.view()),
                     _ => panic!(),

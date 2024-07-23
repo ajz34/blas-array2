@@ -142,8 +142,8 @@ mod valid_owned {
                     .beta(beta)
                     .run().unwrap();
 
-                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.into());
-                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.into());
+                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.try_into().unwrap());
+                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.try_into().unwrap());
                 let c_naive = alpha * gemm(&a_naive.view(), &b_naive.view());
 
                 if let ArrayOut2::Owned(c_out) = c_out {
@@ -263,8 +263,8 @@ mod valid_view {
                     .beta(beta)
                     .run().unwrap();
 
-                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.into());
-                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.into());
+                let a_naive = transpose(&a_raw.slice(a_slc), $a_trans.try_into().unwrap());
+                let b_naive = transpose(&b_raw.slice(b_slc), $b_trans.try_into().unwrap());
                 let c_assign = alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc);
                 c_naive.slice_mut(c_slc).assign(&c_assign);
 

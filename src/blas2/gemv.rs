@@ -158,7 +158,7 @@ where
 
         // finalize
         let driver = GEMV_Driver {
-            trans: trans.into(),
+            trans: trans.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             alpha,

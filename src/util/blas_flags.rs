@@ -56,35 +56,39 @@ pub enum BLASSide {
 
 pub use BLASSide::{Left as BLASLeft, Right as BLASRight};
 
+use super::{blas_invalid, BLASError};
+
 impl From<char> for BLASLayout {
     #[inline]
     fn from(c: char) -> Self {
         match c.to_ascii_uppercase() {
             'R' => BLASRowMajor,
             'C' => BLASColMajor,
-            _ => panic!("Invalid character for BLASOrder: {}", c),
+            _ => Self::Undefined,
         }
     }
 }
 
-impl From<BLASLayout> for char {
+impl TryFrom<BLASLayout> for char {
+    type Error = BLASError;
     #[inline]
-    fn from(layout: BLASLayout) -> Self {
+    fn try_from(layout: BLASLayout) -> Result<Self, BLASError> {
         match layout {
-            BLASRowMajor => 'R',
-            BLASColMajor => 'C',
-            _ => panic!("Invalid BLASOrder: {:?}", layout),
+            BLASRowMajor => Ok('R'),
+            BLASColMajor => Ok('C'),
+            _ => blas_invalid!(layout),
         }
     }
 }
 
-impl From<BLASLayout> for c_char {
+impl TryFrom<BLASLayout> for c_char {
+    type Error = BLASError;
     #[inline]
-    fn from(layout: BLASLayout) -> Self {
+    fn try_from(layout: BLASLayout) -> Result<Self, BLASError> {
         match layout {
-            BLASRowMajor => 'R' as c_char,
-            BLASColMajor => 'C' as c_char,
-            _ => panic!("Invalid BLASOrder: {:?}", layout),
+            BLASRowMajor => Ok('R' as c_char),
+            BLASColMajor => Ok('C' as c_char),
+            _ => blas_invalid!(layout),
         }
     }
 }
@@ -96,31 +100,33 @@ impl From<char> for BLASTranspose {
             'N' => BLASNoTrans,
             'T' => BLASTrans,
             'C' => BLASConjTrans,
-            _ => panic!("Invalid character for BLASTrans: {}", c),
+            _ => Self::Undefined,
         }
     }
 }
 
-impl From<BLASTranspose> for char {
+impl TryFrom<BLASTranspose> for char {
+    type Error = BLASError;
     #[inline]
-    fn from(trans: BLASTranspose) -> Self {
+    fn try_from(trans: BLASTranspose) -> Result<Self, Self::Error> {
         match trans {
-            BLASNoTrans => 'N',
-            BLASTrans => 'T',
-            BLASConjTrans => 'C',
-            _ => panic!("Invalid BLASTrans: {:?}", trans),
+            BLASNoTrans => Ok('N'),
+            BLASTrans => Ok('T'),
+            BLASConjTrans => Ok('C'),
+            _ => blas_invalid!(trans),
         }
     }
 }
 
-impl From<BLASTranspose> for c_char {
+impl TryFrom<BLASTranspose> for c_char {
+    type Error = BLASError;
     #[inline]
-    fn from(trans: BLASTranspose) -> Self {
+    fn try_from(trans: BLASTranspose) -> Result<Self, Self::Error> {
         match trans {
-            BLASNoTrans => 'N' as c_char,
-            BLASTrans => 'T' as c_char,
-            BLASConjTrans => 'C' as c_char,
-            _ => panic!("Invalid BLASTrans: {:?}", trans),
+            BLASNoTrans => Ok('N' as c_char),
+            BLASTrans => Ok('T' as c_char),
+            BLASConjTrans => Ok('C' as c_char),
+            _ => blas_invalid!(trans),
         }
     }
 }
@@ -131,29 +137,31 @@ impl From<char> for BLASUpLo {
         match c.to_ascii_uppercase() {
             'U' => BLASUpper,
             'L' => BLASLower,
-            _ => panic!("Invalid character for BLASUpLo: {}", c),
+            _ => Self::Undefined,
         }
     }
 }
 
-impl From<BLASUpLo> for char {
+impl TryFrom<BLASUpLo> for char {
+    type Error = BLASError;
     #[inline]
-    fn from(uplo: BLASUpLo) -> Self {
+    fn try_from(uplo: BLASUpLo) -> Result<Self, BLASError> {
         match uplo {
-            BLASUpper => 'U',
-            BLASLower => 'L',
-            _ => panic!("Invalid BLASUpLo: {:?}", uplo),
+            BLASUpper => Ok('U'),
+            BLASLower => Ok('L'),
+            _ => blas_invalid!(uplo),
         }
     }
 }
 
-impl From<BLASUpLo> for c_char {
+impl TryFrom<BLASUpLo> for c_char {
+    type Error = BLASError;
     #[inline]
-    fn from(uplo: BLASUpLo) -> Self {
+    fn try_from(uplo: BLASUpLo) -> Result<Self, Self::Error> {
         match uplo {
-            BLASUpper => 'U' as c_char,
-            BLASLower => 'L' as c_char,
-            _ => panic!("Invalid BLASUpLo: {:?}", uplo),
+            BLASUpper => Ok('U' as c_char),
+            BLASLower => Ok('L' as c_char),
+            _ => blas_invalid!(uplo),
         }
     }
 }
@@ -164,29 +172,31 @@ impl From<char> for BLASDiag {
         match c.to_ascii_uppercase() {
             'N' => BLASNonUnit,
             'U' => BLASUnit,
-            _ => panic!("Invalid character for BLASDiag: {}", c),
+            _ => Self::Undefined,
         }
     }
 }
 
-impl From<BLASDiag> for char {
+impl TryFrom<BLASDiag> for char {
+    type Error = BLASError;
     #[inline]
-    fn from(diag: BLASDiag) -> Self {
+    fn try_from(diag: BLASDiag) -> Result<Self, Self::Error> {
         match diag {
-            BLASNonUnit => 'N',
-            BLASUnit => 'U',
-            _ => panic!("Invalid BLASDiag: {:?}", diag),
+            BLASNonUnit => Ok('N'),
+            BLASUnit => Ok('U'),
+            _ => blas_invalid!(diag),
         }
     }
 }
 
-impl From<BLASDiag> for c_char {
+impl TryFrom<BLASDiag> for c_char {
+    type Error = BLASError;
     #[inline]
-    fn from(diag: BLASDiag) -> Self {
+    fn try_from(diag: BLASDiag) -> Result<Self, Self::Error> {
         match diag {
-            BLASNonUnit => 'N' as c_char,
-            BLASUnit => 'U' as c_char,
-            _ => panic!("Invalid BLASDiag: {:?}", diag),
+            BLASNonUnit => Ok('N' as c_char),
+            BLASUnit => Ok('U' as c_char),
+            _ => blas_invalid!(diag),
         }
     }
 }
@@ -197,77 +207,79 @@ impl From<char> for BLASSide {
         match c.to_ascii_uppercase() {
             'L' => BLASLeft,
             'R' => BLASRight,
-            _ => panic!("Invalid character for BLASSide: {}", c),
+            _ => Self::Undefined,
         }
     }
 }
 
-impl From<BLASSide> for char {
+impl TryFrom<BLASSide> for char {
+    type Error = BLASError;
     #[inline]
-    fn from(side: BLASSide) -> Self {
+    fn try_from(side: BLASSide) -> Result<Self, Self::Error> {
         match side {
-            BLASLeft => 'L',
-            BLASRight => 'R',
-            _ => panic!("Invalid BLASSide: {:?}", side),
+            BLASLeft => Ok('L'),
+            BLASRight => Ok('R'),
+            _ => blas_invalid!(side),
         }
     }
 }
 
-impl From<BLASSide> for c_char {
+impl TryFrom<BLASSide> for c_char {
+    type Error = BLASError;
     #[inline]
-    fn from(side: BLASSide) -> Self {
+    fn try_from(side: BLASSide) -> Result<Self, Self::Error> {
         match side {
-            BLASLeft => 'L' as c_char,
-            BLASRight => 'R' as c_char,
-            _ => panic!("Invalid BLASSide: {:?}", side),
+            BLASLeft => Ok('L' as c_char),
+            BLASRight => Ok('R' as c_char),
+            _ => blas_invalid!(side),
         }
     }
 }
 
 impl BLASLayout {
     #[inline]
-    pub fn flip(&self) -> Self {
+    pub fn flip(&self) -> Result<Self, BLASError> {
         match self {
-            BLASRowMajor => BLASColMajor,
-            BLASColMajor => BLASRowMajor,
-            _ => panic!("Invalid BLASOrder: {:?}", self),
+            BLASRowMajor => Ok(BLASColMajor),
+            BLASColMajor => Ok(BLASRowMajor),
+            _ => blas_invalid!(self),
         }
     }
 }
 
 impl BLASUpLo {
     #[inline]
-    pub fn flip(&self) -> Self {
+    pub fn flip(&self) -> Result<Self, BLASError> {
         match self {
-            BLASUpper => BLASLower,
-            BLASLower => BLASUpper,
-            _ => panic!("Invalid BLASUpLo: {:?}", self),
+            BLASUpper => Ok(BLASLower),
+            BLASLower => Ok(BLASUpper),
+            _ => blas_invalid!(self),
         }
     }
 }
 
 impl BLASSide {
     #[inline]
-    pub fn flip(&self) -> Self {
+    pub fn flip(&self) -> Result<Self, BLASError> {
         match self {
-            BLASLeft => BLASRight,
-            BLASRight => BLASLeft,
-            _ => panic!("Invalid BLASSide: {:?}", self),
+            BLASLeft => Ok(BLASRight),
+            BLASRight => Ok(BLASLeft),
+            _ => blas_invalid!(self),
         }
     }
 }
 
 impl BLASTranspose {
     #[inline]
-    pub fn flip(&self, hermi: bool) -> Self {
+    pub fn flip(&self, hermi: bool) -> Result<Self, BLASError> {
         match self {
             BLASNoTrans => match hermi {
-                false => BLASTrans,
-                true => BLASConjTrans,
+                false => Ok(BLASTrans),
+                true => Ok(BLASConjTrans),
             },
-            BLASTrans => BLASNoTrans,
-            BLASConjTrans => BLASNoTrans,
-            _ => panic!("Invalid BLASTranspose: {:?}", self),
+            BLASTrans => Ok(BLASNoTrans),
+            BLASConjTrans => Ok(BLASNoTrans),
+            _ => blas_invalid!(self),
         }
     }
 }

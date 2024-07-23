@@ -127,9 +127,9 @@ where
 
         // finalize
         let driver = TPMV_Driver {
-            uplo: uplo.into(),
-            trans: trans.into(),
-            diag: diag.into(),
+            uplo: uplo.try_into()?,
+            trans: trans.try_into()?,
+            diag: diag.try_into()?,
             n: n.try_into()?,
             ap,
             x,
@@ -173,7 +173,7 @@ where
                     let obj = TPMV_ {
                         ap: ap_cow.view(),
                         trans: BLASTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -184,7 +184,7 @@ where
                     let obj = TPMV_ {
                         ap: ap_cow.view(),
                         trans: BLASNoTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -198,7 +198,7 @@ where
                         ap: ap_cow.view(),
                         x,
                         trans: BLASNoTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };

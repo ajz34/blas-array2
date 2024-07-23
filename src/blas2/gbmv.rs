@@ -172,7 +172,7 @@ where
 
         // finalize
         let driver = GBMV_Driver {
-            trans: trans.into(),
+            trans: trans.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             kl: kl.try_into()?,

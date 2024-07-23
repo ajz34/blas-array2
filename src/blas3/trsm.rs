@@ -151,10 +151,10 @@ where
 
         // finalize
         let driver = TRSM_Driver {
-            side: side.into(),
-            uplo: uplo.into(),
-            transa: transa.into(),
-            diag: diag.into(),
+            side: side.try_into()?,
+            uplo: uplo.try_into()?,
+            transa: transa.try_into()?,
+            diag: diag.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             alpha,
@@ -193,7 +193,7 @@ where
         if layout == BLASColMajor {
             // F-contiguous: B = op(A) B (if side = L)
             let (transa_new, a_cow) = flip_trans_fpref(transa, &a, &at, false)?;
-            let uplo = if transa_new != transa { uplo.flip() } else { uplo };
+            let uplo = if transa_new != transa { uplo.flip()? } else { uplo };
             let obj = TRSM_ {
                 a: a_cow.view(),
                 b,
@@ -208,13 +208,13 @@ where
         } else {
             // C-contiguous: B' = B' op(A') (if side = L)
             let (transa_new, a_cow) = flip_trans_cpref(transa, &a, &at, false)?;
-            let uplo = if transa_new != transa { uplo.flip() } else { uplo };
+            let uplo = if transa_new != transa { uplo.flip()? } else { uplo };
             let obj = TRSM_ {
                 a: a_cow.t(),
                 b: b.reversed_axes(),
                 alpha,
-                side: side.flip(),
-                uplo: uplo.flip(),
+                side: side.flip()?,
+                uplo: uplo.flip()?,
                 transa: transa_new,
                 diag,
                 layout: Some(BLASColMajor),

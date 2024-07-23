@@ -44,8 +44,8 @@ mod valid_own {
             .run()
             .unwrap();
 
-        let a_naive = transpose(&a_raw.slice(a_slc), transa.into());
-        let b_naive = transpose(&b_raw.slice(b_slc), transb.into());
+        let a_naive = transpose(&a_raw.slice(a_slc), transa.try_into().unwrap());
+        let b_naive = transpose(&b_raw.slice(b_slc), transb.try_into().unwrap());
         let c_assign = alpha * gemm(&a_naive.view(), &b_naive.view());
         let mut c_naive = Array::zeros(c_assign.dim());
         tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);
@@ -106,8 +106,8 @@ mod valid_own {
                 let a_slc = slice(ad0, ad1, as0, as1);
                 let b_slc = slice(bd0, bd1, bs0, bs1);
 
-                let a_naive = transpose(&a_raw.slice(a_slc), transa.into());
-                let b_naive = transpose(&b_raw.slice(b_slc), transb.into());
+                let a_naive = transpose(&a_raw.slice(a_slc), transa.try_into().unwrap());
+                let b_naive = transpose(&b_raw.slice(b_slc), transb.try_into().unwrap());
                 let c_assign = gemm(&a_naive.view(), &b_naive.view()) * alpha;
                 let mut c_naive = Array::zeros(c_assign.dim());
                 tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);
@@ -188,8 +188,8 @@ mod valid_view {
         let b_slc = slice(bd0, bd1, bs0, bs1);
         let c_slc = slice(cd0, cd1, cs0, cs1);
 
-        let a_naive = transpose(&a_raw.slice(a_slc), transa.into());
-        let b_naive = transpose(&b_raw.slice(b_slc), transb.into());
+        let a_naive = transpose(&a_raw.slice(a_slc), transa.try_into().unwrap());
+        let b_naive = transpose(&b_raw.slice(b_slc), transb.try_into().unwrap());
         let c_assign = alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_raw.slice(c_slc);
         let mut c_naive = c_raw.slice(c_slc).to_owned();
         tril_assign(&mut c_naive.view_mut(), &c_assign.view(), uplo);

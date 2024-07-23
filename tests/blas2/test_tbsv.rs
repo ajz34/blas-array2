@@ -59,7 +59,7 @@ mod valid {
                         a_naive[[i, i]] = <$F>::from(1.0);
                     }
                 }
-                let a_naive = transpose(&a_naive.view(), trans.into());
+                let a_naive = transpose(&a_naive.view(), trans.try_into().unwrap());
                 let mut x_naive = x_raw.clone();
                 let x_origin = x_raw.clone();
 

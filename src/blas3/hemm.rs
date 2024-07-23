@@ -161,8 +161,8 @@ where
 
         // finalize
         let driver = HEMM_Driver::<'a, 'b, 'c, F> {
-            side: side.into(),
-            uplo: uplo.into(),
+            side: side.try_into()?,
+            uplo: uplo.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             alpha,
@@ -224,8 +224,8 @@ where
                 c: c.map(|c| c.reversed_axes()),
                 alpha,
                 beta,
-                side: side.flip(),
-                uplo: uplo.flip(),
+                side: side.flip()?,
+                uplo: uplo.flip()?,
                 layout: Some(BLASColMajor),
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();

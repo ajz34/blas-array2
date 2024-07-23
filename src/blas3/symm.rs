@@ -163,8 +163,8 @@ where
 
         // finalize
         let driver = SYMM_Driver::<'a, 'b, 'c, F> {
-            side: side.into(),
-            uplo: uplo.into(),
+            side: side.try_into()?,
+            uplo: uplo.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             alpha,
@@ -208,7 +208,7 @@ where
             // F-contiguous: C = op(A) op(B)
             let (uplo, a_cow) = match layout_a.is_fpref() {
                 true => (uplo, a.to_col_layout()?),
-                false => (uplo.flip(), at.to_col_layout()?),
+                false => (uplo.flip()?, at.to_col_layout()?),
             };
             let b_cow = b.to_col_layout()?;
             let obj = SYMM_ {
@@ -226,7 +226,7 @@ where
             // C-contiguous: C' = op(B') op(A')
             let (uplo, a_cow) = match layout_a.is_cpref() {
                 true => (uplo, a.to_row_layout()?),
-                false => (uplo.flip(), at.to_row_layout()?),
+                false => (uplo.flip()?, at.to_row_layout()?),
             };
             let b_cow = b.to_row_layout()?;
             let obj = SYMM_ {
@@ -235,8 +235,8 @@ where
                 c: c.map(|c| c.reversed_axes()),
                 alpha,
                 beta,
-                side: side.flip(),
-                uplo: uplo.flip(),
+                side: side.flip()?,
+                uplo: uplo.flip()?,
                 layout: Some(BLASColMajor),
             };
             let c = obj.driver()?.run_blas()?.reversed_axes();

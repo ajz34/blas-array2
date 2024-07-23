@@ -145,7 +145,7 @@ where
     } else {
         match trans {
             BLASNoTrans => Ok((
-                trans.flip(hermi),
+                trans.flip(hermi)?,
                 match hermi {
                     false => view_t.to_col_layout()?,
                     true => {
@@ -154,8 +154,8 @@ where
                     },
                 },
             )),
-            BLASTrans => Ok((trans.flip(hermi), view_t.to_col_layout()?)),
-            BLASConjTrans => Ok((trans.flip(hermi), {
+            BLASTrans => Ok((trans.flip(hermi)?, view_t.to_col_layout()?)),
+            BLASConjTrans => Ok((trans.flip(hermi)?, {
                 blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
                 CowArray::from(view.mapv(F::conj).reversed_axes())
             })),
@@ -178,7 +178,7 @@ where
     } else {
         match trans {
             BLASNoTrans => Ok((
-                trans.flip(hermi),
+                trans.flip(hermi)?,
                 match hermi {
                     false => view_t.to_row_layout()?,
                     true => {
@@ -187,8 +187,8 @@ where
                     },
                 },
             )),
-            BLASTrans => Ok((trans.flip(hermi), view_t.to_row_layout()?)),
-            BLASConjTrans => Ok((trans.flip(hermi), {
+            BLASTrans => Ok((trans.flip(hermi)?, view_t.to_row_layout()?)),
+            BLASConjTrans => Ok((trans.flip(hermi)?, {
                 blas_warn_layout_clone!(view_t, "Perform element-wise conjugate to matrix")?;
                 CowArray::from(view_t.mapv(F::conj))
             })),

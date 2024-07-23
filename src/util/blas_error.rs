@@ -16,6 +16,7 @@ pub enum BLASError {
     UninitializedField(&'static str),
     ExplicitCopy(String),
     Miscellaneous(String),
+    RuntimeError(String),
 }
 
 /* #region impl BLASError */

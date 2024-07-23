@@ -144,7 +144,7 @@ where
 
         // finalize
         let driver = HEMV_Driver {
-            uplo: uplo.into(),
+            uplo: uplo.try_into()?,
             n: n.try_into()?,
             alpha,
             a,
@@ -195,7 +195,7 @@ where
                     a: a_cow.t(),
                     x: x.view(),
                     y,
-                    uplo: obj.uplo.flip(),
+                    uplo: obj.uplo.flip()?,
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
                     ..obj
@@ -204,7 +204,7 @@ where
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = HEMV_ { a: a_cow.t(), uplo: obj.uplo.flip(), ..obj };
+                let obj = HEMV_ { a: a_cow.t(), uplo: obj.uplo.flip()?, ..obj };
                 return obj.driver()?.run_blas();
             }
         }

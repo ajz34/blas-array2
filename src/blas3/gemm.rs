@@ -181,8 +181,8 @@ where
 
         // finalize
         let driver = GEMM_Driver {
-            transa: transa.into(),
-            transb: transb.into(),
+            transa: transa.try_into()?,
+            transb: transb.try_into()?,
             m: m.try_into()?,
             n: n.try_into()?,
             k: k.try_into()?,
@@ -255,7 +255,7 @@ where
             };
             return Ok(obj.driver()?.run_blas()?.reversed_axes());
         } else {
-            panic!("This is designed not to execuate this line.");
+            return blas_raise!(RuntimeError, "This is designed not to execuate this line.");
         }
     }
 }

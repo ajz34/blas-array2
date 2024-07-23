@@ -128,7 +128,8 @@ where
         };
 
         // finalize
-        let driver = HPR_Driver { uplo: uplo.into(), n: n.try_into()?, alpha, x, incx: incx.try_into()?, ap };
+        let driver =
+            HPR_Driver { uplo: uplo.try_into()?, n: n.try_into()?, alpha, x, incx: incx.try_into()?, ap };
         return Ok(driver);
     }
 }
@@ -156,7 +157,7 @@ where
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
-            let uplo = obj.uplo.flip();
+            let uplo = obj.uplo.flip()?;
             if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
                 let obj = HPR_ { x: x.view(), uplo, layout: Some(BLASColMajor), ..obj };

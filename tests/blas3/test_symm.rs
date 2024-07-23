@@ -29,9 +29,9 @@ mod valid_owned {
             .run()
             .unwrap();
 
-        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
+        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.try_into().unwrap());
         let b_naive = &b_raw.slice(b_slc).into_owned();
-        let c_naive = match side.into() {
+        let c_naive = match side.try_into().unwrap() {
             BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()),
             BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()),
             _ => panic!("Invalid"),
@@ -79,9 +79,9 @@ mod valid_owned {
                     .run()
                     .unwrap();
 
-                let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
+                let a_naive = $symm(&a_raw.slice(a_slc), uplo.try_into().unwrap());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
-                let c_naive = match side.into() {
+                let c_naive = match side.try_into().unwrap() {
                     BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()),
                     BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()),
                     _ => panic!("Invalid"),
@@ -157,9 +157,9 @@ mod valid_view {
             .run()
             .unwrap();
 
-        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.into());
+        let a_naive = symmetrize(&a_raw.slice(a_slc), uplo.try_into().unwrap());
         let b_naive = &b_raw.slice(b_slc).into_owned();
-        let c_assign = match side.into() {
+        let c_assign = match side.try_into().unwrap() {
             BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
             BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
             _ => panic!("Invalid"),
@@ -213,9 +213,9 @@ mod valid_view {
                     .run()
                     .unwrap();
 
-                let a_naive = $symm(&a_raw.slice(a_slc), uplo.into());
+                let a_naive = $symm(&a_raw.slice(a_slc), uplo.try_into().unwrap());
                 let b_naive = &b_raw.slice(b_slc).into_owned();
-                let c_assign = match side.into() {
+                let c_assign = match side.try_into().unwrap() {
                     BLASLeft => alpha * gemm(&a_naive.view(), &b_naive.view()) + beta * &c_naive.slice(c_slc),
                     BLASRight => alpha * gemm(&b_naive.view(), &a_naive.view()) + beta * &c_naive.slice(c_slc),
                     _ => panic!("Invalid"),

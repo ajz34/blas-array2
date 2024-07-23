@@ -56,7 +56,7 @@ mod valid_col_major {
                         }
                     }
                 }
-                let a_naive = $symm(&a_naive.view(), uplo.into());
+                let a_naive = $symm(&a_naive.view(), uplo.try_into().unwrap());
                 let x_naive = x_raw.slice(x_slc).into_owned();
                 let mut y_naive = y_raw.clone();
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());

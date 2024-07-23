@@ -135,9 +135,9 @@ where
 
         // finalize
         let driver = TBSV_Driver {
-            uplo: uplo.into(),
-            trans: trans.into(),
-            diag: diag.into(),
+            uplo: uplo.try_into()?,
+            trans: trans.try_into()?,
+            diag: diag.try_into()?,
             n: n.try_into()?,
             k: k.try_into()?,
             a,
@@ -184,7 +184,7 @@ where
                     let obj = TBSV_ {
                         a: a_cow.t(),
                         trans: BLASTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -195,7 +195,7 @@ where
                     let obj = TBSV_ {
                         a: a_cow.t(),
                         trans: BLASNoTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };
@@ -209,7 +209,7 @@ where
                         a: a_cow.t(),
                         x,
                         trans: BLASNoTrans,
-                        uplo: obj.uplo.flip(),
+                        uplo: obj.uplo.flip()?,
                         layout: Some(BLASColMajor),
                         ..obj
                     };

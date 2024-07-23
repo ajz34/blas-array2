@@ -37,7 +37,7 @@ mod valid_col_major {
             }
         }
 
-        let a_naive = transpose(&a_naive.view(), trans.into());
+        let a_naive = transpose(&a_naive.view(), trans.try_into().unwrap());
         let x_naive = x_raw.slice(x_slc).into_owned();
         let mut y_naive = y_raw.clone();
         let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
@@ -123,7 +123,7 @@ mod valid_col_major {
                     }
                 }
 
-                let a_naive = transpose(&a_naive.view(), trans.into());
+                let a_naive = transpose(&a_naive.view(), trans.try_into().unwrap());
                 let x_naive = x_raw.slice(x_slc).into_owned();
                 let mut y_naive = y_raw.clone();
                 let y_bare = alpha * gemv(&a_naive.view(), &x_naive.view());
