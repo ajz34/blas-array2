@@ -220,7 +220,7 @@ impl<A> LayoutPref for ArrayView2<'_, A> {
 
 /* #region warn on clone */
 
-pub(crate) trait ToLayoutCowArray2<A> {
+pub trait ToLayoutCowArray2<A> {
     fn to_row_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError>;
     fn to_col_layout(&self) -> Result<CowArray<'_, A, Ix2>, BLASError>;
 }
@@ -250,7 +250,7 @@ where
     }
 }
 
-pub(crate) trait ToLayoutCowArray1<A> {
+pub trait ToLayoutCowArray1<A> {
     fn to_seq_layout(&self) -> Result<CowArray<'_, A, Ix1>, BLASError>;
 }
 
