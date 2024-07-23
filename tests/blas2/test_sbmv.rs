@@ -22,7 +22,7 @@ mod valid_col_major {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$F>::rand();
                 let n = 8;
@@ -141,7 +141,7 @@ mod valid_row_major {
             let y_slc = slice_1d(n, 3);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let alpha = F::rand();
@@ -209,7 +209,7 @@ mod valid_row_major {
             let y_slc = slice_1d(n, 3);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let alpha = F::rand();

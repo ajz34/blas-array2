@@ -8,28 +8,16 @@ pub type c32 = Complex<f32>;
 #[allow(non_camel_case_types)]
 pub type c64 = Complex<f64>;
 
-#[allow(bad_style)]
-pub type c_double_complex = [f64; 2];
-#[allow(bad_style)]
-pub type c_float_complex = [f32; 2];
-
 /// Trait for defining real part float types
-pub trait BLASFloat:
-    Num + NumAssignOps + Send + Sync + Copy + Clone + Default + core::fmt::Debug + core::fmt::Display
-{
+pub trait BLASFloat: Num + Copy {
     type RealFloat: BLASFloat;
-    type FFIFloat;
-    const EPSILON: Self::RealFloat;
     fn is_complex() -> bool;
     fn conj(x: Self) -> Self;
-    fn abs(x: Self) -> Self::RealFloat;
     fn from_real(x: Self::RealFloat) -> Self;
 }
 
 impl BLASFloat for f32 {
     type RealFloat = f32;
-    type FFIFloat = f32;
-    const EPSILON: Self::RealFloat = f32::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         false
@@ -37,10 +25,6 @@ impl BLASFloat for f32 {
     #[inline]
     fn conj(x: Self) -> Self {
         x
-    }
-    #[inline]
-    fn abs(x: Self) -> Self::RealFloat {
-        x.abs()
     }
     #[inline]
     fn from_real(x: Self::RealFloat) -> Self {
@@ -50,8 +34,6 @@ impl BLASFloat for f32 {
 
 impl BLASFloat for f64 {
     type RealFloat = f64;
-    type FFIFloat = f64;
-    const EPSILON: Self::RealFloat = f64::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         false
@@ -61,10 +43,6 @@ impl BLASFloat for f64 {
         x
     }
     #[inline]
-    fn abs(x: Self) -> Self::RealFloat {
-        x.abs()
-    }
-    #[inline]
     fn from_real(x: Self::RealFloat) -> Self {
         x
     }
@@ -72,8 +50,6 @@ impl BLASFloat for f64 {
 
 impl BLASFloat for c32 {
     type RealFloat = f32;
-    type FFIFloat = c_float_complex;
-    const EPSILON: Self::RealFloat = f32::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         true
@@ -81,10 +57,6 @@ impl BLASFloat for c32 {
     #[inline]
     fn conj(x: Self) -> Self {
         x.conj()
-    }
-    #[inline]
-    fn abs(x: Self) -> Self::RealFloat {
-        x.abs()
     }
     #[inline]
     fn from_real(x: Self::RealFloat) -> Self {
@@ -94,8 +66,6 @@ impl BLASFloat for c32 {
 
 impl BLASFloat for c64 {
     type RealFloat = f64;
-    type FFIFloat = c_double_complex;
-    const EPSILON: Self::RealFloat = f64::EPSILON;
     #[inline]
     fn is_complex() -> bool {
         true
@@ -105,19 +75,10 @@ impl BLASFloat for c64 {
         x.conj()
     }
     #[inline]
-    fn abs(x: Self) -> Self::RealFloat {
-        x.abs()
-    }
-    #[inline]
     fn from_real(x: Self::RealFloat) -> Self {
         c64::new(x, 0.0)
     }
 }
-
-/// Marker struct of BLAS functions.
-///
-/// This struct will be implemented in modules of each function.
-pub struct BLASFunc {}
 
 /// Trait for BLAS drivers
 pub trait BLASDriver<'c, F, D>
@@ -152,9 +113,7 @@ mod tests {
         let x = 3.0_f32;
         assert_eq!(<f32 as BLASFloat>::is_complex(), false);
         assert_eq!(<f32 as BLASFloat>::conj(x), x);
-        assert_eq!(<f32 as BLASFloat>::abs(x), x);
         assert_eq!(<f32 as BLASFloat>::from_real(x), x);
-        assert_eq!(<f32 as BLASFloat>::EPSILON, f32::EPSILON);
     }
 
     #[test]
@@ -162,9 +121,7 @@ mod tests {
         let x = 3.0_f64;
         assert_eq!(<f64 as BLASFloat>::is_complex(), false);
         assert_eq!(<f64 as BLASFloat>::conj(x), x);
-        assert_eq!(<f64 as BLASFloat>::abs(x), x);
         assert_eq!(<f64 as BLASFloat>::from_real(x), x);
-        assert_eq!(<f64 as BLASFloat>::EPSILON, f64::EPSILON);
     }
 
     #[test]
@@ -172,9 +129,7 @@ mod tests {
         let x = Complex::new(3.0_f32, 4.0_f32);
         assert_eq!(<c32 as BLASFloat>::is_complex(), true);
         assert_eq!(<c32 as BLASFloat>::conj(x), x.conj());
-        assert_eq!(<c32 as BLASFloat>::abs(x), x.abs());
         assert_eq!(<c32 as BLASFloat>::from_real(3.0_f32), Complex::new(3.0_f32, 0.0_f32));
-        assert_eq!(<c32 as BLASFloat>::EPSILON, f32::EPSILON);
     }
 
     #[test]
@@ -182,8 +137,6 @@ mod tests {
         let x = Complex::new(3.0_f64, 4.0_f64);
         assert_eq!(<c64 as BLASFloat>::is_complex(), true);
         assert_eq!(<c64 as BLASFloat>::conj(x), x.conj());
-        assert_eq!(<c64 as BLASFloat>::abs(x), x.abs());
         assert_eq!(<c64 as BLASFloat>::from_real(3.0_f64), Complex::new(3.0_f64, 0.0_f64));
-        assert_eq!(<c64 as BLASFloat>::EPSILON, f64::EPSILON);
     }
 }

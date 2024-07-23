@@ -11,7 +11,7 @@ mod valid {
 
     #[test]
     fn test_example() {
-        type RT = <f32 as BLASFloat>::RealFloat;
+        type RT = <f32 as TestFloat>::RealFloat;
         let alpha = f32::rand();
         let a_raw = random_matrix(100, 100, 'R'.into());
         let mut b_raw = random_matrix(100, 100, 'R'.into());
@@ -84,7 +84,7 @@ mod valid {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let a_raw = random_matrix::<$F>(100, 100, $a_layout.into());
                 let mut b_raw = random_matrix::<$F>(100, 100, $b_layout.into());

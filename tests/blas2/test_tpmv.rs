@@ -22,7 +22,7 @@ mod valid_col_major {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let uplo = $uplo;
                 let trans = $trans;
                 let diag = $diag;
@@ -111,7 +111,7 @@ mod valid_row_major {
             let x_slc = slice_1d(n, 3);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let a_raw = random_array(1000);

@@ -12,7 +12,7 @@ mod valid_cblas {
     #[test]
     fn test_cblas_c32_view() {
         type F = c32;
-        type FFI = <F as BLASFloat>::FFIFloat;
+        type FFI = <F as TestFloat>::FFIFloat;
 
         for (layout, as0, as1, incx, incy) in iproduct!(['C', 'R'], [1, 2], [1, 2], [1, 2], [1, 2]) {
             let m = 8;
@@ -67,7 +67,7 @@ mod valid_cblas {
     #[test]
     fn test_cblas_f32_owned() {
         type F = f32;
-        type FFI = <F as BLASFloat>::FFIFloat;
+        type FFI = <F as TestFloat>::FFIFloat;
 
         for (incx, incy) in iproduct!([1, 2], [1, 2]) {
             let m = 8;

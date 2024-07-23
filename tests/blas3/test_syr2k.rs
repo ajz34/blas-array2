@@ -21,7 +21,7 @@ mod valid_owned {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$blas_ty>::rand();
                 let a_raw = random_matrix(100, 100, $a_layout.into());
@@ -118,7 +118,7 @@ mod valid_view {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let alpha = <$blas_ty>::rand();
                 let beta = <$blas_ty>::rand();
                 let a_raw = random_matrix(100, 100, $a_layout.into());

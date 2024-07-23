@@ -22,7 +22,7 @@ mod valid {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let n = 8;
                 let k = 3;
                 let uplo = $uplo;
@@ -130,7 +130,7 @@ mod valid_row_major {
             let x_slc = slice_1d(n, 3);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let a_raw = random_matrix(100, 100, a_layout.into());

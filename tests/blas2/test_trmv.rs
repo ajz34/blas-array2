@@ -20,7 +20,7 @@ mod valid {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as BLASFloat>::RealFloat;
+                type RT = <$F as TestFloat>::RealFloat;
                 let uplo = $uplo;
                 let trans = $trans;
                 let diag = $diag;

@@ -6,43 +6,80 @@ use num_complex::*;
 use num_traits::*;
 use rand::{thread_rng, Rng};
 
-/* #region Random matrix */
+/* #region TestFloat matrix */
 
-pub trait RandomNumber<F> {
-    fn rand() -> F;
+#[allow(bad_style)]
+pub type c_double_complex = [f64; 2];
+#[allow(bad_style)]
+pub type c_float_complex = [f32; 2];
+
+pub trait TestFloat: BLASFloat + core::fmt::Debug {
+    type RealFloat: TestFloat;
+    type FFIFloat;
+    const EPSILON: <Self as TestFloat>::RealFloat;
+    fn rand() -> Self;
+    fn abs(x: Self) -> <Self as TestFloat>::RealFloat;
 }
 
-impl RandomNumber<f32> for f32 {
+impl TestFloat for f32 {
+    type RealFloat = f32;
+    type FFIFloat = f32;
+    const EPSILON: f32 = f32::EPSILON;
     fn rand() -> f32 {
         thread_rng().gen()
     }
-}
-
-impl RandomNumber<f64> for f64 {
-    fn rand() -> f64 {
-        thread_rng().gen()
+    fn abs(x: Self) -> f32 {
+        x.abs()
     }
 }
 
-impl RandomNumber<c32> for c32 {
+impl TestFloat for f64 {
+    type RealFloat = f64;
+    type FFIFloat = f64;
+    const EPSILON: f64 = f64::EPSILON;
+    fn rand() -> f64 {
+        thread_rng().gen()
+    }
+    fn abs(x: Self) -> f64 {
+        x.abs()
+    }
+}
+
+impl TestFloat for c32 {
+    type RealFloat = f32;
+    type FFIFloat = c_float_complex;
+    const EPSILON: f32 = f32::EPSILON;
     fn rand() -> c32 {
         let re = thread_rng().gen();
         let im = thread_rng().gen();
         c32::new(re, im)
     }
+    fn abs(x: Self) -> f32 {
+        x.abs()
+    }
 }
 
-impl RandomNumber<c64> for c64 {
+impl TestFloat for c64 {
+    type RealFloat = f64;
+    type FFIFloat = c_double_complex;
+    const EPSILON: f64 = f64::EPSILON;
     fn rand() -> c64 {
         let re = thread_rng().gen();
         let im = thread_rng().gen();
         c64::new(re, im)
     }
+    fn abs(x: Self) -> f64 {
+        x.abs()
+    }
 }
+
+/* #endregion */
+
+/* #region Random matrix */
 
 pub fn random_matrix<F>(row: usize, col: usize, layout: BLASLayout) -> Array2<F>
 where
-    F: RandomNumber<F> + BLASFloat,
+    F: TestFloat,
 {
     let mut matrix = match layout {
         BLASRowMajor => Array2::zeros((row, col)),
@@ -57,7 +94,7 @@ where
 
 pub fn random_array<F>(size: usize) -> Array1<F>
 where
-    F: RandomNumber<F> + BLASFloat,
+    F: TestFloat,
 {
     let mut array = Array1::zeros(size);
     for x in array.iter_mut() {
@@ -94,7 +131,7 @@ where
         for j in 0..n {
             let mut sum = F::zero();
             for l in 0..k {
-                sum += a[[i, l]] * b[[l, j]];
+                sum = sum + a[[i, l]] * b[[l, j]];
             }
             c[[i, j]] = sum;
         }
@@ -112,7 +149,7 @@ where
     for i in 0..m {
         let mut sum = F::zero();
         for j in 0..n {
-            sum += a[[i, j]] * x[j];
+            sum = sum + a[[i, j]] * x[j];
         }
         y[i] = sum;
     }
@@ -249,16 +286,19 @@ where
     }
 }
 
-pub fn check_same<F, D>(a: &ArrayView<F, D>, b: &ArrayView<F, D>, eps: <F::RealFloat as AbsDiffEq>::Epsilon)
-where
-    F: BLASFloat,
+pub fn check_same<F, D>(
+    a: &ArrayView<F, D>,
+    b: &ArrayView<F, D>,
+    eps: <<F as TestFloat>::RealFloat as AbsDiffEq>::Epsilon,
+) where
+    F: TestFloat,
     D: Dimension,
-    <F as BLASFloat>::RealFloat: approx::AbsDiffEq,
+    <F as TestFloat>::RealFloat: approx::AbsDiffEq,
 {
-    let err: F::RealFloat = (a - b).mapv(F::abs).sum();
-    let acc: F::RealFloat = a.mapv(F::abs).sum();
+    let err: <F as TestFloat>::RealFloat = (a - b).mapv(F::abs).sum();
+    let acc: <F as TestFloat>::RealFloat = a.mapv(F::abs).sum();
     let err_div = err / acc;
-    assert_abs_diff_eq!(err_div, F::RealFloat::zero(), epsilon = eps);
+    assert_abs_diff_eq!(err_div, <F as TestFloat>::RealFloat::zero(), epsilon = eps);
 }
 
 /* #endregion */

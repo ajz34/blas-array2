@@ -20,7 +20,7 @@ mod valid_row_major {
             let y_slc = slice_1d(n, stride_y);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let alpha = F::rand();
@@ -82,7 +82,7 @@ mod valid_row_major {
             let y_slc = slice_1d(n, stride_y);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let alpha = F::rand();

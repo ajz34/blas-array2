@@ -22,7 +22,7 @@ mod valid_row_major {
             let x_slc = slice_1d(n, stride_x);
 
             // type definition
-            type FFI = <F as BLASFloat>::FFIFloat;
+            type FFI = <F as TestFloat>::FFIFloat;
 
             // data assignment
             let a_raw = random_array(1000);
