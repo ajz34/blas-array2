@@ -2,80 +2,65 @@ use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
 use derive_builder::Builder;
 use ndarray::prelude::*;
+use num_traits::*;
 
 /* #region BLAS func */
 
-pub trait SYRFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
-    unsafe fn syr(
+pub trait HERNum: BLASFloat {
+    unsafe fn her(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self::RealFloat,
+        x: *const Self,
         incx: *const blas_int,
-        a: *mut F,
+        a: *mut Self,
         lda: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SYRFunc<$type, $symm> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
-            unsafe fn syr(
+    ($type: ty, $func: ident) => {
+        impl HERNum for $type {
+            unsafe fn her(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self::RealFloat,
+                x: *const Self,
                 incx: *const blas_int,
-                a: *mut $type,
+                a: *mut Self,
                 lda: *const blas_int,
             ) {
-                type HermitialFloat = <$symm as BLASSymmetric>::HermitianFloat;
-                ffi::$func(uplo, n, alpha as *const HermitialFloat, x, incx, a, lda);
+                ffi::$func(uplo, n, alpha, x, incx, a, lda);
             }
         }
     };
 }
 
-impl_func!(f32, BLASSymm<f32>, ssyr_);
-impl_func!(f64, BLASSymm<f64>, dsyr_);
-impl_func!(c32, BLASHermi<c32>, cher_);
-impl_func!(c64, BLASHermi<c64>, zher_);
-// these two functions are actually in lapack, not blas
-// impl_func!(c32, BLASSymm<c32>, csyr_);
-// impl_func!(c64, BLASSymm<c64>, zsyr_);
+impl_func!(f32, ssyr_);
+impl_func!(f64, dsyr_);
+impl_func!(c32, cher_);
+impl_func!(c64, zher_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SYR_Driver<'x, 'a, F, S>
+pub struct HER_Driver<'x, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HERNum,
 {
     uplo: c_char,
     n: blas_int,
-    alpha: F,
+    alpha: F::RealFloat,
     x: ArrayView1<'x, F>,
     incx: blas_int,
     a: ArrayOut2<'a, F>,
     lda: blas_int,
-
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'x, 'a, F, S> BLASDriver<'a, F, Ix2> for SYR_Driver<'x, 'a, F, S>
+impl<'x, 'a, F> BLASDriver<'a, F, Ix2> for HER_Driver<'x, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYRFunc<F, S>,
+    F: HERNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, mut a, lda, .. } = self;
@@ -89,7 +74,7 @@ where
         }
 
         unsafe {
-            BLASFunc::syr(&uplo, &n, &alpha, x_ptr, &incx, a_ptr, &lda);
+            F::her(&uplo, &n, &alpha, x_ptr, &incx, a_ptr, &lda);
         }
         return Ok(a.clone_to_view_mut());
     }
@@ -101,31 +86,25 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SYR_<'x, 'a, F, S>
+pub struct HER_<'x, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HERNum,
 {
     pub x: ArrayView1<'x, F>,
 
     #[builder(setter(into, strip_option), default = "None")]
     pub a: Option<ArrayViewMut2<'a, F>>,
-    #[builder(setter(into), default = "F::one()")]
-    pub alpha: F,
+    #[builder(setter(into), default = "F::RealFloat::one()")]
+    pub alpha: F::RealFloat,
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
-
-    #[builder(private, default = "core::marker::PhantomData {}")]
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'x, 'a, F, S> BLASBuilder_<'a, F, Ix2> for SYR_<'x, 'a, F, S>
+impl<'x, 'a, F> BLASBuilder_<'a, F, Ix2> for HER_<'x, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYRFunc<F, S>,
+    F: HERNum,
 {
-    fn driver(self) -> Result<SYR_Driver<'x, 'a, F, S>, BLASError> {
+    fn driver(self) -> Result<HER_Driver<'x, 'a, F>, BLASError> {
         let Self { x, a, alpha, uplo, .. } = self;
 
         // initialize intent(hide)
@@ -148,7 +127,7 @@ where
         let lda = a.view().stride_of(Axis(1));
 
         // finalize
-        let driver = SYR_Driver {
+        let driver = HER_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             alpha,
@@ -156,7 +135,6 @@ where
             incx: incx.try_into()?,
             a,
             lda: lda.try_into()?,
-            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -166,19 +144,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYR<'x, 'a, F> = SYR_Builder<'x, 'a, F, BLASSymm<F>>;
-pub type SSYR<'x, 'a> = SYR<'x, 'a, f32>;
-pub type DSYR<'x, 'a> = SYR<'x, 'a, f64>;
-
-pub type HER<'x, 'a, F> = SYR_Builder<'x, 'a, F, BLASHermi<F>>;
+pub type HER<'x, 'a, F> = HER_Builder<'x, 'a, F>;
+pub type SSYR<'x, 'a> = HER<'x, 'a, f32>;
+pub type DSYR<'x, 'a> = HER<'x, 'a, f64>;
 pub type CHER<'x, 'a> = HER<'x, 'a, c32>;
 pub type ZHER<'x, 'a> = HER<'x, 'a, c64>;
 
-impl<'x, 'a, F, S> BLASBuilder<'a, F, Ix2> for SYR_Builder<'x, 'a, F, S>
+impl<'x, 'a, F> BLASBuilder<'a, F, Ix2> for HER_Builder<'x, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYRFunc<F, S>,
+    F: HERNum,
 {
     fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize
@@ -191,13 +165,13 @@ where
             // C-contiguous
             let uplo = obj.uplo.flip();
             let a = obj.a.map(|a| a.reversed_axes());
-            if S::is_hermitian() {
+            if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
-                let obj = SYR_ { a, x: x.view(), uplo, ..obj };
+                let obj = HER_ { a, x: x.view(), uplo, ..obj };
                 let a = obj.driver()?.run_blas()?;
                 return Ok(a.reversed_axes());
             } else {
-                let obj = SYR_ { a, uplo, ..obj };
+                let obj = HER_ { a, uplo, ..obj };
                 let a = obj.driver()?.run_blas()?;
                 return Ok(a.reversed_axes());
             };

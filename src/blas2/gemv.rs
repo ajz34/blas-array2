@@ -5,42 +5,36 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait GEMVFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait GEMVNum: BLASFloat {
     unsafe fn gemv(
         trans: *const c_char,
         m: *const blas_int,
         n: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        x: *const F,
+        x: *const Self,
         incx: *const blas_int,
-        beta: *const F,
-        y: *mut F,
+        beta: *const Self,
+        y: *mut Self,
         incy: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl GEMVFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl GEMVNum for $type {
             unsafe fn gemv(
                 trans: *const c_char,
                 m: *const blas_int,
                 n: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                x: *const $type,
+                x: *const Self,
                 incx: *const blas_int,
-                beta: *const $type,
-                y: *mut $type,
+                beta: *const Self,
+                y: *mut Self,
                 incy: *const blas_int,
             ) {
                 ffi::$func(trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
@@ -77,8 +71,7 @@ where
 
 impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for GEMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMVFunc<F>,
+    F: GEMVNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let Self { trans, m, n, alpha, a, lda, x, incx, beta, mut y, incy } = self;
@@ -93,7 +86,7 @@ where
         }
 
         unsafe {
-            BLASFunc::gemv(&trans, &m, &n, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
+            F::gemv(&trans, &m, &n, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
         }
         return Ok(y);
     }
@@ -107,7 +100,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct GEMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
+    F: GEMVNum,
 {
     pub a: ArrayView2<'a, F>,
     pub x: ArrayView1<'x, F>,
@@ -124,8 +117,7 @@ where
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for GEMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMVFunc<F>,
+    F: GEMVNum,
 {
     fn driver(self) -> Result<GEMV_Driver<'a, 'x, 'y, F>, BLASError> {
         let Self { a, x, y, alpha, beta, trans } = self;
@@ -194,8 +186,7 @@ pub type ZGEMV<'a, 'x, 'y> = GEMV<'a, 'x, 'y, c64>;
 
 impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for GEMV_Builder<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GEMVFunc<F>,
+    F: GEMVNum,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize

@@ -5,78 +5,69 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait SPRFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
-    unsafe fn spr(
+pub trait HPR2Num: BLASFloat {
+    unsafe fn hpr2(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self,
+        x: *const Self,
         incx: *const blas_int,
-        ap: *mut F,
+        y: *const Self,
+        incy: *const blas_int,
+        ap: *mut Self,
     );
 }
 
 macro_rules! impl_func {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SPRFunc<$type, $symm> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
-            unsafe fn spr(
+    ($type: ty, $func: ident) => {
+        impl HPR2Num for $type {
+            unsafe fn hpr2(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self,
+                x: *const Self,
                 incx: *const blas_int,
-                ap: *mut $type,
+                y: *const Self,
+                incy: *const blas_int,
+                ap: *mut Self,
             ) {
-                type HermitialFloat = <$symm as BLASSymmetric>::HermitianFloat;
-                ffi::$func(uplo, n, alpha as *const HermitialFloat, x, incx, ap);
+                ffi::$func(uplo, n, alpha, x, incx, y, incy, ap);
             }
         }
     };
 }
 
-impl_func!(f32, BLASSymm<f32>, sspr_);
-impl_func!(f64, BLASSymm<f64>, dspr_);
-impl_func!(c32, BLASHermi<c32>, chpr_);
-impl_func!(c64, BLASHermi<c64>, zhpr_);
-// these two functions are actually in lapack, not blas
-// impl_func!(c32, BLASSymm<c32>, cspr_);
-// impl_func!(c64, BLASSymm<c64>, zspr_);
+impl_func!(f32, sspr2_);
+impl_func!(f64, dspr2_);
+impl_func!(c32, chpr2_);
+impl_func!(c64, zhpr2_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SPR_Driver<'x, 'a, F, S>
+pub struct HPR2_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HPR2Num,
 {
     uplo: c_char,
     n: blas_int,
     alpha: F,
     x: ArrayView1<'x, F>,
     incx: blas_int,
+    y: ArrayView1<'y, F>,
+    incy: blas_int,
     ap: ArrayOut1<'a, F>,
-
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'x, 'a, F, S> BLASDriver<'a, F, Ix1> for SPR_Driver<'x, 'a, F, S>
+impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix1> for HPR2_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPRFunc<F, S>,
+    F: HPR2Num,
 {
     fn run_blas(self) -> Result<ArrayOut1<'a, F>, BLASError> {
-        let Self { uplo, n, alpha, x, incx, mut ap, .. } = self;
+        let Self { uplo, n, alpha, x, incx, y, incy, mut ap } = self;
         let x_ptr = x.as_ptr();
+        let y_ptr = y.as_ptr();
         let ap_ptr = ap.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
@@ -86,7 +77,7 @@ where
         }
 
         unsafe {
-            BLASFunc::spr(&uplo, &n, &alpha, x_ptr, &incx, ap_ptr);
+            F::hpr2(&uplo, &n, &alpha, x_ptr, &incx, y_ptr, &incy, ap_ptr);
         }
         return Ok(ap.clone_to_view_mut());
     }
@@ -98,12 +89,12 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SPR_<'x, 'a, F, S>
+pub struct HPR2_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HPR2Num,
 {
     pub x: ArrayView1<'x, F>,
+    pub y: ArrayView1<'y, F>,
 
     #[builder(setter(into, strip_option), default = "None")]
     pub ap: Option<ArrayViewMut1<'a, F>>,
@@ -113,26 +104,25 @@ where
     pub uplo: BLASUpLo,
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
-
-    #[builder(private, default = "core::marker::PhantomData {}")]
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'x, 'a, F, S> BLASBuilder_<'a, F, Ix1> for SPR_<'x, 'a, F, S>
+impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix1> for HPR2_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPRFunc<F, S>,
+    F: HPR2Num,
 {
-    fn driver(self) -> Result<SPR_Driver<'x, 'a, F, S>, BLASError> {
-        let Self { x, ap, alpha, uplo, layout, .. } = self;
+    fn driver(self) -> Result<HPR2_Driver<'x, 'y, 'a, F>, BLASError> {
+        let Self { x, y, ap, alpha, uplo, layout, .. } = self;
 
         // initialize intent(hide)
         let incx = x.stride_of(Axis(0));
+        let incy = y.stride_of(Axis(0));
         let n = x.len_of(Axis(0));
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));
+
+        // check optional
+        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let ap = match ap {
@@ -149,14 +139,15 @@ where
         };
 
         // finalize
-        let driver = SPR_Driver {
+        let driver = HPR2_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             alpha,
             x,
             incx: incx.try_into()?,
+            y,
+            incy: incy.try_into()?,
             ap,
-            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -166,19 +157,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SPR<'x, 'a, F> = SPR_Builder<'x, 'a, F, BLASSymm<F>>;
-pub type SSPR<'x, 'a> = SPR<'x, 'a, f32>;
-pub type DSPR<'x, 'a> = SPR<'x, 'a, f64>;
+pub type HPR2<'x, 'y, 'a, F> = HPR2_Builder<'x, 'y, 'a, F>;
+pub type SSPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, f32>;
+pub type DSPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, f64>;
+pub type CHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c32>;
+pub type ZHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c64>;
 
-pub type HPR<'x, 'a, F> = SPR_Builder<'x, 'a, F, BLASHermi<F>>;
-pub type CHPR<'x, 'a> = HPR<'x, 'a, c32>;
-pub type ZHPR<'x, 'a> = HPR<'x, 'a, c64>;
-
-impl<'x, 'a, F, S> BLASBuilder<'a, F, Ix1> for SPR_Builder<'x, 'a, F, S>
+impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix1> for HPR2_Builder<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPRFunc<F, S>,
+    F: HPR2Num,
 {
     fn run(self) -> Result<ArrayOut1<'a, F>, BLASError> {
         // initialize
@@ -190,12 +177,13 @@ where
         } else {
             // C-contiguous
             let uplo = obj.uplo.flip();
-            if S::is_hermitian() {
+            if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
-                let obj = SPR_ { x: x.view(), uplo, layout: Some(BLASColMajor), ..obj };
+                let y = obj.y.mapv(F::conj);
+                let obj = HPR2_ { y: x.view(), x: y.view(), uplo, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             } else {
-                let obj = SPR_ { uplo, layout: Some(BLASColMajor), ..obj };
+                let obj = HPR2_ { uplo, x: obj.y, y: obj.x, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             };
         }

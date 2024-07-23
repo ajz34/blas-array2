@@ -2,79 +2,66 @@ use crate::ffi::{self, blas_int, c_char};
 use crate::util::*;
 use derive_builder::Builder;
 use ndarray::prelude::*;
+use num_traits::*;
 
 /* #region BLAS func */
 
-pub trait SPR2Func<F>
-where
-    F: BLASFloat,
-{
-    unsafe fn spr2(
+pub trait HPRNum: BLASFloat {
+    unsafe fn hpr(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self::RealFloat,
+        x: *const Self,
         incx: *const blas_int,
-        y: *const F,
-        incy: *const blas_int,
-        ap: *mut F,
+        ap: *mut Self,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl SPR2Func<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
-            unsafe fn spr2(
+        impl HPRNum for $type {
+            unsafe fn hpr(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self::RealFloat,
+                x: *const Self,
                 incx: *const blas_int,
-                y: *const $type,
-                incy: *const blas_int,
-                ap: *mut $type,
+                ap: *mut Self,
             ) {
-                ffi::$func(uplo, n, alpha, x, incx, y, incy, ap);
+                ffi::$func(uplo, n, alpha, x, incx, ap);
             }
         }
     };
 }
 
-impl_func!(f32, sspr2_);
-impl_func!(f64, dspr2_);
-impl_func!(c32, chpr2_);
-impl_func!(c64, zhpr2_);
+impl_func!(f32, sspr_);
+impl_func!(f64, dspr_);
+impl_func!(c32, chpr_);
+impl_func!(c64, zhpr_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SPR2_Driver<'x, 'y, 'a, F>
+pub struct HPR_Driver<'x, 'a, F>
 where
-    F: BLASFloat,
+    F: HPRNum,
 {
     uplo: c_char,
     n: blas_int,
-    alpha: F,
+    alpha: F::RealFloat,
     x: ArrayView1<'x, F>,
     incx: blas_int,
-    y: ArrayView1<'y, F>,
-    incy: blas_int,
     ap: ArrayOut1<'a, F>,
 }
 
-impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix1> for SPR2_Driver<'x, 'y, 'a, F>
+impl<'x, 'a, F> BLASDriver<'a, F, Ix1> for HPR_Driver<'x, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SPR2Func<F>,
+    F: HPRNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'a, F>, BLASError> {
-        let Self { uplo, n, alpha, x, incx, y, incy, mut ap } = self;
+        let Self { uplo, n, alpha, x, incx, mut ap, .. } = self;
         let x_ptr = x.as_ptr();
-        let y_ptr = y.as_ptr();
         let ap_ptr = ap.get_data_mut_ptr();
 
         // assuming dimension checks has been performed
@@ -84,7 +71,7 @@ where
         }
 
         unsafe {
-            BLASFunc::spr2(&uplo, &n, &alpha, x_ptr, &incx, y_ptr, &incy, ap_ptr);
+            F::hpr(&uplo, &n, &alpha, x_ptr, &incx, ap_ptr);
         }
         return Ok(ap.clone_to_view_mut());
     }
@@ -96,41 +83,35 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SPR2_<'x, 'y, 'a, F>
+pub struct HPR_<'x, 'a, F>
 where
-    F: BLASFloat,
+    F: HPRNum,
 {
     pub x: ArrayView1<'x, F>,
-    pub y: ArrayView1<'y, F>,
 
     #[builder(setter(into, strip_option), default = "None")]
     pub ap: Option<ArrayViewMut1<'a, F>>,
-    #[builder(setter(into), default = "F::one()")]
-    pub alpha: F,
+    #[builder(setter(into), default = "F::RealFloat::one()")]
+    pub alpha: F::RealFloat,
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
 }
 
-impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix1> for SPR2_<'x, 'y, 'a, F>
+impl<'x, 'a, F> BLASBuilder_<'a, F, Ix1> for HPR_<'x, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SPR2Func<F>,
+    F: HPRNum,
 {
-    fn driver(self) -> Result<SPR2_Driver<'x, 'y, 'a, F>, BLASError> {
-        let Self { x, y, ap, alpha, uplo, layout, .. } = self;
+    fn driver(self) -> Result<HPR_Driver<'x, 'a, F>, BLASError> {
+        let Self { x, ap, alpha, uplo, layout, .. } = self;
 
         // initialize intent(hide)
         let incx = x.stride_of(Axis(0));
-        let incy = y.stride_of(Axis(0));
         let n = x.len_of(Axis(0));
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         assert_eq!(layout, Some(BLASColMajor));
-
-        // check optional
-        blas_assert_eq!(y.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
         let ap = match ap {
@@ -147,16 +128,7 @@ where
         };
 
         // finalize
-        let driver = SPR2_Driver {
-            uplo: uplo.into(),
-            n: n.try_into()?,
-            alpha,
-            x,
-            incx: incx.try_into()?,
-            y,
-            incy: incy.try_into()?,
-            ap,
-        };
+        let driver = HPR_Driver { uplo: uplo.into(), n: n.try_into()?, alpha, x, incx: incx.try_into()?, ap };
         return Ok(driver);
     }
 }
@@ -165,18 +137,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SPR2<'x, 'y, 'a, F> = SPR2_Builder<'x, 'y, 'a, F>;
-pub type SSPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, f32>;
-pub type DSPR2<'x, 'y, 'a> = SPR2<'x, 'y, 'a, f64>;
+pub type HPR<'x, 'a, F> = HPR_Builder<'x, 'a, F>;
+pub type SSPR<'x, 'a> = HPR<'x, 'a, f32>;
+pub type DSPR<'x, 'a> = HPR<'x, 'a, f64>;
+pub type CHPR<'x, 'a> = HPR<'x, 'a, c32>;
+pub type ZHPR<'x, 'a> = HPR<'x, 'a, c64>;
 
-pub type HPR2<'x, 'y, 'a, F> = SPR2_Builder<'x, 'y, 'a, F>;
-pub type CHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c32>;
-pub type ZHPR2<'x, 'y, 'a> = HPR2<'x, 'y, 'a, c64>;
-
-impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix1> for SPR2_Builder<'x, 'y, 'a, F>
+impl<'x, 'a, F> BLASBuilder<'a, F, Ix1> for HPR_Builder<'x, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SPR2Func<F>,
+    F: HPRNum,
 {
     fn run(self) -> Result<ArrayOut1<'a, F>, BLASError> {
         // initialize
@@ -190,11 +159,10 @@ where
             let uplo = obj.uplo.flip();
             if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
-                let y = obj.y.mapv(F::conj);
-                let obj = SPR2_ { y: x.view(), x: y.view(), uplo, layout: Some(BLASColMajor), ..obj };
+                let obj = HPR_ { x: x.view(), uplo, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             } else {
-                let obj = SPR2_ { uplo, x: obj.y, y: obj.x, layout: Some(BLASColMajor), ..obj };
+                let obj = HPR_ { uplo, layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             };
         }

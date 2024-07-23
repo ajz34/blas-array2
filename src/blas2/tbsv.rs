@@ -5,38 +5,32 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait TBSVFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait TBSVNum: BLASFloat {
     unsafe fn tbsv(
         uplo: *const c_char,
         trans: *const c_char,
         diag: *const c_char,
         n: *const blas_int,
         k: *const blas_int,
-        a: *const F,
+        a: *const Self,
         lda: *const blas_int,
-        x: *mut F,
+        x: *mut Self,
         incx: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl TBSVFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl TBSVNum for $type {
             unsafe fn tbsv(
                 uplo: *const c_char,
                 trans: *const c_char,
                 diag: *const c_char,
                 n: *const blas_int,
                 k: *const blas_int,
-                a: *const $type,
+                a: *const Self,
                 lda: *const blas_int,
-                x: *mut $type,
+                x: *mut Self,
                 incx: *const blas_int,
             ) {
                 ffi::$func(uplo, trans, diag, n, k, a, lda, x, incx);
@@ -56,7 +50,7 @@ impl_func!(c64, ztbsv_);
 
 pub struct TBSV_Driver<'a, 'x, F>
 where
-    F: BLASFloat,
+    F: TBSVNum,
 {
     uplo: c_char,
     trans: c_char,
@@ -71,8 +65,7 @@ where
 
 impl<'a, 'x, F> BLASDriver<'x, F, Ix1> for TBSV_Driver<'a, 'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: TBSVFunc<F>,
+    F: TBSVNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         let Self { uplo, trans, diag, n, k, a, lda, mut x, incx } = self;
@@ -86,7 +79,7 @@ where
         }
 
         unsafe {
-            BLASFunc::tbsv(&uplo, &trans, &diag, &n, &k, a_ptr, &lda, x_ptr, &incx);
+            F::tbsv(&uplo, &trans, &diag, &n, &k, a_ptr, &lda, x_ptr, &incx);
         }
         return Ok(x);
     }
@@ -100,7 +93,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct TBSV_<'a, 'x, F>
 where
-    F: BLASFloat,
+    F: TBSVNum,
 {
     pub a: ArrayView2<'a, F>,
     pub x: ArrayViewMut1<'x, F>,
@@ -117,8 +110,7 @@ where
 
 impl<'a, 'x, F> BLASBuilder_<'x, F, Ix1> for TBSV_<'a, 'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: TBSVFunc<F>,
+    F: TBSVNum,
 {
     fn driver(self) -> Result<TBSV_Driver<'a, 'x, F>, BLASError> {
         let Self { a, x, uplo, trans, diag, layout } = self;
@@ -169,8 +161,7 @@ pub type ZTBSV<'a, 'x> = TBSV<'a, 'x, c64>;
 
 impl<'a, 'x, F> BLASBuilder<'x, F, Ix1> for TBSV_Builder<'a, 'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: TBSVFunc<F>,
+    F: TBSVNum,
 {
     fn run(self) -> Result<ArrayOut1<'x, F>, BLASError> {
         // initialize

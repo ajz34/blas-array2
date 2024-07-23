@@ -1,6 +1,5 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas2::symv::{HEMV, SYMV};
 use blas_array2::prelude::*;
 use num_complex::*;
 
@@ -78,14 +77,14 @@ mod valid {
         };
     }
 
-    test_macro!(test_000: inline, f32, (8, 8, 1, 1), (8, 1), (8, 1), 'R', 'U', SYMV, symmetrize);
-    test_macro!(test_001: inline, f32, (8, 8, 1, 1), (8, 1), (8, 3), 'C', 'L', SYMV, symmetrize);
-    test_macro!(test_002: inline, f32, (8, 8, 3, 3), (8, 3), (8, 1), 'R', 'U', SYMV, symmetrize);
-    test_macro!(test_003: inline, f32, (8, 8, 3, 3), (8, 3), (8, 3), 'C', 'L', SYMV, symmetrize);
-    test_macro!(test_004: inline, f64, (8, 8, 1, 1), (8, 3), (8, 1), 'R', 'L', SYMV, symmetrize);
-    test_macro!(test_005: inline, f64, (8, 8, 1, 1), (8, 3), (8, 3), 'C', 'U', SYMV, symmetrize);
-    test_macro!(test_006: inline, f64, (8, 8, 3, 3), (8, 1), (8, 1), 'C', 'U', SYMV, symmetrize);
-    test_macro!(test_007: inline, f64, (8, 8, 3, 3), (8, 1), (8, 3), 'R', 'L', SYMV, symmetrize);
+    test_macro!(test_000: inline, f32, (8, 8, 1, 1), (8, 1), (8, 1), 'R', 'U', HEMV, symmetrize);
+    test_macro!(test_001: inline, f32, (8, 8, 1, 1), (8, 1), (8, 3), 'C', 'L', HEMV, symmetrize);
+    test_macro!(test_002: inline, f32, (8, 8, 3, 3), (8, 3), (8, 1), 'R', 'U', HEMV, symmetrize);
+    test_macro!(test_003: inline, f32, (8, 8, 3, 3), (8, 3), (8, 3), 'C', 'L', HEMV, symmetrize);
+    test_macro!(test_004: inline, f64, (8, 8, 1, 1), (8, 3), (8, 1), 'R', 'L', HEMV, symmetrize);
+    test_macro!(test_005: inline, f64, (8, 8, 1, 1), (8, 3), (8, 3), 'C', 'U', HEMV, symmetrize);
+    test_macro!(test_006: inline, f64, (8, 8, 3, 3), (8, 1), (8, 1), 'C', 'U', HEMV, symmetrize);
+    test_macro!(test_007: inline, f64, (8, 8, 3, 3), (8, 1), (8, 3), 'R', 'L', HEMV, symmetrize);
     test_macro!(test_008: inline, c32, (8, 8, 1, 3), (8, 1), (8, 1), 'R', 'L', HEMV, hermitianize);
     test_macro!(test_009: inline, c32, (8, 8, 1, 3), (8, 1), (8, 3), 'C', 'U', HEMV, hermitianize);
     test_macro!(test_010: inline, c32, (8, 8, 3, 1), (8, 3), (8, 1), 'C', 'L', HEMV, hermitianize);

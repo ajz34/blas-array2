@@ -1,5 +1,4 @@
 use crate::util::*;
-use blas_array2::blas2::spr::{HPR, SPR};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -131,7 +130,7 @@ mod valid_cblas {
                 );
             }
 
-            let a_out = SPR::<F>::default()
+            let a_out = HPR::<F>::default()
                 .x(x_raw.slice(x_slc))
                 .alpha(alpha)
                 .uplo(uplo)

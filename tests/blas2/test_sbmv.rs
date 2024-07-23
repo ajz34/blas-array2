@@ -1,6 +1,5 @@
 use crate::util::*;
 use approx::*;
-use blas_array2::blas2::sbmv::{HBMV, SBMV};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -106,14 +105,14 @@ mod valid_col_major {
         };
     }
 
-    test_macro!(test_000: inline, f32, (4, 8, 1, 1), (8, 1), (8, 1), 'R', 'U', SBMV, symmetrize);
-    test_macro!(test_001: inline, f32, (4, 8, 1, 1), (8, 1), (8, 3), 'C', 'L', SBMV, symmetrize);
-    test_macro!(test_002: inline, f32, (4, 8, 3, 3), (8, 3), (8, 1), 'R', 'U', SBMV, symmetrize);
-    test_macro!(test_003: inline, f32, (4, 8, 3, 3), (8, 3), (8, 3), 'C', 'L', SBMV, symmetrize);
-    test_macro!(test_004: inline, f64, (4, 8, 1, 1), (8, 3), (8, 1), 'R', 'L', SBMV, symmetrize);
-    test_macro!(test_005: inline, f64, (4, 8, 1, 1), (8, 3), (8, 3), 'C', 'U', SBMV, symmetrize);
-    test_macro!(test_006: inline, f64, (4, 8, 3, 3), (8, 1), (8, 1), 'C', 'U', SBMV, symmetrize);
-    test_macro!(test_007: inline, f64, (4, 8, 3, 3), (8, 1), (8, 3), 'R', 'L', SBMV, symmetrize);
+    test_macro!(test_000: inline, f32, (4, 8, 1, 1), (8, 1), (8, 1), 'R', 'U', HBMV, symmetrize);
+    test_macro!(test_001: inline, f32, (4, 8, 1, 1), (8, 1), (8, 3), 'C', 'L', HBMV, symmetrize);
+    test_macro!(test_002: inline, f32, (4, 8, 3, 3), (8, 3), (8, 1), 'R', 'U', HBMV, symmetrize);
+    test_macro!(test_003: inline, f32, (4, 8, 3, 3), (8, 3), (8, 3), 'C', 'L', HBMV, symmetrize);
+    test_macro!(test_004: inline, f64, (4, 8, 1, 1), (8, 3), (8, 1), 'R', 'L', HBMV, symmetrize);
+    test_macro!(test_005: inline, f64, (4, 8, 1, 1), (8, 3), (8, 3), 'C', 'U', HBMV, symmetrize);
+    test_macro!(test_006: inline, f64, (4, 8, 3, 3), (8, 1), (8, 1), 'C', 'U', HBMV, symmetrize);
+    test_macro!(test_007: inline, f64, (4, 8, 3, 3), (8, 1), (8, 3), 'R', 'L', HBMV, symmetrize);
     test_macro!(test_008: inline, c32, (4, 8, 1, 3), (8, 1), (8, 1), 'R', 'L', HBMV, hermitianize);
     test_macro!(test_009: inline, c32, (4, 8, 1, 3), (8, 1), (8, 3), 'C', 'U', HBMV, hermitianize);
     test_macro!(test_010: inline, c32, (4, 8, 3, 1), (8, 3), (8, 1), 'C', 'L', HBMV, hermitianize);
@@ -244,7 +243,7 @@ mod valid_row_major {
                 );
             }
 
-            let y_out = SBMV::<F>::default()
+            let y_out = HBMV::<F>::default()
                 .a(a_raw.slice(a_slc))
                 .x(x_raw.slice(x_slc))
                 .y(y_raw.slice_mut(y_slc))

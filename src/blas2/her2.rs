@@ -5,38 +5,32 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait SYR2Func<F>
-where
-    F: BLASFloat,
-{
+pub trait HER2Num: BLASFloat {
     unsafe fn syr2(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self,
+        x: *const Self,
         incx: *const blas_int,
-        y: *const F,
+        y: *const Self,
         incy: *const blas_int,
-        a: *mut F,
+        a: *mut Self,
         lda: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl SYR2Func<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl HER2Num for $type {
             unsafe fn syr2(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self,
+                x: *const Self,
                 incx: *const blas_int,
-                y: *const $type,
+                y: *const Self,
                 incy: *const blas_int,
-                a: *mut $type,
+                a: *mut Self,
                 lda: *const blas_int,
             ) {
                 ffi::$func(uplo, n, alpha, x, incx, y, incy, a, lda);
@@ -54,9 +48,9 @@ impl_func!(c64, zher2_);
 
 /* #region BLAS driver */
 
-pub struct SYR2_Driver<'x, 'y, 'a, F>
+pub struct HER2_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
+    F: HER2Num,
 {
     uplo: c_char,
     n: blas_int,
@@ -69,10 +63,9 @@ where
     lda: blas_int,
 }
 
-impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix2> for SYR2_Driver<'x, 'y, 'a, F>
+impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix2> for HER2_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SYR2Func<F>,
+    F: HER2Num,
 {
     fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { uplo, n, alpha, x, incx, y, incy, mut a, lda } = self;
@@ -87,7 +80,7 @@ where
         }
 
         unsafe {
-            BLASFunc::syr2(&uplo, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
+            F::syr2(&uplo, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
         }
         return Ok(a.clone_to_view_mut());
     }
@@ -99,7 +92,7 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SYR2_<'x, 'y, 'a, F>
+pub struct HER2_<'x, 'y, 'a, F>
 where
     F: BLASFloat,
 {
@@ -114,12 +107,11 @@ where
     pub uplo: BLASUpLo,
 }
 
-impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix2> for SYR2_<'x, 'y, 'a, F>
+impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix2> for HER2_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SYR2Func<F>,
+    F: HER2Num,
 {
-    fn driver(self) -> Result<SYR2_Driver<'x, 'y, 'a, F>, BLASError> {
+    fn driver(self) -> Result<HER2_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, a, alpha, uplo, .. } = self;
 
         // initialize intent(hide)
@@ -146,7 +138,7 @@ where
         let lda = a.view().stride_of(Axis(1));
 
         // finalize
-        let driver = SYR2_Driver {
+        let driver = HER2_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             alpha,
@@ -165,18 +157,17 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYR2<'x, 'y, 'a, F> = SYR2_Builder<'x, 'y, 'a, F>;
+pub type SYR2<'x, 'y, 'a, F> = HER2_Builder<'x, 'y, 'a, F>;
 pub type SSYR2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, f32>;
 pub type DSYR2<'x, 'y, 'a> = SYR2<'x, 'y, 'a, f64>;
 
-pub type HER2<'x, 'y, 'a, F> = SYR2_Builder<'x, 'y, 'a, F>;
+pub type HER2<'x, 'y, 'a, F> = HER2_Builder<'x, 'y, 'a, F>;
 pub type CHER2<'x, 'y, 'a> = HER2<'x, 'y, 'a, c32>;
 pub type ZHER2<'x, 'y, 'a> = HER2<'x, 'y, 'a, c64>;
 
-impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix2> for SYR2_Builder<'x, 'y, 'a, F>
+impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix2> for HER2_Builder<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: SYR2Func<F>,
+    F: HER2Num,
 {
     fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize
@@ -192,11 +183,11 @@ where
             if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.mapv(F::conj);
-                let obj = SYR2_ { a, y: x.view(), x: y.view(), uplo, ..obj };
+                let obj = HER2_ { a, y: x.view(), x: y.view(), uplo, ..obj };
                 let a = obj.driver()?.run_blas()?;
                 return Ok(a.reversed_axes());
             } else {
-                let obj = SYR2_ { a, uplo, x: obj.y, y: obj.x, ..obj };
+                let obj = HER2_ { a, uplo, x: obj.y, y: obj.x, ..obj };
                 let a = obj.driver()?.run_blas()?;
                 return Ok(a.reversed_axes());
             };

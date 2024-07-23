@@ -1,5 +1,4 @@
 use crate::util::*;
-use blas_array2::blas2::syr::{HER, SYR};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -128,7 +127,7 @@ mod valid_cblas {
             }
 
             let a_out =
-                SYR::<F>::default().x(x_raw.slice(x_slc)).alpha(alpha).uplo(uplo).run().unwrap().into_owned();
+                HER::<F>::default().x(x_raw.slice(x_slc)).alpha(alpha).uplo(uplo).run().unwrap().into_owned();
 
             check_same(&a_out.view(), &a_naive.view(), 4.0 * F::EPSILON);
         }

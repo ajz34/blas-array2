@@ -5,39 +5,32 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait SPMVFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
-    unsafe fn spmv(
+pub trait HPMVNum: BLASFloat {
+    unsafe fn hpmv(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        ap: *const F,
-        x: *const F,
+        alpha: *const Self,
+        ap: *const Self,
+        x: *const Self,
         incx: *const blas_int,
-        beta: *const F,
-        y: *mut F,
+        beta: *const Self,
+        y: *mut Self,
         incy: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SPMVFunc<$type, $symm> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
-            unsafe fn spmv(
+    ($type: ty, $func: ident) => {
+        impl HPMVNum for $type {
+            unsafe fn hpmv(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                ap: *const $type,
-                x: *const $type,
+                alpha: *const Self,
+                ap: *const Self,
+                x: *const Self,
                 incx: *const blas_int,
-                beta: *const $type,
-                y: *mut $type,
+                beta: *const Self,
+                y: *mut Self,
                 incy: *const blas_int,
             ) {
                 ffi::$func(uplo, n, alpha, ap, x, incx, beta, y, incy);
@@ -46,22 +39,18 @@ macro_rules! impl_func {
     };
 }
 
-impl_func!(f32, BLASSymm<f32>, sspmv_);
-impl_func!(f64, BLASSymm<f64>, dspmv_);
-impl_func!(c32, BLASHermi<c32>, chpmv_);
-impl_func!(c64, BLASHermi<c64>, zhpmv_);
-// these two functions are actually in lapack, not blas
-// impl_func!(c32, BLASSymm<c32>, cspmv_);
-// impl_func!(c64, BLASSymm<c64>, zspmv_);
+impl_func!(f32, sspmv_);
+impl_func!(f64, dspmv_);
+impl_func!(c32, chpmv_);
+impl_func!(c64, zhpmv_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SPMV_Driver<'a, 'x, 'y, F, S>
+pub struct HPMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HPMVNum,
 {
     uplo: c_char,
     n: blas_int,
@@ -72,14 +61,11 @@ where
     beta: F,
     y: ArrayOut1<'y, F>,
     incy: blas_int,
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SPMV_Driver<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for HPMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPMVFunc<F, S>,
+    F: HPMVNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let Self { uplo, n, alpha, ap, x, incx, beta, mut y, incy, .. } = self;
@@ -94,7 +80,7 @@ where
         }
 
         unsafe {
-            BLASFunc::spmv(&uplo, &n, &alpha, ap_ptr, x_ptr, &incx, &beta, y_ptr, &incy);
+            F::hpmv(&uplo, &n, &alpha, ap_ptr, x_ptr, &incx, &beta, y_ptr, &incy);
         }
         return Ok(y);
     }
@@ -106,9 +92,9 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SPMV_<'a, 'x, 'y, F, S>
+pub struct HPMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
+    F: HPMVNum,
 {
     pub ap: ArrayView1<'a, F>,
     pub x: ArrayView1<'x, F>,
@@ -123,18 +109,13 @@ where
     pub uplo: BLASUpLo,
     #[builder(setter(into, strip_option), default = "None")]
     pub layout: Option<BLASLayout>,
-
-    #[builder(private, default = "core::marker::PhantomData {}")]
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SPMV_<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for HPMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPMVFunc<F, S>,
+    F: HPMVNum,
 {
-    fn driver(self) -> Result<SPMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
+    fn driver(self) -> Result<HPMV_Driver<'a, 'x, 'y, F>, BLASError> {
         let Self { ap, x, y, alpha, beta, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
@@ -161,7 +142,7 @@ where
         let incy = y.view().stride_of(Axis(0));
 
         // finalize
-        let driver = SPMV_Driver {
+        let driver = HPMV_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
             alpha,
@@ -171,7 +152,6 @@ where
             beta,
             y,
             incy: incy.try_into()?,
-            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -181,19 +161,15 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SPMV<'a, 'x, 'y, F> = SPMV_Builder<'a, 'x, 'y, F, BLASSymm<F>>;
-pub type SSPMV<'a, 'x, 'y> = SPMV<'a, 'x, 'y, f32>;
-pub type DSPMV<'a, 'x, 'y> = SPMV<'a, 'x, 'y, f64>;
-
-pub type HPMV<'a, 'x, 'y, F> = SPMV_Builder<'a, 'x, 'y, F, BLASHermi<F>>;
+pub type HPMV<'a, 'x, 'y, F> = HPMV_Builder<'a, 'x, 'y, F>;
+pub type SSPMV<'a, 'x, 'y> = HPMV<'a, 'x, 'y, f32>;
+pub type DSPMV<'a, 'x, 'y> = HPMV<'a, 'x, 'y, f64>;
 pub type CHPMV<'a, 'x, 'y> = HPMV<'a, 'x, 'y, c32>;
 pub type ZHPMV<'a, 'x, 'y> = HPMV<'a, 'x, 'y, c64>;
 
-impl<'a, 'x, 'y, F, S> BLASBuilder<'y, F, Ix1> for SPMV_Builder<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for HPMV_Builder<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SPMVFunc<F, S>,
+    F: HPMVNum,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
@@ -204,18 +180,18 @@ where
         if layout == BLASColMajor {
             // F-contiguous
             let ap_cow = obj.ap.to_seq_layout()?;
-            let obj = SPMV_ { ap: ap_cow.view(), layout: Some(BLASColMajor), ..obj };
+            let obj = HPMV_ { ap: ap_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
             let ap_cow = obj.ap.to_seq_layout()?;
-            if S::is_hermitian() {
+            if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.map(|mut y| {
                     y.mapv_inplace(F::conj);
                     y
                 });
-                let obj = SPMV_ {
+                let obj = HPMV_ {
                     ap: ap_cow.view(),
                     x: x.view(),
                     y,
@@ -230,7 +206,7 @@ where
                 return Ok(y);
             } else {
                 let obj =
-                    SPMV_ { ap: ap_cow.view(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
+                    HPMV_ { ap: ap_cow.view(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

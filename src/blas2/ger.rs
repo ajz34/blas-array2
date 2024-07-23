@@ -5,38 +5,32 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait GERFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait GERNum: BLASFloat {
     unsafe fn ger(
         m: *const blas_int,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self,
+        x: *const Self,
         incx: *const blas_int,
-        y: *const F,
+        y: *const Self,
         incy: *const blas_int,
-        a: *mut F,
+        a: *mut Self,
         lda: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl GERFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl GERNum for $type {
             unsafe fn ger(
                 m: *const blas_int,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self,
+                x: *const Self,
                 incx: *const blas_int,
-                y: *const $type,
+                y: *const Self,
                 incy: *const blas_int,
-                a: *mut $type,
+                a: *mut Self,
                 lda: *const blas_int,
             ) {
                 ffi::$func(m, n, alpha, x, incx, y, incy, a, lda);
@@ -71,8 +65,7 @@ where
 
 impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix2> for GER_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERFunc<F>,
+    F: GERNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { m, n, alpha, x, incx, y, incy, mut a, lda } = self;
@@ -87,7 +80,7 @@ where
         }
 
         unsafe {
-            BLASFunc::ger(&m, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
+            F::ger(&m, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
         }
         return Ok(a.clone_to_view_mut());
     }
@@ -101,7 +94,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct GER_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
+    F: GERNum,
 {
     pub x: ArrayView1<'x, F>,
     pub y: ArrayView1<'y, F>,
@@ -114,8 +107,7 @@ where
 
 impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix2> for GER_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERFunc<F>,
+    F: GERNum,
 {
     fn driver(self) -> Result<GER_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, a, alpha } = self;
@@ -169,8 +161,7 @@ pub type ZGERU<'x, 'y, 'a> = GER<'x, 'y, 'a, c64>;
 
 impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix2> for GER_Builder<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERFunc<F>,
+    F: GERNum,
 {
     fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize

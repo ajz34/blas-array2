@@ -1,5 +1,4 @@
 use crate::util::*;
-use blas_array2::blas2::spr2::SPR2;
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -47,7 +46,7 @@ mod valid_cblas {
                 );
             }
 
-            SPR2::<F>::default()
+            HPR2::<F>::default()
                 .x(x_raw.slice(x_slc))
                 .y(y_raw.slice(y_slc))
                 .ap(ap_raw.slice_mut(ap_slc))
@@ -99,7 +98,7 @@ mod valid_cblas {
                 );
             }
 
-            let a_out = SPR2::<F>::default()
+            let a_out = HPR2::<F>::default()
                 .x(x_raw.slice(x_slc))
                 .y(y_raw.slice(y_slc))
                 .alpha(alpha)

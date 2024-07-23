@@ -1,4 +1,4 @@
-use crate::blas2::ger::{GERFunc, GER_};
+use crate::blas2::ger::{GERNum, GER_};
 use crate::ffi::{self, blas_int};
 use crate::util::*;
 use derive_builder::Builder;
@@ -6,38 +6,32 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait GERCFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait GERCNum: BLASFloat + GERNum {
     unsafe fn gerc(
         m: *const blas_int,
         n: *const blas_int,
-        alpha: *const F,
-        x: *const F,
+        alpha: *const Self,
+        x: *const Self,
         incx: *const blas_int,
-        y: *const F,
+        y: *const Self,
         incy: *const blas_int,
-        a: *mut F,
+        a: *mut Self,
         lda: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl GERCFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl GERCNum for $type {
             unsafe fn gerc(
                 m: *const blas_int,
                 n: *const blas_int,
-                alpha: *const $type,
-                x: *const $type,
+                alpha: *const Self,
+                x: *const Self,
                 incx: *const blas_int,
-                y: *const $type,
+                y: *const Self,
                 incy: *const blas_int,
-                a: *mut $type,
+                a: *mut Self,
                 lda: *const blas_int,
             ) {
                 ffi::$func(m, n, alpha, x, incx, y, incy, a, lda);
@@ -55,7 +49,7 @@ impl_func!(c64, zgerc_);
 
 pub struct GERC_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
+    F: GERCNum,
 {
     m: blas_int,
     n: blas_int,
@@ -70,8 +64,7 @@ where
 
 impl<'x, 'y, 'a, F> BLASDriver<'a, F, Ix2> for GERC_Driver<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERCFunc<F>,
+    F: GERCNum,
 {
     fn run_blas(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         let Self { m, n, alpha, x, incx, y, incy, mut a, lda } = self;
@@ -86,7 +79,7 @@ where
         }
 
         unsafe {
-            BLASFunc::gerc(&m, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
+            F::gerc(&m, &n, &alpha, x_ptr, &incx, y_ptr, &incy, a_ptr, &lda);
         }
         return Ok(a.clone_to_view_mut());
     }
@@ -113,8 +106,7 @@ where
 
 impl<'x, 'y, 'a, F> BLASBuilder_<'a, F, Ix2> for GERC_<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERCFunc<F>,
+    F: GERCNum,
 {
     fn driver(self) -> Result<GERC_Driver<'x, 'y, 'a, F>, BLASError> {
         let Self { x, y, a, alpha } = self;
@@ -166,8 +158,7 @@ pub type ZGERC<'x, 'y, 'a> = GERC<'x, 'y, 'a, c64>;
 
 impl<'x, 'y, 'a, F> BLASBuilder<'a, F, Ix2> for GERC_Builder<'x, 'y, 'a, F>
 where
-    F: BLASFloat,
-    BLASFunc: GERCFunc<F> + GERFunc<F>,
+    F: GERCNum,
 {
     fn run(self) -> Result<ArrayOut2<'a, F>, BLASError> {
         // initialize

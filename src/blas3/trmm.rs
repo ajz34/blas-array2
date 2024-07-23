@@ -23,10 +23,7 @@ pub trait TRMMNum: BLASFloat {
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl TRMMNum for $type
-        where
-            $type: BLASFloat,
-        {
+        impl TRMMNum for $type {
             unsafe fn trmm(
                 side: *const c_char,
                 uplo: *const c_char,

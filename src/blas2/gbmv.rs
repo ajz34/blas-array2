@@ -5,46 +5,40 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait GBMVFunc<F>
-where
-    F: BLASFloat,
-{
+pub trait GBMVNum: BLASFloat {
     unsafe fn gbmv(
         trans: *const c_char,
         m: *const blas_int,
         n: *const blas_int,
         kl: *const blas_int,
         ku: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        x: *const F,
+        x: *const Self,
         incx: *const blas_int,
-        beta: *const F,
-        y: *mut F,
+        beta: *const Self,
+        y: *mut Self,
         incy: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl GBMVFunc<$type> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
+        impl GBMVNum for $type {
             unsafe fn gbmv(
                 trans: *const c_char,
                 m: *const blas_int,
                 n: *const blas_int,
                 kl: *const blas_int,
                 ku: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                x: *const $type,
+                x: *const Self,
                 incx: *const blas_int,
-                beta: *const $type,
-                y: *mut $type,
+                beta: *const Self,
+                y: *mut Self,
                 incy: *const blas_int,
             ) {
                 ffi::$func(trans, m, n, kl, ku, alpha, a, lda, x, incx, beta, y, incy);
@@ -64,7 +58,7 @@ impl_func!(c64, zgbmv_);
 
 pub struct GBMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
+    F: GBMVNum,
 {
     trans: c_char,
     m: blas_int,
@@ -83,8 +77,7 @@ where
 
 impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for GBMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GBMVFunc<F>,
+    F: GBMVNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         let Self { trans, m, n, kl, ku, alpha, a, lda, x, incx, beta, mut y, incy } = self;
@@ -99,7 +92,7 @@ where
         }
 
         unsafe {
-            BLASFunc::gbmv(&trans, &m, &n, &kl, &ku, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
+            F::gbmv(&trans, &m, &n, &kl, &ku, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
         }
         return Ok(y);
     }
@@ -113,7 +106,7 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct GBMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
+    F: GBMVNum,
 {
     pub a: ArrayView2<'a, F>,
     pub x: ArrayView1<'x, F>,
@@ -134,8 +127,7 @@ where
 
 impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for GBMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GBMVFunc<F>,
+    F: GBMVNum,
 {
     fn driver(self) -> Result<GBMV_Driver<'a, 'x, 'y, F>, BLASError> {
         let Self { a, x, m, kl, y, alpha, beta, trans, layout } = self;
@@ -210,8 +202,7 @@ pub type ZGBMV<'a, 'x, 'y> = GBMV<'a, 'x, 'y, c64>;
 
 impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for GBMV_Builder<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    BLASFunc: GBMVFunc<F>,
+    F: GBMVNum,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize

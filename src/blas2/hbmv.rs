@@ -5,68 +5,60 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait SYMVFunc<F, S>
-where
-    F: BLASFloat,
-    S: BLASSymmetric,
-{
-    unsafe fn hemv(
+pub trait HBMVNum: BLASFloat {
+    unsafe fn hbmv(
         uplo: *const c_char,
         n: *const blas_int,
-        alpha: *const F,
-        a: *const F,
+        k: *const blas_int,
+        alpha: *const Self,
+        a: *const Self,
         lda: *const blas_int,
-        x: *const F,
+        x: *const Self,
         incx: *const blas_int,
-        beta: *const F,
-        y: *mut F,
+        beta: *const Self,
+        y: *mut Self,
         incy: *const blas_int,
     );
 }
 
 macro_rules! impl_func {
-    ($type: ty, $symm: ty, $func: ident) => {
-        impl SYMVFunc<$type, $symm> for BLASFunc
-        where
-            $type: BLASFloat,
-        {
-            unsafe fn hemv(
+    ($type: ty, $func: ident) => {
+        impl HBMVNum for $type {
+            unsafe fn hbmv(
                 uplo: *const c_char,
                 n: *const blas_int,
-                alpha: *const $type,
-                a: *const $type,
+                k: *const blas_int,
+                alpha: *const Self,
+                a: *const Self,
                 lda: *const blas_int,
-                x: *const $type,
+                x: *const Self,
                 incx: *const blas_int,
-                beta: *const $type,
-                y: *mut $type,
+                beta: *const Self,
+                y: *mut Self,
                 incy: *const blas_int,
             ) {
-                ffi::$func(uplo, n, alpha, a, lda, x, incx, beta, y, incy);
+                ffi::$func(uplo, n, k, alpha, a, lda, x, incx, beta, y, incy);
             }
         }
     };
 }
 
-impl_func!(f32, BLASSymm<f32>, ssymv_);
-impl_func!(f64, BLASSymm<f64>, dsymv_);
-impl_func!(c32, BLASHermi<c32>, chemv_);
-impl_func!(c64, BLASHermi<c64>, zhemv_);
-// these two functions are actually in lapack, not blas
-// impl_func!(c32, BLASSymm<c32>, csymv_);
-// impl_func!(c64, BLASSymm<c64>, zsymv_);
+impl_func!(f32, ssbmv_);
+impl_func!(f64, dsbmv_);
+impl_func!(c32, chbmv_);
+impl_func!(c64, zhbmv_);
 
 /* #endregion */
 
 /* #region BLAS driver */
 
-pub struct SYMV_Driver<'a, 'x, 'y, F, S>
+pub struct HBMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HBMVNum,
 {
     uplo: c_char,
     n: blas_int,
+    k: blas_int,
     alpha: F,
     a: ArrayView2<'a, F>,
     lda: blas_int,
@@ -75,17 +67,14 @@ where
     beta: F,
     y: ArrayOut1<'y, F>,
     incy: blas_int,
-    _phantom: core::marker::PhantomData<S>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASDriver<'y, F, Ix1> for SYMV_Driver<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASDriver<'y, F, Ix1> for HBMV_Driver<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMVFunc<F, S>,
+    F: HBMVNum,
 {
     fn run_blas(self) -> Result<ArrayOut1<'y, F>, BLASError> {
-        let Self { uplo, n, alpha, a, lda, x, incx, beta, mut y, incy, .. } = self;
+        let Self { uplo, n, k, alpha, a, lda, x, incx, beta, mut y, incy, .. } = self;
         let a_ptr = a.as_ptr();
         let x_ptr = x.as_ptr();
         let y_ptr = y.get_data_mut_ptr();
@@ -97,7 +86,7 @@ where
         }
 
         unsafe {
-            BLASFunc::hemv(&uplo, &n, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
+            F::hbmv(&uplo, &n, &k, &alpha, a_ptr, &lda, x_ptr, &incx, &beta, y_ptr, &incy);
         }
         return Ok(y);
     }
@@ -109,10 +98,9 @@ where
 
 #[derive(Builder)]
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
-pub struct SYMV_<'a, 'x, 'y, F, S>
+pub struct HBMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
+    F: HBMVNum,
 {
     pub a: ArrayView2<'a, F>,
     pub x: ArrayView1<'x, F>,
@@ -125,31 +113,30 @@ where
     pub beta: F,
     #[builder(setter(into), default = "BLASUpper")]
     pub uplo: BLASUpLo,
-
-    #[builder(private, default = "core::marker::PhantomData {}")]
-    _phantom: core::marker::PhantomData<S>,
+    #[builder(setter(into, strip_option), default = "None")]
+    pub layout: Option<BLASLayout>,
 }
 
-impl<'a, 'x, 'y, F, S> BLASBuilder_<'y, F, Ix1> for SYMV_<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASBuilder_<'y, F, Ix1> for HBMV_<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMVFunc<F, S>,
+    F: HBMVNum,
 {
-    fn driver(self) -> Result<SYMV_Driver<'a, 'x, 'y, F, S>, BLASError> {
-        let Self { a, x, y, alpha, beta, uplo, .. } = self;
+    fn driver(self) -> Result<HBMV_Driver<'a, 'x, 'y, F>, BLASError> {
+        let Self { a, x, y, alpha, beta, uplo, layout, .. } = self;
 
         // only fortran-preferred (col-major) is accepted in inner wrapper
         let layout_a = get_layout_array2(&a);
         assert!(layout_a.is_fpref());
+        assert!(layout == Some(BLASLayout::ColMajor));
 
         // initialize intent(hide)
-        let (n_, n) = a.dim();
+        let (k_, n) = a.dim();
+        blas_assert!(k_ > 0, InvalidDim, "Rows of input `a` must larger than zero.")?;
+        let k = k_ - 1;
         let lda = a.stride_of(Axis(1));
         let incx = x.stride_of(Axis(0));
 
         // perform check
-        blas_assert_eq!(n, n_, InvalidDim)?;
         blas_assert_eq!(x.len_of(Axis(0)), n, InvalidDim)?;
 
         // prepare output
@@ -163,9 +150,10 @@ where
         let incy = y.view().stride_of(Axis(0));
 
         // finalize
-        let driver = SYMV_Driver {
+        let driver = HBMV_Driver {
             uplo: uplo.into(),
             n: n.try_into()?,
+            k: k.try_into()?,
             alpha,
             a,
             lda: lda.try_into()?,
@@ -174,7 +162,6 @@ where
             beta,
             y,
             incy: incy.try_into()?,
-            _phantom: core::marker::PhantomData {},
         };
         return Ok(driver);
     }
@@ -184,52 +171,52 @@ where
 
 /* #region BLAS wrapper */
 
-pub type SYMV<'a, 'x, 'y, F> = SYMV_Builder<'a, 'x, 'y, F, BLASSymm<F>>;
-pub type SSYMV<'a, 'x, 'y> = SYMV<'a, 'x, 'y, f32>;
-pub type DSYMV<'a, 'x, 'y> = SYMV<'a, 'x, 'y, f64>;
+pub type HBMV<'a, 'x, 'y, F> = HBMV_Builder<'a, 'x, 'y, F>;
+pub type SSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f32>;
+pub type DSBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, f64>;
+pub type CHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c32>;
+pub type ZHBMV<'a, 'x, 'y> = HBMV<'a, 'x, 'y, c64>;
 
-pub type HEMV<'a, 'x, 'y, F> = SYMV_Builder<'a, 'x, 'y, F, BLASHermi<F>>;
-pub type CHEMV<'a, 'x, 'y> = HEMV<'a, 'x, 'y, c32>;
-pub type ZHEMV<'a, 'x, 'y> = HEMV<'a, 'x, 'y, c64>;
-
-impl<'a, 'x, 'y, F, S> BLASBuilder<'y, F, Ix1> for SYMV_Builder<'a, 'x, 'y, F, S>
+impl<'a, 'x, 'y, F> BLASBuilder<'y, F, Ix1> for HBMV_Builder<'a, 'x, 'y, F>
 where
-    F: BLASFloat,
-    S: BLASSymmetric,
-    BLASFunc: SYMVFunc<F, S>,
+    F: HBMVNum,
 {
     fn run(self) -> Result<ArrayOut1<'y, F>, BLASError> {
         // initialize
         let obj = self.build()?;
 
         let layout_a = get_layout_array2(&obj.a);
+        let layout = get_layout_row_preferred(&[obj.layout, Some(layout_a)], &[]);
 
-        if layout_a.is_fpref() {
+        if layout == BLASColMajor {
             // F-contiguous
+            let a_cow = obj.a.to_col_layout()?;
+            let obj = HBMV_ { a: a_cow.view(), layout: Some(BLASColMajor), ..obj };
             return obj.driver()?.run_blas();
         } else {
             // C-contiguous
             let a_cow = obj.a.to_row_layout()?;
-            if S::is_hermitian() {
+            if F::is_complex() {
                 let x = obj.x.mapv(F::conj);
                 let y = obj.y.map(|mut y| {
                     y.mapv_inplace(F::conj);
                     y
                 });
-                let obj = SYMV_ {
+                let obj = HBMV_ {
                     a: a_cow.t(),
                     x: x.view(),
                     y,
                     uplo: obj.uplo.flip(),
                     alpha: F::conj(obj.alpha),
                     beta: F::conj(obj.beta),
+                    layout: Some(BLASColMajor),
                     ..obj
                 };
                 let mut y = obj.driver()?.run_blas()?;
                 y.view_mut().mapv_inplace(F::conj);
                 return Ok(y);
             } else {
-                let obj = SYMV_ { a: a_cow.t(), uplo: obj.uplo.flip(), ..obj };
+                let obj = HBMV_ { a: a_cow.t(), uplo: obj.uplo.flip(), layout: Some(BLASColMajor), ..obj };
                 return obj.driver()?.run_blas();
             }
         }

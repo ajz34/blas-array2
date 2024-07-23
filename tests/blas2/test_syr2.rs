@@ -1,5 +1,5 @@
 use crate::util::*;
-use blas_array2::blas2::syr2::SYR2;
+use blas_array2::blas2::her2::SYR2;
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;

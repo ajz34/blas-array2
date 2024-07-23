@@ -1,5 +1,4 @@
 use crate::util::*;
-use blas_array2::blas2::spmv::{HPMV, SPMV};
 use blas_array2::prelude::*;
 use cblas_sys::*;
 use itertools::*;
@@ -114,7 +113,7 @@ mod valid_row_major {
                 );
             }
 
-            SPMV::<F>::default()
+            HPMV::<F>::default()
                 .ap(a_raw.slice(a_slc))
                 .x(x_raw.slice(x_slc))
                 .y(y_raw.slice_mut(y_slc))
