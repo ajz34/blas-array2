@@ -12,14 +12,14 @@ Implementation of parameter-optional BLAS wrapper by `ndarray::Array` (`Ix1` or 
 > --- *Dark Sun...*, OP2 of *PERSONA5 the Animation*
 
 Additional documents:
-- Document for develop (link at [github](docs-markdown/dev.md), link at [docs.rs](`document_dev`))
-- List of BLAS wrapper structs (link at [github](docs-markdown/func.md), link at [docs.rs](`document_func`))
-- Efficiency demonstration (link at [github](docs-markdown/demo_efficiency.md), link at [docs.rs](`demo_efficiency`))
+- Document for develop (link for [github](docs-markdown/dev.md), link for [docs.rs](`document_dev`))
+- List of BLAS wrapper structs (link for [github](docs-markdown/func.md), link for [docs.rs](`document_func`))
+- Efficiency demonstration (link for [github](docs-markdown/demo_efficiency.md), link for [docs.rs](`demo_efficiency`))
 
 After v0.2, this crate have implemented most planned functionalities. This crate is considered to be almost finished, and may not be actively maintained or updated.
 However, we also welcome issues and PRs to further increase new features or bug fixes.
 
-## Simple example
+## Example of simple case
 For simple illustration to this package, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}$ (`dgemm`):
 ```rust
 use blas_array2::prelude::*;
@@ -46,7 +46,7 @@ Important points are
 - **BLAS2/BLAS3 Functionality**: All (legacy) BLAS2/BLAS3 functions have been implemented.
 - **Optional Parameters**: Convention similar to [BLAST Fortran 95 binding](https://netlib.org/blas/blast-forum/chapter2.pdf) or `scipy.linalg.blas`. Shape of matrix, and information of leading dimension will be checked and parsed properly, so users do not need to give these values.
 - **Row-major Layout**: Row-major support to Fortran 77 API (CBLAS functionality without CBLAS functions). You can safely use the default `libopenblas.so` shipped by debian with `blas-sys`, where CBLAS is not automatically integrated, for example.
-- **Generics**: For example, `GEMM<F> where F: BLASFloat` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc. Original names such as `DGEMM`, `ZSYR2K` are also available.
+- **Generics**: For example, `GEMM<F> where F: GEMMNum` for `f32`, `f64`, `Complex<f32>`, `Complex<f64>` types, in one generic (template) class. The same to `SYRK` or `GEMV`, etc. Original names such as `DGEMM`, `ZSYR2K` are also available.
 - **Avoid explicit copy if possible**: All input in row-major (or col-major) should not involve unnecessary transpositions with explicit copy. Further more, for some BLAS3 functions (GEMM, SYRK, TRMM, TRSM), if transposition does not involve `BLASConjTrans`, then mixed row-major or col-major also does not involve explicit transposition. Also note that in many cases, sub-matrices (sliced matrix) are also considered as row-major (or col-major), if data is stored contiguously in any dimension.
 
 ### Other Functionality
@@ -63,7 +63,7 @@ Important points are
 - **`warn_on_copy`**: If input matrix layout is not consistent, and explicit memory copy / transposition / complex conjugate is required, then a warning message will be printed on stderr.
 - **`error_on_copy`**: Similar to `warn_on_copy`, but will directly raise `BLASError`.
 
-## Complicated example
+## Example of complicated case
 
 For complicated situation, we perform $\mathbf{C} = \mathbf{A} \mathbf{B}^\mathrm{T}$ by `SGEMM = GEMM<f32>`:
 ```rust
@@ -121,6 +121,41 @@ Output of `c` is
  [-9.500, -23.500, -37.500]]
 ```
 
+## Example of generic
+
+After v0.3, this crate now supports (somehow) simple generic usage. For example of GEMM and TRMM,
+
+```rust
+use blas_array2::prelude::*;
+use ndarray::prelude::*;
+
+fn demo<F>()
+where
+    F: GEMMNum + TRMMNum,
+{
+    let a = Array2::<F>::ones((3, 3));
+    let b = Array2::<F>::ones((3, 3));
+    let mut c = GEMM::<F>::default().a(a.view()).b(b.view()).run().unwrap().into_owned();
+    TRMM::<F>::default().a(a.view()).b(c.view_mut()).run().unwrap();
+    println!("{:}", c);
+}
+
+fn main() {
+    demo::<f64>();
+    demo::<c64>();
+}
+```
+
+This will give result of
+```
+[[9, 9, 9],
+ [6, 6, 6],
+ [3, 3, 3]]
+[[9+0i, 9+0i, 9+0i],
+ [6+0i, 6+0i, 6+0i],
+ [3+0i, 3+0i, 3+0i]]
+```
+
 ## Installation
 
 This crate is available on crates.io.
@@ -132,24 +167,6 @@ RUSTFLAGS="-lopenblas"
 if using OpenBLAS as backend.
 
 Some features (such as `ilp64`, `gemmt`) requires BLAS to be compiled with 64-bit integer, or certain BLAS extensions.
-
-## Limitation of this crate
-
-Though I believe this crate provides many functionalities that interests audiences in scientific computation, there are also some points that this crate is lack of, or is not going to support with by design.
-
-For the features that will not support with,
-- **Supports to other types of matrices**. Currently crates such as `ndarray`, `nalgebra`, `matrix`, `faer-rs`, `rulinalg`, `rest_tensors` represent typical matrix implementations in rust. Though some crates are extremely fast (comparable to MKL or OpenBLAS, especially `faer-rs`) in linalgs, it seems that `ndarray` could better support features in high-dimension tensors and sub-matrices, as well as advanced slicing/view. This is also related to concept of "leading dimension" in BLAS. So `ndarray` is choosen to represent matrix in this crate. Matrices defined in other crates should be able to easily casted to `ndarray`, without explicit memory copy (by rust's moving or by tensor view of slice from raw-data), and thus not providing BLAS to other types of matrices.
-- **Other targets (GPU)**. This may well require a new data structure (such as numpy v.s. torch/jax). Though machine learning frameworks (such as `candle`, `burn`, etc.) seem to be promising, an API-stable tensor structure that accepts various targets, with advanced slicing/stride support has probably yet existed in rust.
-- **Arbitary data types**. Currently, this crate supports f32/f64/c32/c64, which should be supported by legacy BLAS standard. However, this crate will not implement something like int8/rug. To address this issue, a BLAS reference implementation to any types is required, and is out of scope for this crate, which is only a high-level wrapper to BLAS (or BLAS-like) functions.
-- **Fn instead of struct**. A common sense for using BLAS functions with matrices, is function with optional parameters. However, this is not possible in rust, syntactically. So we choose to use struct (with `derive_build`) to pass optional parameters. In this way, there is at least one additional drawback: no IDE-time/compile-time check to non-optional parameters, so errors may occur in runtime; this require programmers to use this crate with caution.
-- **Lapack wrapper**. This is surely important, but will probably be implemented in a new crate.
-
-For the features that can be added, but currently haven't been added (probably I'm not interested in for the moment I'm writing this crate) and may be implemented in a later time, or may be implemented after someone giving feature requests in issues/PRs.
-- **BLAS1 functions**. I think that in many cases, functionality of BLAS1 can be simply covered by iterators, or features in matrix libraries such as `ndarray`. Efficiency of BLAS1 can be achieved by compiler optimization (especially for serial/single-thread usage), using BLAS may not significantly improve efficiency if your code is mostly computation-bounded instead of memory-bounded.
-- **Other kinds of floats**. With development of machine learning nowadays, demands of low-precision BLAS is increasing; MKL and OpenBLAS has already implemented some `BF16` features.
-- **BLAS extensions**. There are some important BLAS extensions, such as `omatcopy`, `imatcopy`, `gemmt`, `gemm3m`, that has already been implemented in both OpenBLAS, MKL and BLIS. Currently, `gemmt` has been implemented. Others are on-going work.
-- **Documents**. I hope that this crate is clear and simple to use by itself, especially to programmers from C/C++/F77. This crate want to be `scipy.linalg.blas` replacement in rust. So documentation may not be of that important (<https://netlib.org/lapack/explore-html/> is farely well documented), but probably it's still required to newcommers.
-- **Tests**. It works, but it is messy. Boundary conditions have not been fully checked.
 
 ## Acknowledges
 
