@@ -5,20 +5,17 @@ use ndarray::prelude::*;
 
 /* #region BLAS func */
 
-pub trait IAMAXFunc<F>
-where
-    F: BLASFloat,
-{
-    unsafe fn iamax(n: *const blas_int, x: *const F, incx: *const blas_int) -> blas_int;
+pub trait IAMAXNum: BLASFloat {
+    unsafe fn iamax(n: *const blas_int, x: *const Self, incx: *const blas_int) -> blas_int;
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl IAMAXFunc<$type> for BLASFunc
+        impl IAMAXNum for $type
         where
             $type: BLASFloat,
         {
-            unsafe fn iamax(n: *const blas_int, x: *const $type, incx: *const blas_int) -> blas_int {
+            unsafe fn iamax(n: *const blas_int, x: *const Self, incx: *const blas_int) -> blas_int {
                 ffi::$func(n, x, incx)
             }
         }
@@ -36,7 +33,7 @@ impl_func!(c64, izamax_);
 
 pub struct IAMAX_Driver<'x, F>
 where
-    F: BLASFloat,
+    F: IAMAXNum,
 {
     n: blas_int,
     x: ArrayView1<'x, F>,
@@ -45,8 +42,7 @@ where
 
 impl<'x, F> IAMAX_Driver<'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: IAMAXFunc<F>,
+    F: IAMAXNum,
 {
     pub fn run_blas(self) -> Result<usize, BLASError> {
         let Self { n, x, incx } = self;
@@ -55,7 +51,7 @@ where
             return Ok(0);
         } else {
             // 0-index for C/Rust v.s. 1-index for Fortran
-            return unsafe { Ok((BLASFunc::iamax(&n, x_ptr, &incx) - 1).try_into()?) };
+            return unsafe { Ok((F::iamax(&n, x_ptr, &incx) - 1).try_into()?) };
         }
     }
 }
@@ -68,15 +64,14 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct IAMAX_<'x, F>
 where
-    F: BLASFloat,
+    F: IAMAXNum,
 {
     pub x: ArrayView1<'x, F>,
 }
 
 impl<'x, F> IAMAX_<'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: IAMAXFunc<F>,
+    F: IAMAXNum,
 {
     pub fn driver(self) -> Result<IAMAX_Driver<'x, F>, BLASError> {
         let Self { x } = self;
@@ -97,8 +92,7 @@ pub type IZAMAX<'x> = IAMAX<'x, c64>;
 
 impl<'x, F> IAMAX<'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: IAMAXFunc<F>,
+    F: IAMAXNum,
 {
     pub fn run(self) -> Result<usize, BLASError> {
         self.build()?.driver()?.run_blas()

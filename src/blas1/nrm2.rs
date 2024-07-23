@@ -6,22 +6,19 @@ use num_traits::Zero;
 
 /* #region BLAS func */
 
-pub trait NRM2Func<F>
-where
-    F: BLASFloat,
-{
-    unsafe fn nrm2(n: *const blas_int, x: *const F, incx: *const blas_int) -> F::RealFloat;
+pub trait NRM2Num: BLASFloat {
+    unsafe fn nrm2(n: *const blas_int, x: *const Self, incx: *const blas_int) -> Self::RealFloat;
 }
 
 macro_rules! impl_func {
     ($type: ty, $func: ident) => {
-        impl NRM2Func<$type> for BLASFunc
+        impl NRM2Num for $type
         where
             $type: BLASFloat,
         {
             unsafe fn nrm2(
                 n: *const blas_int,
-                x: *const $type,
+                x: *const Self,
                 incx: *const blas_int,
             ) -> <$type as BLASFloat>::RealFloat {
                 ffi::$func(n, x, incx)
@@ -41,7 +38,7 @@ impl_func!(c64, dznrm2_);
 
 pub struct NRM2_Driver<'x, F>
 where
-    F: BLASFloat,
+    F: NRM2Num,
 {
     n: blas_int,
     x: ArrayView1<'x, F>,
@@ -50,9 +47,7 @@ where
 
 impl<'x, F> NRM2_Driver<'x, F>
 where
-    F: BLASFloat,
-    F::RealFloat: Zero,
-    BLASFunc: NRM2Func<F>,
+    F: NRM2Num,
 {
     pub fn run_blas(self) -> Result<F::RealFloat, BLASError> {
         let Self { n, x, incx } = self;
@@ -60,7 +55,7 @@ where
         if n == 0 {
             return Ok(F::RealFloat::zero());
         } else {
-            return unsafe { Ok(BLASFunc::nrm2(&n, x_ptr, &incx)) };
+            return unsafe { Ok(F::nrm2(&n, x_ptr, &incx)) };
         }
     }
 }
@@ -73,15 +68,14 @@ where
 #[builder(pattern = "owned", build_fn(error = "BLASError"), no_std)]
 pub struct NRM2_<'x, F>
 where
-    F: BLASFloat,
+    F: NRM2Num,
 {
     pub x: ArrayView1<'x, F>,
 }
 
 impl<'x, F> NRM2_<'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: NRM2Func<F>,
+    F: NRM2Num,
 {
     pub fn driver(self) -> Result<NRM2_Driver<'x, F>, BLASError> {
         let Self { x } = self;
@@ -102,8 +96,7 @@ pub type DZNRM2<'x> = NRM2<'x, c64>;
 
 impl<'x, F> NRM2<'x, F>
 where
-    F: BLASFloat,
-    BLASFunc: NRM2Func<F>,
+    F: NRM2Num,
 {
     pub fn run(self) -> Result<F::RealFloat, BLASError> {
         self.build()?.driver()?.run_blas()

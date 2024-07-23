@@ -6,4 +6,5 @@ pub mod test_trmm;
 pub mod test_trsm;
 
 #[cfg(feature = "gemmt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "gemmt")))]
 pub mod test_gemmt;

@@ -1,9 +1,9 @@
 pub use crate::ffi::blas_int;
 pub use crate::util::*;
 
-pub use crate::blas1::asum::{ASUM, DASUM, DZASUM, SASUM, SCASUM};
-pub use crate::blas1::iamax::{IAMAX, ICAMAX, IDAMAX, ISAMAX, IZAMAX};
-pub use crate::blas1::nrm2::{DNRM2, DZNRM2, NRM2, SCNRM2, SNRM2};
+pub use crate::blas1::asum::{ASUMNum, ASUM, DASUM, DZASUM, SASUM, SCASUM};
+pub use crate::blas1::iamax::{IAMAXNum, IAMAX, ICAMAX, IDAMAX, ISAMAX, IZAMAX};
+pub use crate::blas1::nrm2::{NRM2Num, DNRM2, DZNRM2, NRM2, SCNRM2, SNRM2};
 
 pub use crate::blas2::gbmv::{GBMVNum, CGBMV, DGBMV, GBMV, SGBMV, ZGBMV};
 pub use crate::blas2::gemv::{GEMVNum, CGEMV, DGEMV, GEMV, SGEMV, ZGEMV};
@@ -34,6 +34,7 @@ pub use crate::blas3::trmm::{TRMMNum, CTRMM, DTRMM, STRMM, TRMM, ZTRMM};
 pub use crate::blas3::trsm::{TRSMNum, CTRSM, DTRSM, STRSM, TRSM, ZTRSM};
 
 #[cfg(feature = "gemmt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "gemmt")))]
 pub use crate::blas3::gemmt::{GEMMTNum, CGEMMT, DGEMMT, GEMMT, SGEMMT, ZGEMMT};
 
 pub mod generic {
@@ -67,5 +68,6 @@ pub mod generic {
     pub use crate::blas3::trsm::TRSM_;
 
     #[cfg(feature = "gemmt")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "gemmt")))]
     pub use crate::blas3::gemmt::GEMMT_;
 }
