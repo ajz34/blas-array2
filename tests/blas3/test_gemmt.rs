@@ -24,7 +24,7 @@ mod valid_own {
         let bs0 = 1;
         let bs1 = 1;
 
-        type RT = <f32 as TestFloat>::RealFloat;
+        type RT = <f32 as BLASFloat>::RealFloat;
         let alpha = f32::rand();
         let beta = f32::rand();
         let a_raw = random_matrix(100, 100, layout_a.into());
@@ -73,7 +73,7 @@ mod valid_own {
             let list_bs0 = [1, 2];
             let list_bs1 = [1, 2];
 
-            type RT = <$type as TestFloat>::RealFloat;
+            type RT = <$type as BLASFloat>::RealFloat;
             let alpha = <$type>::rand();
             let beta = <$type>::rand();
             let a_buffer = random_array::<$type>(400).to_vec();
@@ -165,7 +165,7 @@ mod valid_view {
         let cs0 = 1;
         let cs1 = 1;
 
-        type RT = <f32 as TestFloat>::RealFloat;
+        type RT = <f32 as BLASFloat>::RealFloat;
         let alpha = f32::rand();
         let beta = f32::rand();
         let a_buffer = random_array::<f32>(400).to_vec();

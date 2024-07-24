@@ -13,7 +13,7 @@ mod valid_col_major {
 
     #[test]
     fn test_example() {
-        type RT = <f32 as TestFloat>::RealFloat;
+        type RT = <f32 as BLASFloat>::RealFloat;
         let alpha = <f32>::rand();
         let beta = <f32>::rand();
         let m = 10;
@@ -99,7 +99,7 @@ mod valid_col_major {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as TestFloat>::RealFloat;
+                type RT = <$F as BLASFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$F>::rand();
                 let m = 10;

@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use approx::*;
 use blas_array2::util::*;
 use cblas_sys::*;
@@ -13,16 +14,14 @@ pub type c_double_complex = [f64; 2];
 #[allow(bad_style)]
 pub type c_float_complex = [f32; 2];
 
-pub trait TestFloat: BLASFloat + core::fmt::Debug {
-    type RealFloat: TestFloat;
+pub trait TestFloat: BLASFloat + Debug {
     type FFIFloat;
-    const EPSILON: <Self as TestFloat>::RealFloat;
+    const EPSILON: Self::RealFloat;
     fn rand() -> Self;
-    fn abs(x: Self) -> <Self as TestFloat>::RealFloat;
+    fn abs(x: Self) -> Self::RealFloat;
 }
 
 impl TestFloat for f32 {
-    type RealFloat = f32;
     type FFIFloat = f32;
     const EPSILON: f32 = f32::EPSILON;
     fn rand() -> f32 {
@@ -34,7 +33,6 @@ impl TestFloat for f32 {
 }
 
 impl TestFloat for f64 {
-    type RealFloat = f64;
     type FFIFloat = f64;
     const EPSILON: f64 = f64::EPSILON;
     fn rand() -> f64 {
@@ -46,7 +44,6 @@ impl TestFloat for f64 {
 }
 
 impl TestFloat for c32 {
-    type RealFloat = f32;
     type FFIFloat = c_float_complex;
     const EPSILON: f32 = f32::EPSILON;
     fn rand() -> c32 {
@@ -60,7 +57,6 @@ impl TestFloat for c32 {
 }
 
 impl TestFloat for c64 {
-    type RealFloat = f64;
     type FFIFloat = c_double_complex;
     const EPSILON: f64 = f64::EPSILON;
     fn rand() -> c64 {
@@ -286,19 +282,16 @@ where
     }
 }
 
-pub fn check_same<F, D>(
-    a: &ArrayView<F, D>,
-    b: &ArrayView<F, D>,
-    eps: <<F as TestFloat>::RealFloat as AbsDiffEq>::Epsilon,
-) where
+pub fn check_same<F, D>(a: &ArrayView<F, D>, b: &ArrayView<F, D>, eps: <F::RealFloat as AbsDiffEq>::Epsilon)
+where
     F: TestFloat,
     D: Dimension,
-    <F as TestFloat>::RealFloat: approx::AbsDiffEq,
+    F::RealFloat: approx::AbsDiffEq + Debug,
 {
-    let err: <F as TestFloat>::RealFloat = (a - b).mapv(F::abs).sum();
-    let acc: <F as TestFloat>::RealFloat = a.mapv(F::abs).sum();
+    let err: F::RealFloat = (a - b).mapv(F::abs).sum();
+    let acc: F::RealFloat = a.mapv(F::abs).sum();
     let err_div = err / acc;
-    assert_abs_diff_eq!(err_div, <F as TestFloat>::RealFloat::zero(), epsilon = eps);
+    assert_abs_diff_eq!(err_div, F::RealFloat::zero(), epsilon = eps);
 }
 
 /* #endregion */

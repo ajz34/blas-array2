@@ -19,7 +19,7 @@ mod valid {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as TestFloat>::RealFloat;
+                type RT = <$F as BLASFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$F>::rand();
                 let a_raw = random_matrix(100, 100, $a_layout.into());

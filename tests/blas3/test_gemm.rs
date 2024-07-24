@@ -81,7 +81,7 @@ mod valid_owned {
 
     #[test]
     fn test_example() {
-        type RT = <f32 as TestFloat>::RealFloat;
+        type RT = <f32 as BLASFloat>::RealFloat;
         let alpha = f32::rand();
         let beta = f32::rand();
         let a_raw = random_matrix(100, 100, 'R'.into());
@@ -125,7 +125,7 @@ mod valid_owned {
             #[$attr]
             pub fn $test_name()
             {
-                type RT = <$F as TestFloat>::RealFloat;
+                type RT = <$F as BLASFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$F>::rand();
                 let a_raw = random_matrix(100, 100, $a_layout.into());
@@ -191,7 +191,7 @@ mod valid_view {
 
     #[test]
     fn test_example() {
-        type RT = <f32 as TestFloat>::RealFloat;
+        type RT = <f32 as BLASFloat>::RealFloat;
         let alpha = f32::rand();
         let beta = f32::rand();
         let a_raw = random_matrix(100, 100, 'R'.into());
@@ -241,7 +241,7 @@ mod valid_view {
             #[$attr]
             pub fn $test_name()
             {
-                type RT = <$F as TestFloat>::RealFloat;
+                type RT = <$F as BLASFloat>::RealFloat;
                 let alpha = <$F>::rand();
                 let beta = <$F>::rand();
                 let a_raw = random_matrix(100, 100, $a_layout.into());

@@ -22,7 +22,7 @@ mod valid_col_major {
             #[test]
             #[$attr]
             fn $test_name() {
-                type RT = <$F as TestFloat>::RealFloat;
+                type RT = <$F as BLASFloat>::RealFloat;
                 let n = 8;
                 let k = 3;
                 let uplo = $uplo;
